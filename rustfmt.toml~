@@ -1,0 +1,9 @@
+array_layout = "Visual"
+chain_indent = "Visual"
+chain_one_line_max = 40
+chain_split_single_child = true
+closure_block_indent_threshold = -1
+condense_wildcard_suffixes = true
+control_style = "Legacy"
+fn_args_density = "Tall"
+fn_args_layout = "Visual"
