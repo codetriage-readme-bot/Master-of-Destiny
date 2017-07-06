@@ -1,6 +1,6 @@
 extern crate rand;
 
-use draw::DrawChar;
+use draw::{Describe, DrawChar};
 use life;
 
 use self::rand::Rng;
@@ -40,10 +40,19 @@ fn adjacent((ux, uy): (usize, usize),
 
 /////// ROCK
 // Possible igneous rock kinds
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum IgneousRocks {
     Obsidian,
     Basalt,
+}
+
+impl Describe for IgneousRocks {
+    fn describe(&self) -> String {
+        match self {
+            &IgneousRocks::Obsidian => "Igneous obisidian".to_string(),
+            &IgneousRocks::Basalt => "Igneous basalt".to_string(),
+        }
+    }
 }
 
 impl DrawChar for IgneousRocks {
@@ -68,10 +77,19 @@ impl DrawChar for IgneousRocks {
 }
 
 // Possible metamorphic rock kinds
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum MetamorphicRocks {
     Gneiss,
     Marble,
+}
+
+impl Describe for MetamorphicRocks {
+    fn describe(&self) -> String {
+        match self {
+            &MetamorphicRocks::Gneiss => "Metamorphic gneiss".to_string(),
+            &MetamorphicRocks::Marble => "Metamorphic marble".to_string(),
+        }
+    }
 }
 
 impl DrawChar for MetamorphicRocks {
@@ -96,10 +114,23 @@ impl DrawChar for MetamorphicRocks {
 }
 
 // Possible Sedimentary rock kinds
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum SedimentaryRocks {
     Limestone,
     Conglomerate,
+}
+
+impl Describe for SedimentaryRocks {
+    fn describe(&self) -> String {
+        match self {
+            &SedimentaryRocks::Limestone => {
+                "Sedimentary limestone".to_string()
+            }
+            &SedimentaryRocks::Conglomerate => {
+                "Sedimentary conglomerate".to_string()
+            }
+        }
+    }
 }
 
 impl DrawChar for SedimentaryRocks {
@@ -129,6 +160,16 @@ pub enum StoneTypes {
     Sedimentary(SedimentaryRocks),
     Igneous(IgneousRocks),
     Metamorphic(MetamorphicRocks),
+}
+
+impl Describe for StoneTypes {
+    fn describe(&self) -> String {
+        match self {
+            &StoneTypes::Sedimentary(v) => v.describe(),
+            &StoneTypes::Igneous(v) => v.describe(),
+            &StoneTypes::Metamorphic(v) => v.describe(),
+        }
+    }
 }
 
 impl DrawChar for StoneTypes {
@@ -176,10 +217,31 @@ pub enum VegTypes {
     // Small trees (height 6-9)
     Crabapple,
     Redbud,
+    Treetrunk,
     // Tall trees (height 10-20)
     Pine,
     Redwood,
     Banyon,
+}
+
+impl Describe for VegTypes {
+    fn describe(&self) -> String {
+        match self {
+            &VegTypes::Bluegrass => "Bluegrass".to_string(),
+            &VegTypes::Bentgrass => "Bentgrass".to_string(),
+            &VegTypes::Ryegrass => "Ryegrass".to_string(),
+            &VegTypes::Dandelion => "Dandelion".to_string(),
+            &VegTypes::Chickweed => "Chickweed".to_string(),
+            &VegTypes::BroomShrub => "Broom Shrub".to_string(),
+            &VegTypes::Rhododendron => "Rhododendron".to_string(),
+            &VegTypes::Crabapple => "Crabapple".to_string(),
+            &VegTypes::Redbud => "Redbud".to_string(),
+            &VegTypes::Pine => "Pine".to_string(),
+            &VegTypes::Redwood => "Redwood".to_string(),
+            &VegTypes::Banyon => "Banyon".to_string(),
+            &VegTypes::Treetrunk => "Tree trunk".to_string(),
+        }
+    }
 }
 
 impl DrawChar for VegTypes {
@@ -189,7 +251,14 @@ impl DrawChar for VegTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  '"',
-                                 Color::new(0, 200, 150),
+                                 Color::new(0, 50, 200),
+                                 Color::new(50, 200, 50));
+            }
+            &VegTypes::Treetrunk => {
+                root.put_char_ex(pos.0 as i32,
+                                 pos.1 as i32,
+                                 'O',
+                                 Color::new(139, 69, 19),
                                  Color::new(50, 200, 50));
             }
             &VegTypes::Bentgrass => {
@@ -255,14 +324,14 @@ impl DrawChar for VegTypes {
             &VegTypes::Pine => {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 chars::SPADE,
+                                 chars::ARROW_N,
                                  Color::new(255, 255, 250),
                                  Color::new(50, 200, 50));
             }
             &VegTypes::Redwood => {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 chars::ARROW_N,
+                                 '\u{17}',
                                  Color::new(255, 100, 100),
                                  Color::new(50, 200, 50));
             }
@@ -282,14 +351,14 @@ impl DrawChar for VegTypes {
 pub struct Biome {
     temperature_high_f: i32,
     temperature_low_f: i32,
-    name: &'static str,
+    name: String,
     humidity_pcnt: i32,
     percipitation_chance: i32,
 }
 
 /////// GENERAL
 // State: the 3 physical forms + fire because it's convenient.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum State {
     Liquid,
     Solid,
@@ -312,6 +381,7 @@ pub enum Compass {
 pub enum Slope {
     Up,
     Down,
+    None,
 }
 
 // General types of tiles (very broad) and their current state.
@@ -326,6 +396,52 @@ pub enum Tile {
     Fire,
 }
 
+impl Describe for Tile {
+    fn describe(&self) -> String {
+        match self {
+            &Tile::Empty => "Emtpy space".to_string(),
+            &Tile::Ramp(ref s, ref slope) => {
+                match slope {
+                    &Slope::Up => format!("Up hill of {}", s.describe()),
+                    &Slope::Down => {
+                        format!("Down hill of {}", s.describe())
+                    }
+                    &Slope::None => format!("{} floor", s.describe()),
+                }
+            }
+            &Tile::Moveable(ref s) => {
+                format!("Loose pile of {}", s.describe())
+            }
+            &Tile::Water(ref purity, ref state) => {
+                let purity_str = match purity {
+                    &LiquidPurity::Clean => "clean",
+                    &LiquidPurity::Clear => "clear",
+                    &LiquidPurity::Dirty => "dirty",
+                    &LiquidPurity::Muddy => "muddy",
+                    &LiquidPurity::Murky => "murky",
+                    &LiquidPurity::Pure => "pure",
+                    &LiquidPurity::Sandy => "sandy",
+                    &LiquidPurity::Toxic => "toxic",
+                };
+                match state {
+                    &State::Gas => format!("Cloud of {} steam", purity_str),
+                    &State::Solid => format!("{} water", purity_str),
+                    _ => panic!("Time to panic!"),
+                }
+            }
+            &Tile::Stone(ref s, ref state) => {
+                match state {
+                    &State::Solid => format!("Rough {}", s.describe()),
+                    &State::Liquid => format!("Molten {}", s.describe()),
+                    _ => panic!("Panic! In the Code"),
+                }
+            }
+            &Tile::Fire => "Flames".to_string(),
+            &Tile::Vegitation(veg, ..) => veg.describe(),
+        }
+    }
+}
+
 impl DrawChar for Tile {
     fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
         match self {
@@ -336,6 +452,13 @@ impl DrawChar for Tile {
                         root.put_char(pos.0 as i32,
                                       pos.1 as i32,
                                       chars::ARROW2_N,
+                                      BackgroundFlag::None);
+                    }
+                    &Slope::None => {
+                        undertile.draw_char(root, pos);
+                        root.put_char(pos.0 as i32,
+                                      pos.1 as i32,
+                                      '.',
                                       BackgroundFlag::None);
                     }
                     &Slope::Down => {
@@ -379,8 +502,8 @@ impl DrawChar for Tile {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  '~',
-                                 Color::new(255, 0, 0),
-                                 Color::new(0, 0, 0));
+                                 Color::new(0, 0, 0),
+                                 Color::new(255, 0, 0));
             }
             &Tile::Stone(_, State::Gas) => panic!("Stones can't be a gas!"),
             &Tile::Water(_, State::Solid) => {
@@ -475,14 +598,6 @@ impl World {
             .random(random::Rng::new_with_seed(random::Algo::MT, seed))
             .init();
 
-        // Rock type
-        let rnoise = Noise::init_with_dimensions(2)
-            .lacunarity(0.43)
-            .hurst(-0.9)
-            .noise_type(NoiseType::Simplex)
-            .random(random::Rng::new_with_seed(random::Algo::MT, seed))
-            .init();
-
         let (sx, sy) = size;
         let mut heightmap = vec![vec![0f32; sx]; sy];
         for y in 0..sy {
@@ -497,26 +612,40 @@ impl World {
             map: vec![],
             world_noise: wnoise,
             vegetation_noise: vnoise,
-            stone_vein_noise: rnoise,
+            stone_vein_noise: Noise::init_with_dimensions(3)
+                .lacunarity(0.43)
+                .hurst(-0.9)
+                .noise_type(NoiseType::Simplex)
+                .random(random::Rng::new_with_seed(random::Algo::MT, seed))
+                .init(),
         };
         for y in 0..sy {
             let mut line = vec![];
             for x in 0..sx {
                 let mut tiles: Vec<Tile> = vec![];
                 let mut biomes: Vec<Biome> = vec![];
-                for n in (0..30).rev() {
-                    tiles.push(world.rock_type((x, y), -n));
+                for n in 0..30 {
+                    tiles.push(world.rock_type((x, y), 30 - n));
                 }
 
                 let height = heightmap[y][x];
                 if height <= 30.0 {
-                    if heightmap[y][x] > 2.0 {
-                        tiles.push(Tile::Ramp(box world.get_vegetation((x, y)), Slope::Up));
-                    } else {
-                        tiles.push(world.get_vegetation((x, y)));
-                    }
-                    for _ in 0..((heightmap[y][x] - 1.0) as i32) {
-                        tiles.push(world.get_vegetation((x, y)));
+                    match world.get_vegetation((x, y)) {
+                        Tile::Vegitation(a, height, b) => {
+                            for z in 0..height {
+                                if z >= height / 3 {
+                                    tiles.push(Tile::Vegitation(a,
+                                                                height -
+                                                                    z,
+                                                                b));
+                                } else {
+                                    tiles.push(Tile::Vegitation(VegTypes::Treetrunk, 1, State::Solid));
+                                }
+                            }
+                        }
+                        _ => {
+                            panic!("Don't panic? Now is the perfect time to panic!")
+                        }
                     }
                     if adjacent((x, y), (sx, sy))
                         .iter()
@@ -571,24 +700,55 @@ impl World {
         Biome {
             temperature_high_f: 75,
             temperature_low_f: 52,
-            name: "LowMed",
+            name: "LowMed".to_string(),
             humidity_pcnt: 60,
             percipitation_chance: 70,
         }
     }
 
+    fn rock_choice<T: Clone>(list: &[T; 2], rn: isize) -> T {
+        if rn < 0 {
+            list[0].clone()
+        } else {
+            list[1].clone()
+        }
+    }
     pub fn rock_type(&self, (x, y): (usize, usize), height: isize) -> Tile {
-        let rn =
-            self.stone_vein_noise
-                .get_turbulence(&mut [x as f32, y as f32], 3) as
-                isize;
-        Tile::Stone(StoneTypes::Sedimentary(SedimentaryRocks::Limestone),
-                    State::Solid)
+        let rn = self.stone_vein_noise
+                     .get_turbulence(&mut [x as f32,
+                                           y as f32,
+                                           height as f32],
+                                     3) as isize;
+
+        let sedimentary = &[SedimentaryRocks::Conglomerate,
+                            SedimentaryRocks::Limestone];
+        let igneous = &[IgneousRocks::Obsidian, IgneousRocks::Basalt];
+        let metamorphic = &[MetamorphicRocks::Marble,
+                            MetamorphicRocks::Gneiss];
+        Tile::Stone(// Stone type
+                    if height < 10 {
+                        let v = World::rock_choice(igneous, rn);
+                        StoneTypes::Igneous(v.clone())
+                    } else if height <= 20 {
+                        let v = World::rock_choice(sedimentary, rn);
+                        StoneTypes::Sedimentary(v.clone())
+                    } else {
+                        let v = World::rock_choice(metamorphic, rn);
+                        StoneTypes::Metamorphic(v.clone())
+                    },
+
+                    // State
+                    if height < 3 {
+                        if rn < 30 { State::Liquid } else { State::Solid }
+                    } else {
+                        State::Solid
+                    })
     }
 
     pub fn get_vegetation(&self, (x, y): (usize, usize)) -> Tile {
         let vn = self.vegetation_noise
-                     .get_fbm(&mut [x as f32, y as f32], 1);
+                     .get_fbm(&mut [x as f32, y as f32], 1) *
+            100.0;
         let veg_levels =
             vec![[VegTypes::Bluegrass,
                   VegTypes::Bentgrass,
@@ -605,6 +765,7 @@ impl World {
                  [VegTypes::Pine, VegTypes::Crabapple, VegTypes::Pine],
                  [VegTypes::Redwood, VegTypes::Pine, VegTypes::Banyon]];
         let mut trng = rand::thread_rng(); // I don't know why this should be mutable!
+        println!("{}", vn);
         let veg = if vn < 0.0 {
             (trng.choose(&veg_levels[0]), 1)
         } else if vn < 2.0 {

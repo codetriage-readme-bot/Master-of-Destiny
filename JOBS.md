@@ -1,0 +1,16 @@
+# Job organization/division
+
+## Will Trovinger
+
+- [ ] Work tileset
+- [ ]  Explore Dwarf Fortress
+
+## Chris Dumas
+
+- [X] Watch Dino thing
+- [X] Make tiles describe themselves
+- [X] Fix crashing bug
+- [X] Generate proper vegetation
+- [ ] Fix water generation
+- [ ] Generate rocks properly
+- [ ] Improve perlin noise generator, perhaps switch to diamond

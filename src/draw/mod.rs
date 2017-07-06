@@ -1,10 +1,15 @@
 use tcod::{OffscreenConsole, RootConsole};
+use tcod::colors::Color;
 use tcod::console;
 use tcod::console::{BackgroundFlag, Console};
 use worldgen::{Tile, WorldState};
 
 pub trait DrawChar {
     fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize));
+}
+
+pub trait Describe {
+    fn describe(&self) -> String;
 }
 
 pub fn draw_map(root: &mut RootConsole,
@@ -53,13 +58,32 @@ pub fn draw_map(root: &mut RootConsole,
                      format!("Screen Position: {}, {}",
                              world.screen.0,
                              world.screen.1));
+        if (world.cursor.0 >= 0 &&
+            world.cursor.0 < world.map[0].len() as i32) &&
+            (world.cursor.1 >= 0 &&
+             world.cursor.1 < world.map.len() as i32)
+        {
+            window.print(1,
+                         3,
+                         world.map[world.cursor.1 as usize][world.cursor
+                                                            .0 as
+                                                            usize]
+                         .tiles
+                         .get(world.level as usize)
+                         .unwrap_or(&Tile::Empty)
+                         .describe());
+            root.set_char_background(world.cursor.0,
+                                     world.cursor.1,
+                                     Color::new(255, 255, 0),
+                                     BackgroundFlag::Lighten);
+        }
         console::blit(window,
                       (0, 0),
                       (frame_width, frame_height),
                       root,
                       (frame_start_pos, 0),
                       1.0,
-                      0.3);
+                      0.6);
     }
     root.flush();
 }

@@ -1,10 +1,11 @@
-#![feature(box_syntax, box_patterns, rand)]
+#![feature(box_syntax, box_patterns)]
 extern crate tcod;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use tcod::{FontLayout, RootConsole};
-use tcod::input::{KEY_PRESSED, KeyCode};
+use tcod::input;
+use tcod::input::KeyCode;
 
 mod life;
 mod draw;
@@ -20,10 +21,11 @@ fn main() {
     let screen_size = (90, 50);
     let mut root = RootConsole::initializer()
         .size(screen_size.0, screen_size.1)
-        .title("Hobbit Fort")
+        .title("The Game of Life")
         .font("cheepicus16x16_ro.png", FontLayout::AsciiInRow)
         .init();
     tcod::system::set_fps(20);
+    root.set_keyboard_repeat(0, 0);
 
     let size = (240 as usize, 240 as usize);
     let start = SystemTime::now();
@@ -39,59 +41,77 @@ fn main() {
     let move_dist = 10;
 
     while !root.window_closed() {
-        let keypress = root.check_for_keypress(KEY_PRESSED);
-        if let Some(key) = keypress {
-            match key.code {
-                KeyCode::Tab => {
-                    show_hud = !show_hud;
-                }
-                KeyCode::Char => {
-                    match key.printable {
-                        '<' => {
-                            world_state.level = clamp(world_state.level -
+        match input::check_for_event(input::KEY | input::MOUSE) {
+            None => {}
+            Some((_, event)) => {
+                match event {
+                    input::Event::Mouse(ref mouse) => {
+                        world_state.cursor = (mouse.cx as i32,
+                                              mouse.cy as i32);
+                    }
+                    input::Event::Key(ref key) => {
+                        if key.pressed {
+                            match key.code {
+                                KeyCode::Tab => {
+                                    show_hud = !show_hud;
+                                }
+                                KeyCode::Char => {
+                                    match key.printable {
+                                        '<' => {
+                                            world_state.level =
+                                                clamp(world_state.level -
                                                       1,
                                                       highest_world,
                                                       0);
-                        }
-                        '>' => {
-                            world_state.level = clamp(world_state.level +
+                                        }
+                                        '>' => {
+                                            world_state.level =
+                                                clamp(world_state.level +
                                                       1,
                                                       highest_world,
                                                       0);
+                                        }
+                                        _ => {}
+                                    };
+                                }
+                                KeyCode::Up => {
+                                    let new = clamp(world_state.screen.1 -
+                                                    move_dist as i32,
+                                                    max_screen_move.1,
+                                                    0);
+                                    world_state.screen =
+                                        (world_state.screen.0, new);
+                                }
+                                KeyCode::Down => {
+                                    let new = clamp(world_state.screen.1 +
+                                                    move_dist as i32,
+                                                    max_screen_move.1,
+                                                    0);
+                                    world_state.screen =
+                                        (world_state.screen.0, new);
+                                }
+                                KeyCode::Left => {
+                                    let new = clamp(world_state.screen.0 -
+                                                    move_dist as i32,
+                                                    max_screen_move.0,
+                                                    0);
+                                    world_state.screen =
+                                        (new, world_state.screen.1);
+                                }
+                                KeyCode::Right => {
+                                    let new = clamp(world_state.screen.0 +
+                                                    move_dist as i32,
+                                                    max_screen_move.0,
+                                                    0);
+                                    world_state.screen =
+                                        (new, world_state.screen.1);
+                                }
+                                _ => {}
+                            };
                         }
-                        _ => {}
-                    };
+                    }
                 }
-                KeyCode::Up => {
-                    let new = clamp(world_state.screen.1 -
-                                    move_dist as i32,
-                                    max_screen_move.1,
-                                    0);
-                    world_state.screen = (world_state.screen.0, new);
-                }
-                KeyCode::Down => {
-                    let new = clamp(world_state.screen.1 +
-                                    move_dist as i32,
-                                    max_screen_move.1,
-                                    0);
-                    world_state.screen = (world_state.screen.0, new);
-                }
-                KeyCode::Left => {
-                    let new = clamp(world_state.screen.0 -
-                                    move_dist as i32,
-                                    max_screen_move.0,
-                                    0);
-                    world_state.screen = (new, world_state.screen.1);
-                }
-                KeyCode::Right => {
-                    let new = clamp(world_state.screen.0 +
-                                    move_dist as i32,
-                                    max_screen_move.0,
-                                    0);
-                    world_state.screen = (new, world_state.screen.1);
-                }
-                _ => {}
-            };
+            }
         }
         draw_map(&mut root, &world_state, show_hud);
     }
