@@ -348,12 +348,14 @@ impl DrawChar for VegTypes {
 
 /////// BIOME
 
+type Ferenheight = i32;
+type Percent = usize;
 pub struct Biome {
-    temperature_high_f: i32,
-    temperature_low_f: i32,
+    temperature_high_f: Ferenheight,
+    temperature_low_f: Ferenheight,
     name: String,
-    humidity_pcnt: i32,
-    percipitation_chance: i32,
+    humidity_pcnt: Percent,
+    percipitation_chance: Percent,
 }
 
 /////// GENERAL
@@ -367,6 +369,7 @@ pub enum State {
 
 // Descriptive alias (hey, I'm a haskell programmer).
 pub type Height = i32;
+pub type Depth = i32;
 
 // North is up, South is down, East is left, West is right.
 #[derive(Debug)]
@@ -390,7 +393,7 @@ pub enum Tile {
     Empty,
     Ramp(Box<Tile>, Slope),
     Moveable(Box<Tile>),
-    Water(LiquidPurity, State),
+    Water(LiquidPurity, State, Depth),
     Stone(StoneTypes, State),
     Vegitation(VegTypes, Height, State),
     Fire,
@@ -412,7 +415,7 @@ impl Describe for Tile {
             &Tile::Moveable(ref s) => {
                 format!("Loose pile of {}", s.describe())
             }
-            &Tile::Water(ref purity, ref state) => {
+            &Tile::Water(ref purity, ref state, _) => {
                 let purity_str = match purity {
                     &LiquidPurity::Clean => "clean",
                     &LiquidPurity::Clear => "clear",
@@ -425,8 +428,8 @@ impl Describe for Tile {
                 };
                 match state {
                     &State::Gas => format!("Cloud of {} steam", purity_str),
-                    &State::Solid => format!("{} water", purity_str),
-                    _ => panic!("Time to panic!"),
+                    &State::Solid => format!("{} ice", purity_str),
+                    &State::Liquid => format!("{} water", purity_str),
                 }
             }
             &Tile::Stone(ref s, ref state) => {
@@ -506,21 +509,34 @@ impl DrawChar for Tile {
                                  Color::new(255, 0, 0));
             }
             &Tile::Stone(_, State::Gas) => panic!("Stones can't be a gas!"),
-            &Tile::Water(_, State::Solid) => {
+            &Tile::Water(_, State::Solid, _) => {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  '#',
                                  Color::new(255, 255, 255),
                                  Color::new(100, 255, 100));
             }
-            &Tile::Water(_, State::Liquid) => {
-                root.put_char_ex(pos.0 as i32,
-                                 pos.1 as i32,
-                                 '\u{f7}',
-                                 Color::new(0, 105, 148),
-                                 Color::new(0, 159, 225));
-            }
-            &Tile::Water(_, State::Gas) => {
+            &Tile::Water(_, State::Liquid, ref depth) => {
+                if depth <= &2 {
+                    root.put_char_ex(pos.0 as i32,
+                                     pos.1 as i32,
+                                     '\u{f7}',
+                                     Color::new(0, 105, 148),
+                                     Color::new(0, 159, 225));
+                } else {
+                    root.put_char_ex(pos.0 as i32,
+                                     pos.1 as i32,
+                                     format!("{}", depth)
+                                         .bytes()
+                                         .take(1)
+                                         .collect::<Vec<_>>()
+                                         [0] as
+                                         char,
+                                     Color::new(0, 105, 148),
+                                     Color::new(0, 159, 225));
+                }
+            }   
+            &Tile::Water(_, State::Gas, _) => {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  '\u{a7}',
@@ -556,7 +572,6 @@ pub struct Unit {
 
 pub struct World {
     pub map: Vec<Vec<Unit>>,
-    pub world_noise: Noise,
     pub vegetation_noise: Noise,
     pub stone_vein_noise: Noise,
 }
@@ -579,7 +594,7 @@ impl Index<Range<usize>> for World {
     }
 }
 
-const THRESHOLD: f32 = 80.0;
+const THRESHOLD: f32 = 100.0;
 impl World {
     pub fn new(size: (usize, usize), seed: u32) -> World {
         println!("Generating seed from {}", seed);
@@ -599,18 +614,8 @@ impl World {
             .init();
 
         let (sx, sy) = size;
-        let mut heightmap = vec![vec![0f32; sx]; sy];
-        for y in 0..sy {
-            for x in 0..sx {
-                heightmap[y][x] =
-                    wnoise.get_fbm(&mut [x as f32, y as f32], 2) *
-                        THRESHOLD;
-            }
-        }
-
         let mut world: World = World {
             map: vec![],
-            world_noise: wnoise,
             vegetation_noise: vnoise,
             stone_vein_noise: Noise::init_with_dimensions(3)
                 .lacunarity(0.43)
@@ -619,17 +624,26 @@ impl World {
                 .random(random::Rng::new_with_seed(random::Algo::MT, seed))
                 .init(),
         };
+        let get_fbm =
+            |x, y| wnoise.get_fbm(&mut [x as f32, y as f32], 2) * THRESHOLD;
         for y in 0..sy {
             let mut line = vec![];
             for x in 0..sx {
+                let height = get_fbm(x, y);
                 let mut tiles: Vec<Tile> = vec![];
                 let mut biomes: Vec<Biome> = vec![];
                 for n in 0..30 {
                     tiles.push(world.rock_type((x, y), 30 - n));
                 }
-
-                let height = heightmap[y][x];
-                if height <= 30.0 {
+                let water_height = (-(height / THRESHOLD) * 7.0) as i32;
+                if water_height >= 5 {
+                    for n in 0..water_height {
+                        tiles[29 - n as usize] =
+                            Tile::Water(World::purity(n as isize),
+                                        State::Liquid,
+                                        water_height - n as i32);
+                    }
+                } else if height <= 60.0 {
                     match world.get_vegetation((x, y)) {
                         Tile::Vegitation(a, height, b) => {
                             for z in 0..height {
@@ -649,7 +663,7 @@ impl World {
                     }
                     if adjacent((x, y), (sx, sy))
                         .iter()
-                        .find(|z| heightmap[z.1][z.0] > height)
+                        .find(|z| get_fbm(z.0, z.1) > height)
                         .is_some()
                     {
                         tiles.push(Tile::Ramp(box world.get_vegetation((x, y)),
@@ -657,7 +671,7 @@ impl World {
                     }
                     if adjacent((x, y), (sx, sy))
                         .iter()
-                        .find(|z| heightmap[z.1][z.0] < height)
+                        .find(|z| get_fbm(z.0, z.1) < height)
                         .is_some()
                     {
                         tiles.push(Tile::Ramp(box world.get_vegetation((x, y)),
@@ -666,7 +680,23 @@ impl World {
                 } else {
                     for z in 0..(height as isize - 1) {
                         biomes.push(world.biome_from_height(z));
-                        tiles.push(world.rock_type((x, y), z));
+                        if adjacent((x, y), (sx, sy))
+                            .iter()
+                            .find(|z| get_fbm(z.0, z.1) > height)
+                            .is_some()
+                        {
+                            tiles.push(Tile::Ramp(box world.rock_type((x, y), z),
+                                              Slope::Up));
+                        } else if adjacent((x, y), (sx, sy))
+                                   .iter()
+                                   .find(|z| get_fbm(z.0, z.1) < height)
+                                   .is_some()
+                        {
+                            tiles.push(Tile::Ramp(box world.rock_type((x, y), z),
+                                              Slope::Down));
+                        } else {
+                            tiles.push(world.rock_type((x, y), z));
+                        }
                     }
                     tiles.push(world.get_vegetation((x, y)));
                 }
@@ -765,7 +795,6 @@ impl World {
                  [VegTypes::Pine, VegTypes::Crabapple, VegTypes::Pine],
                  [VegTypes::Redwood, VegTypes::Pine, VegTypes::Banyon]];
         let mut trng = rand::thread_rng(); // I don't know why this should be mutable!
-        println!("{}", vn);
         let veg = if vn < 0.0 {
             (trng.choose(&veg_levels[0]), 1)
         } else if vn < 2.0 {
