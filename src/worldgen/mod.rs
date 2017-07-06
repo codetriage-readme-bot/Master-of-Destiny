@@ -1,5 +1,6 @@
 extern crate rand;
-
+extern crate tcod_sys;
+                
 use draw::{Describe, DrawChar};
 use life;
 
@@ -15,27 +16,28 @@ use tcod::map;
 use tcod::noise::{Noise, NoiseType};
 use tcod::random;
 
+
 pub fn clamp<T: Ord>(value: T, max: T, min: T) -> T {
     cmp::min(max, cmp::max(min, value))
 }
 
-fn adjacent((ux, uy): (usize, usize),
-            size: (usize, usize))
-    -> Vec<(usize, usize)> {
-    let (x, y) = (ux as i32, uy as i32);
-    let (width, height) = (size.0 as i32, size.1 as i32);
-    let fx = |x: i32| clamp(x, width - 1, 0) as usize;
-    let fy = |y: i32| clamp(y, height - 1, 0) as usize;
-    let fxy = |x, y| (fx(x), fy(y));
+fn restricted_from_tile(tile: Tile) -> RestrictedTile {
+    match tile {
+        Tile::Stone(a, b) => RestrictedTile::Stone(a, b),
+        Tile::Vegitation(a, b, c) => RestrictedTile::Vegitation(a, b, c),
+        _ => {
+            panic!("Type error. Cannot allow restricted type of kind {:?}",
+                   tile)
+        }
+    }
+}
 
-    vec![fxy(x + 1, y),
-         fxy(x - 1, y),
-         fxy(x, y + 1),
-         fxy(x, y - 1),
-         fxy(x + 1, y + 1),
-         fxy(x - 1, y - 1),
-         fxy(x + 1, y - 1),
-         fxy(x - 1, y + 1)]
+fn can_be_restricted(tile: Tile) -> bool {
+    match tile {
+        Tile::Stone(..) => true,
+        Tile::Vegitation(..) => true,
+        _ => false,
+    }
 }
 
 /////// ROCK
@@ -155,7 +157,7 @@ impl DrawChar for SedimentaryRocks {
 }
 
 // Stone types (SCIENCE!)
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum StoneTypes {
     Sedimentary(SedimentaryRocks),
     Igneous(IgneousRocks),
@@ -184,7 +186,7 @@ impl DrawChar for StoneTypes {
 
 /////// WATER
 // This is a DF-type game, so... extra fidelty!
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum LiquidPurity {
     // Helps with healing
     Pure,
@@ -372,7 +374,7 @@ pub type Height = i32;
 pub type Depth = i32;
 
 // North is up, South is down, East is left, West is right.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Compass {
     North,
     South,
@@ -380,19 +382,64 @@ pub enum Compass {
     West,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Slope {
     Up,
     Down,
     None,
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum RestrictedTile {
+    Stone(StoneTypes, State),
+    Vegitation(VegTypes, Height, State),
+}
+
+impl Describe for RestrictedTile {
+    fn describe(&self) -> String {
+        match self {
+            &RestrictedTile::Stone(ref s, ref state) => {
+                match state {
+                    &State::Solid => format!("Rough {}", s.describe()),
+                    &State::Liquid => format!("Molten {}", s.describe()),
+                    _ => panic!("Panic! In the Code"),
+                }
+            }
+            &RestrictedTile::Vegitation(veg, ..) => veg.describe(),
+        }
+    }
+}
+
+impl DrawChar for RestrictedTile {
+    fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
+        match self {
+            &RestrictedTile::Stone(ref s, State::Solid) => {
+                s.draw_char(root, pos)
+            }
+            &RestrictedTile::Stone(_, State::Liquid) => {
+                root.put_char_ex(pos.0 as i32,
+                                 pos.1 as i32,
+                                 '~',
+                                 Color::new(0, 0, 0),
+                                 Color::new(255, 0, 0));
+            }   
+            &RestrictedTile::Stone(_, State::Gas) => {
+                panic!("Stones can't be a gas!")
+            }
+            &RestrictedTile::Vegitation(ref v, ..) => {
+                v.draw_char(root, pos)
+            }
+        }
+    }
+}
+
 // General types of tiles (very broad) and their current state.
-#[derive(Debug)]
+// FIXME: use restricted tile instead of duplicating functionality. Composition over inheritence!
+#[derive(Debug, Copy, Clone)]
 pub enum Tile {
     Empty,
-    Ramp(Box<Tile>, Slope),
-    Moveable(Box<Tile>),
+    Ramp(RestrictedTile, Slope),
+    Moveable(RestrictedTile),
     Water(LiquidPurity, State, Depth),
     Stone(StoneTypes, State),
     Vegitation(VegTypes, Height, State),
@@ -475,14 +522,14 @@ impl DrawChar for Tile {
             }
             &Tile::Moveable(ref t) => {
                 match t {
-                    &box Tile::Stone(ref s, State::Solid) => {
+                    &RestrictedTile::Stone(ref s, State::Solid) => {
                         s.draw_char(root, pos);
                         root.put_char(pos.0 as i32,
                                       pos.1 as i32,
                                       chars::BULLET,
                                       BackgroundFlag::Set);
                     }
-                    &box Tile::Vegitation(ref v, ..) => {
+                    &RestrictedTile::Vegitation(ref v, ..) => {
                         match v {
                             &VegTypes::Pine |
                             &VegTypes::Banyon |
@@ -496,7 +543,6 @@ impl DrawChar for Tile {
                             f => f.draw_char(root, pos),
                         }
                     }
-                    &box Tile::Moveable(..) => panic!("Nested moveables!"),
                     _ => panic!("Shouldn't be moveable!"),
                 }
             }
@@ -572,8 +618,9 @@ pub struct Unit {
 
 pub struct World {
     pub map: Vec<Vec<Unit>>,
-    pub vegetation_noise: Noise,
-    pub stone_vein_noise: Noise,
+    heightmap: *mut tcod_sys::TCOD_heightmap_t,
+    vegetation_noise: Noise,
+    stone_vein_noise: Noise,
 }
 
 impl Index<usize> for World {
@@ -594,16 +641,36 @@ impl Index<Range<usize>> for World {
     }
 }
 
+fn add_hill(heightmap: *mut tcod_sys::TCOD_heightmap_t,
+            (hmw, hmh): (usize, usize),
+            num_hills: i32,
+            base_radius: f32,
+            radius: f32,
+            height: f32,
+            rndn: tcod_sys::TCOD_random_t) {
+    unsafe {
+        for i in 0..num_hills {
+            let radius =
+                tcod_sys::TCOD_random_get_float(rndn,
+                                                base_radius *
+                                                    (1.0 - radius),
+                                                base_radius *
+                                                    (1.0 + radius));
+            let xh = tcod_sys::TCOD_random_get_int(rndn, 0, hmw as i32 - 1);
+            let yh = tcod_sys::TCOD_random_get_int(rndn, 0, hmh as i32 - 1);
+            tcod_sys::TCOD_heightmap_add_hill(heightmap,
+                                              xh as f32,
+                                              yh as f32,
+                                              radius,
+                                              height);
+        }
+    }
+}
+
 const THRESHOLD: f32 = 100.0;
 impl World {
     pub fn new(size: (usize, usize), seed: u32) -> World {
         println!("Generating seed from {}", seed);
-        let wnoise = Noise::init_with_dimensions(2)
-            .lacunarity(0.1)
-            .hurst(0.7)
-            .noise_type(NoiseType::Perlin)
-            .random(random::Rng::new_with_seed(random::Algo::MT, seed))
-            .init();
 
         // Vegitation
         let vnoise = Noise::init_with_dimensions(2)
@@ -614,8 +681,47 @@ impl World {
             .init();
 
         let (sx, sy) = size;
+
+        // And here we see a small C hiding in the maw of a Rust. <low-level>
+        let heightmap =
+            unsafe { tcod_sys::TCOD_heightmap_new(sx as i32, sy as i32) };
+        unsafe {
+            let rndn =
+                tcod_sys::TCOD_random_new_from_seed(tcod_sys::TCOD_RNG_MT,
+                                                    seed);
+            let noise = tcod_sys::TCOD_noise_new(2, 0.7, 0.1, rndn);
+            tcod_sys::TCOD_noise_set_type(noise,
+                                          tcod_sys::TCOD_NOISE_PERLIN);
+            tcod_sys::TCOD_heightmap_add_fbm(heightmap,
+                                             noise,
+                                             2.20 * (sx as f32) / 400.0,
+                                             2.20 * (sx as f32) / 400.0,
+                                             0.0,
+                                             0.0,
+                                             10.0,
+                                             1.0,
+                                             2.05);
+            tcod_sys::TCOD_heightmap_normalize(heightmap, 0.0, 100.0);
+            add_hill(heightmap,
+                     size,
+                     600,
+                     16.0 * sx as f32 / 200.0,
+                     0.7,
+                     0.3,
+                     rndn);
+            tcod_sys::TCOD_heightmap_normalize(heightmap, 0.0, 100.0);
+            tcod_sys::TCOD_heightmap_rain_erosion(heightmap,
+                                                  (sx * sy) as i32,
+                                                  0.03,
+                                                  0.01,
+                                                  rndn);
+        }
+
+        // </low-level>
+
         let mut world: World = World {
             map: vec![],
+            heightmap: heightmap,
             vegetation_noise: vnoise,
             stone_vein_noise: Noise::init_with_dimensions(3)
                 .lacunarity(0.43)
@@ -624,12 +730,16 @@ impl World {
                 .random(random::Rng::new_with_seed(random::Algo::MT, seed))
                 .init(),
         };
-        let get_fbm =
-            |x, y| wnoise.get_fbm(&mut [x as f32, y as f32], 2) * THRESHOLD;
         for y in 0..sy {
             let mut line = vec![];
             for x in 0..sx {
-                let height = get_fbm(x, y);
+                let height = unsafe { world.get_height(x, y) };
+                let slope = unsafe {
+                    tcod_sys::TCOD_heightmap_get_slope(heightmap,
+                                                       x as i32,
+                                                       y as i32)
+                };
+
                 let mut tiles: Vec<Tile> = vec![];
                 let mut biomes: Vec<Biome> = vec![];
                 for n in 0..30 {
@@ -661,44 +771,25 @@ impl World {
                             panic!("Don't panic? Now is the perfect time to panic!")
                         }
                     }
-                    if adjacent((x, y), (sx, sy))
-                        .iter()
-                        .find(|z| get_fbm(z.0, z.1) > height)
-                        .is_some()
-                    {
-                        tiles.push(Tile::Ramp(box world.get_vegetation((x, y)),
-                                              Slope::Up));
-                    }
-                    if adjacent((x, y), (sx, sy))
-                        .iter()
-                        .find(|z| get_fbm(z.0, z.1) < height)
-                        .is_some()
-                    {
-                        tiles.push(Tile::Ramp(box world.get_vegetation((x, y)),
-                                              Slope::Down));
-                    }
                 } else {
                     for z in 0..(height as isize - 1) {
                         biomes.push(world.biome_from_height(z));
-                        if adjacent((x, y), (sx, sy))
-                            .iter()
-                            .find(|z| get_fbm(z.0, z.1) > height)
-                            .is_some()
-                        {
-                            tiles.push(Tile::Ramp(box world.rock_type((x, y), z),
-                                              Slope::Up));
-                        } else if adjacent((x, y), (sx, sy))
-                                   .iter()
-                                   .find(|z| get_fbm(z.0, z.1) < height)
-                                   .is_some()
-                        {
-                            tiles.push(Tile::Ramp(box world.rock_type((x, y), z),
-                                              Slope::Down));
-                        } else {
-                            tiles.push(world.rock_type((x, y), z));
-                        }
+
                     }
                     tiles.push(world.get_vegetation((x, y)));
+                }
+                let last = tiles.len() - 1;
+                let tile = tiles[last];
+                if can_be_restricted(tile) {
+                    if slope < 0.0 {
+                        tiles[last] =
+                            Tile::Ramp(restricted_from_tile(tile.clone()),
+                                       Slope::Down);
+                    } else if slope > 0.01 {
+                        tiles[last] =
+                            Tile::Ramp(restricted_from_tile(tile.clone()),
+                                       Slope::Up);
+                    }
                 }
                 line.push(Unit {
                               tiles: tiles,
@@ -710,6 +801,12 @@ impl World {
 
         println!("Done world generation!");
         world
+    }
+
+    unsafe fn get_height(&self, x: usize, y: usize) -> f32 {
+        tcod_sys::TCOD_heightmap_get_value(self.heightmap,
+                                           x as i32,
+                                           y as i32)
     }
 
     pub fn purity(vein: isize) -> LiquidPurity { LiquidPurity::Clean }
