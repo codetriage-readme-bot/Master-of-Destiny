@@ -1,6 +1,6 @@
 extern crate rand;
 extern crate tcod_sys;
-                
+
 use draw::{Describe, DrawChar};
 use life;
 
@@ -156,12 +156,86 @@ impl DrawChar for SedimentaryRocks {
     }
 }
 
+// Soil types
+#[derive(Debug, Copy, Clone)]
+pub enum SoilTypes {
+    Clay,
+    Sandy,
+    Silty,
+    Peaty,
+    Chalky,
+    Loamy,
+}
+
+impl Describe for SoilTypes {
+    fn describe(&self) -> String {
+        match self {
+            &SoilTypes::Clay => "Clay soil".to_string(),
+            &SoilTypes::Sandy => "Sandy soil".to_string(),
+            &SoilTypes::Silty => "Silty soil".to_string(),
+            &SoilTypes::Peaty => "Peaty soil".to_string(),
+            &SoilTypes::Chalky => "Chalky soil".to_string(),
+            &SoilTypes::Loamy => "Loamy soil".to_string(),
+        }
+    }
+}
+
+impl DrawChar for SoilTypes {
+    fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
+        match self {
+            &SoilTypes::Clay => {
+                root.put_char_ex(pos.0 as i32,
+                                 pos.1 as i32,
+                                 '=',
+                                 Color::new(167, 107, 41),
+                                 Color::new(191, 100, 35))
+            }
+            &SoilTypes::Sandy => {
+                root.put_char_ex(pos.0 as i32,
+                                 pos.1 as i32,
+                                 '=',
+                                 Color::new(167, 107, 41),
+                                 Color::new(191, 100, 35))
+            }
+            &SoilTypes::Silty => {
+                root.put_char_ex(pos.0 as i32,
+                                 pos.1 as i32,
+                                 '=',
+                                 Color::new(133, 126, 108),
+                                 Color::new(99, 94, 80))
+            }
+            &SoilTypes::Peaty => {
+                root.put_char_ex(pos.0 as i32,
+                                 pos.1 as i32,
+                                 '=',
+                                 Color::new(159, 145, 95),
+                                 Color::new(119, 108, 71))
+            }
+            &SoilTypes::Chalky => {
+                root.put_char_ex(pos.0 as i32,
+                                 pos.1 as i32,
+                                 '=',
+                                 Color::new(219, 233, 237),
+                                 Color::new(143, 186, 199))
+            }
+            &SoilTypes::Loamy => {
+                root.put_char_ex(pos.0 as i32,
+                                 pos.1 as i32,
+                                 '=',
+                                 Color::new(86, 59, 56),
+                                 Color::new(64, 44, 41))
+            }   
+        }
+    }
+}
+
 // Stone types (SCIENCE!)
 #[derive(Debug, Copy, Clone)]
 pub enum StoneTypes {
     Sedimentary(SedimentaryRocks),
     Igneous(IgneousRocks),
     Metamorphic(MetamorphicRocks),
+    Soil(SoilTypes),
 }
 
 impl Describe for StoneTypes {
@@ -170,6 +244,7 @@ impl Describe for StoneTypes {
             &StoneTypes::Sedimentary(v) => v.describe(),
             &StoneTypes::Igneous(v) => v.describe(),
             &StoneTypes::Metamorphic(v) => v.describe(),
+            &StoneTypes::Soil(v) => v.describe(),
         }
     }
 }
@@ -180,6 +255,7 @@ impl DrawChar for StoneTypes {
             &StoneTypes::Sedimentary(ref s) => s.draw_char(root, pos),
             &StoneTypes::Metamorphic(ref s) => s.draw_char(root, pos),
             &StoneTypes::Igneous(ref s) => s.draw_char(root, pos),
+            &StoneTypes::Soil(ref s) => s.draw_char(root, pos),
         }
     }
 }
@@ -598,11 +674,10 @@ impl DrawChar for Tile {
                                  Color::new(255, 0, 0));
             }
             &Tile::Empty => {
-                root.put_char_ex(pos.0 as i32,
-                                 pos.1 as i32,
-                                 ' ',
-                                 Color::new(135, 206, 250),
-                                 Color::new(135, 206, 250))
+                root.put_char(pos.0 as i32,
+                              pos.1 as i32,
+                              ' ',
+                              BackgroundFlag::None);
             }
         }
     }
@@ -667,7 +742,10 @@ fn add_hill(heightmap: *mut tcod_sys::TCOD_heightmap_t,
     }
 }
 
-const THRESHOLD: f32 = 100.0;
+const THRESHOLD: f32 = 1.0;
+const WATER_THRESHOLD: f32 = 10.0;
+const VEG_THRESHOLD: f32 = 200.0;
+const RAMP_THRESHOLD: f32 = 0.015;
 impl World {
     pub fn new(size: (usize, usize), seed: u32) -> World {
         println!("Generating seed from {}", seed);
@@ -742,53 +820,55 @@ impl World {
 
                 let mut tiles: Vec<Tile> = vec![];
                 let mut biomes: Vec<Biome> = vec![];
-                for n in 0..30 {
-                    tiles.push(world.rock_type((x, y), 30 - n));
-                }
-                let water_height = (-(height / THRESHOLD) * 7.0) as i32;
-                if water_height >= 5 {
-                    for n in 0..water_height {
-                        tiles[29 - n as usize] =
-                            Tile::Water(World::purity(n as isize),
-                                        State::Liquid,
-                                        water_height - n as i32);
-                    }
-                } else if height <= 60.0 {
-                    match world.get_vegetation((x, y)) {
-                        Tile::Vegitation(a, height, b) => {
-                            for z in 0..height {
-                                if z >= height / 3 {
-                                    tiles.push(Tile::Vegitation(a,
-                                                                height -
-                                                                    z,
-                                                                b));
-                                } else {
-                                    tiles.push(Tile::Vegitation(VegTypes::Treetrunk, 1, State::Solid));
-                                }
-                            }
-                        }
-                        _ => {
-                            panic!("Don't panic? Now is the perfect time to panic!")
-                        }
+                let wh = height - 9.0;
+                if wh <= 7.0 {
+                    for z in 0..(wh as isize - 1) {
+                        tiles.push(Tile::Water(World::purity(),
+                                               State::Liquid,
+                                               wh as i32 - z as i32));
                     }
                 } else {
                     for z in 0..(height as isize - 1) {
                         biomes.push(world.biome_from_height(z));
-
+                        tiles.push(world.rock_type((x, y), z));
                     }
-                    tiles.push(world.get_vegetation((x, y)));
-                }
-                let last = tiles.len() - 1;
-                let tile = tiles[last];
-                if can_be_restricted(tile) {
-                    if slope < 0.0 {
-                        tiles[last] =
+                    if height <= VEG_THRESHOLD {
+                        match world.get_vegetation((x, y)) {
+                            Tile::Vegitation(a, height, b) => {
+                                for z in 0..height {
+                                    if z >= height / 3 {
+                                        tiles.push(Tile::Vegitation(a,
+                                                                    height -
+                                                                        z,
+                                                                    b));
+                                    } else {
+                                        tiles.push(Tile::Vegitation(VegTypes::Treetrunk, 1, State::Solid));
+                                    }
+                                }
+                            }
+                            _ => {
+                                panic!("Don't panic? Now is the perfect time to panic!")
+                            }
+                        }
+                    }
+                    let tile = match tiles.len() {
+                        0 => None,
+                        n => Some(tiles[n - 1]),
+                    };
+                    if tile.is_some() {
+                        let tile = tile.unwrap();
+                        let last = (tiles.len() - 1) as usize;
+                        if can_be_restricted(tile) {
+                            if slope < -RAMP_THRESHOLD {
+                                tiles[last] =
                             Tile::Ramp(restricted_from_tile(tile.clone()),
                                        Slope::Down);
-                    } else if slope > 0.01 {
-                        tiles[last] =
+                            } else if slope > RAMP_THRESHOLD {
+                                tiles[last] =
                             Tile::Ramp(restricted_from_tile(tile.clone()),
                                        Slope::Up);
+                            }
+                        }
                     }
                 }
                 line.push(Unit {
@@ -806,10 +886,27 @@ impl World {
     unsafe fn get_height(&self, x: usize, y: usize) -> f32 {
         tcod_sys::TCOD_heightmap_get_value(self.heightmap,
                                            x as i32,
-                                           y as i32)
+                                           y as i32) * THRESHOLD
     }
 
-    pub fn purity(vein: isize) -> LiquidPurity { LiquidPurity::Clean }
+    pub fn purity() -> LiquidPurity {
+        *rand::thread_rng()
+            .choose(&[LiquidPurity::Clean,
+                      LiquidPurity::Clear,
+                      LiquidPurity::Clear,
+                      LiquidPurity::Dirty,
+                      LiquidPurity::Dirty,
+                      LiquidPurity::Dirty,
+                      LiquidPurity::Dirty,
+                      LiquidPurity::Muddy,
+                      LiquidPurity::Muddy,
+                      LiquidPurity::Muddy,
+                      LiquidPurity::Murky,
+                      LiquidPurity::Pure,
+                      LiquidPurity::Sandy,
+                      LiquidPurity::Toxic])
+            .unwrap()
+    }
 
     pub fn len(&self) -> usize {
         match *self {

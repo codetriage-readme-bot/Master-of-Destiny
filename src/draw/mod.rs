@@ -31,17 +31,23 @@ pub fn draw_map(root: &mut RootConsole,
         for (mx, x) in (screen_start_x..screen_end_x)
             .zip(0..wid)
         {
-            match world.map[my][mx]
-                .tiles
-                .get(world.level as usize) {
-                    None => (Tile::Empty).draw_char(root, (x, y)),
-                    Some(tile) => tile.draw_char(root, (x, y)),
+            let tiles = &world.map[my][mx].tiles;
+
+            match tiles.get(world.level as usize) {
+                None => {
+                    match tiles.get((world.level - 1) as usize) {
+                        None => (Tile::Empty).draw_char(root, (x, y)),
+                        Some(tile) => tile.draw_char(root, (x, y)),
+                    };
+                    (Tile::Empty).draw_char(root, (x, y));
                 }
+                Some(tile) => tile.draw_char(root, (x, y)),
+            }
         }
     }
 
     if show_hud {
-        let frame_start_pos = (wid as i32 / 3) * 2;
+        let frame_start_pos = (wid as i32 / 3) * 2 - 10;
         let frame_width = wid as i32 - frame_start_pos;
         let frame_height = hig as i32;
         let mut window = &OffscreenConsole::new(frame_width, frame_height);
