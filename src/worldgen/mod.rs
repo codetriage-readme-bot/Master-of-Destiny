@@ -40,6 +40,10 @@ fn can_be_restricted(tile: Tile) -> bool {
     }
 }
 
+fn adjacent((x, y): (usize, usize)) -> Vec<(usize, usize)> {
+    vec![(x + 1, y), (x - 1, y), (x, y - 1), (x, y + 1)]
+}
+
 /////// ROCK
 // Possible igneous rock kinds
 #[derive(Debug, Copy, Clone)]
@@ -163,7 +167,6 @@ pub enum SoilTypes {
     Sandy,
     Silty,
     Peaty,
-    Chalky,
     Loamy,
 }
 
@@ -174,7 +177,6 @@ impl Describe for SoilTypes {
             &SoilTypes::Sandy => "Sandy soil".to_string(),
             &SoilTypes::Silty => "Silty soil".to_string(),
             &SoilTypes::Peaty => "Peaty soil".to_string(),
-            &SoilTypes::Chalky => "Chalky soil".to_string(),
             &SoilTypes::Loamy => "Loamy soil".to_string(),
         }
     }
@@ -210,13 +212,6 @@ impl DrawChar for SoilTypes {
                                  '=',
                                  Color::new(159, 145, 95),
                                  Color::new(119, 108, 71))
-            }
-            &SoilTypes::Chalky => {
-                root.put_char_ex(pos.0 as i32,
-                                 pos.1 as i32,
-                                 '=',
-                                 Color::new(219, 233, 237),
-                                 Color::new(143, 186, 199))
             }
             &SoilTypes::Loamy => {
                 root.put_char_ex(pos.0 as i32,
@@ -719,7 +714,7 @@ fn add_hill(heightmap: *mut tcod_sys::TCOD_heightmap_t,
             height: f32,
             rndn: tcod_sys::TCOD_random_t) {
     unsafe {
-        for i in 0..num_hills {
+        for _ in 0..num_hills {
             let radius =
                 tcod_sys::TCOD_random_get_float(rndn,
                                                 base_radius *
@@ -738,7 +733,7 @@ fn add_hill(heightmap: *mut tcod_sys::TCOD_heightmap_t,
 }
 
 const THRESHOLD: f32 = 0.5;
-const SEA_LEVEL: f32 = 23.0;
+const SEA_LEVEL: f32 = 17.0;
 const VEG_THRESHOLD: f32 = 200.0;
 const RAMP_THRESHOLD: f32 = 0.015;
 impl World {
@@ -783,6 +778,14 @@ impl World {
                      0.3,
                      rndn);
             tcod_sys::TCOD_heightmap_normalize(heightmap, 0.0, 100.0);
+            add_hill(heightmap,
+                     size,
+                     150,
+                     16.0 * sx as f32 / 100.0,
+                     0.3,
+                     0.2,
+                     rndn);
+            tcod_sys::TCOD_heightmap_normalize(heightmap, 0.0, 100.0);
             tcod_sys::TCOD_heightmap_rain_erosion(heightmap,
                                                   (sx * sy) as i32,
                                                   0.03,
@@ -807,6 +810,34 @@ impl World {
             let mut line = vec![];
             for x in 0..sx {
                 let height = unsafe { world.get_height(x, y) };
+
+                let ll = line.len();
+                let wl = world.len();
+                let adj = adjacent((x, y))
+                    .iter()
+                    .map(|p| if x < ll && y >= wl {
+                             line.get(x)
+                                 .unwrap_or(&Unit {
+                                                biomes: vec![],
+                                                tiles: vec![],
+                                            })
+                                 .tiles
+                                 .get(height as usize)
+                                 .unwrap_or(&Tile::Empty)
+                         } else if y < wl {
+                             world[y]
+                                 .get(x)
+                                 .unwrap_or(&Unit {
+                                                biomes: vec![],
+                                                tiles: vec![],
+                                            })
+                                 .tiles
+                                 .get(height as usize)
+                                 .unwrap_or(&Tile::Empty)
+                         } else {
+                             &Tile::Empty
+                         })
+                    .collect::<Vec<_>>();
                 let slope = unsafe {
                     tcod_sys::TCOD_heightmap_get_slope(heightmap,
                                                        x as i32,
@@ -825,7 +856,7 @@ impl World {
                 } else {
                     for z in 0..(height as isize - 1) {
                         biomes.push(world.biome_from_height(z));
-                        tiles.push(world.rock_type((x, y), z));
+                        tiles.push(world.rock_type(adj, (x, y), z));
                     }
                     if height <= VEG_THRESHOLD {
                         match world.get_vegetation((x, y)) {
@@ -931,29 +962,74 @@ impl World {
         }
     }
 
-    fn rock_choice<T: Clone>(list: &[T; 2], rn: isize) -> T {
-        println!("{}", rn);
-        if rn < 0 {
+    fn rock_choice<T: Clone>(list: &[T; 2], rn: f32) -> T {
+        if rn < 0.0 {
             list[0].clone()
         } else {
             list[1].clone()
         }
     }
-    pub fn rock_type(&self, (x, y): (usize, usize), height: isize) -> Tile {
+
+    fn soil_choice(rn: f32, adj: Vec<&Tile>) -> SoilTypes {
+        let water_adjacent = adj.iter()
+                                .find(|x| match **x {
+                                          &Tile::Water(..) => true,
+                                          _ => false,
+                                      })
+                                .is_some();
+        let veg_adjacent = adj.iter()
+                              .find(|x| match **x {
+                                        &Tile::Vegitation(..) => true,
+                                        _ => false,
+                                    })
+                              .is_some();
+        let sedimentary_adjacent = adj.iter()
+                                      .find(|x| match **x {
+            &Tile::Stone(StoneTypes::Sedimentary(..), ..) => true,
+            _ => false,
+        })
+                                      .is_some();
+        if water_adjacent {
+            SoilTypes::Sandy
+        } else if veg_adjacent && water_adjacent {
+            SoilTypes::Peaty
+        } else if veg_adjacent {
+            SoilTypes::Loamy
+        } else if sedimentary_adjacent {
+            SoilTypes::Silty
+        } else if sedimentary_adjacent && water_adjacent {
+            SoilTypes::Clay
+        } else {
+            SoilTypes::Loamy
+        }
+    }
+
+    pub fn rock_type(&self,
+                     adj: Vec<&Tile>,
+                     (x, y): (usize, usize),
+                     height: isize)
+        -> Tile {
         let rn =
-            (self.stone_vein_noise
-                 .get_fbm(&mut [x as f32, y as f32, height as f32], 6) *
-                 10.0) as isize;
+            self.stone_vein_noise
+                .get_fbm(&mut [x as f32, y as f32, height as f32], 2) *
+                100.0;
         let sedimentary = &[SedimentaryRocks::Conglomerate,
                             SedimentaryRocks::Limestone];
         let igneous = &[IgneousRocks::Obsidian, IgneousRocks::Basalt];
         let metamorphic = &[MetamorphicRocks::Marble,
                             MetamorphicRocks::Gneiss];
+        // [Sedimentary]->[Soil]->[Metamorphic]->[Igneous]
         Tile::Stone(// Stone type
                     if height < 10 {
                         let v = World::rock_choice(igneous, rn);
                         StoneTypes::Igneous(v.clone())
-                    } else if height <= 20 {
+                    } else if height as f32 <= SEA_LEVEL - 3.0 {
+                        let v = World::rock_choice(metamorphic, rn);
+                        StoneTypes::Metamorphic(v.clone())
+                    } else if height as f32 <= SEA_LEVEL + 3.0 {
+                        let v = World::soil_choice(rn, adj);
+                        StoneTypes::Soil(v.clone())
+                    } else if height as f32 <= SEA_LEVEL + 13.0 {
                         let v = World::rock_choice(sedimentary, rn);
                         StoneTypes::Sedimentary(v.clone())
                     } else {
@@ -963,7 +1039,11 @@ impl World {
 
                     // State
                     if height < 3 {
-                        if rn < 30 { State::Liquid } else { State::Solid }
+                        if rn < 0.0 {
+                            State::Liquid
+                        } else {
+                            State::Solid
+                        }
                     } else {
                         State::Solid
                     })

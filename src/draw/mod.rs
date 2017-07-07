@@ -71,13 +71,17 @@ pub fn draw_map(root: &mut RootConsole,
             let (cx, cy) = (world.cursor.0 as usize,
                             world.cursor.1 as usize);
             let tiles = &world.map[cy][cx].tiles;
-            let len = (tiles.len() - 1) as i32;
+            let len = tiles.len().checked_sub(1).unwrap_or(0) as i32;
             window.print(1,
                          3,
                          if len < world.level {
-                             tiles[len as usize].describe()
+                             tiles.get(len as usize)
+                                  .unwrap_or(&Tile::Empty)
+                                  .describe()
                          } else {
-                             tiles[world.level as usize].describe()
+                             tiles.get(world.level as usize)
+                                  .unwrap_or(&Tile::Empty)
+                                  .describe()
                          });
             root.set_char_background(cx as i32,
                                      cy as i32,
