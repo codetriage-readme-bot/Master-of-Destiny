@@ -1,5 +1,5 @@
 [root]
-name = "TGoL"
+name = "skyspace"
 version = "0.1.4"
 dependencies = [
  "rand 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
