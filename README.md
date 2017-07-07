@@ -1,19 +1,29 @@
-# The Game of Life
+```
+_________ __
+/   _____/|  | __ ___.__.  ____________  _____     ____    ____
+\_____  \ |  |/ /<   |  | /  ___/\____ \ \__  \  _/ ___\ _/ __ \
+/        \|    <  \___  | \___ \ |  |_> > / __ \_\  \___ \  ___/
+/_______  /|__|_ \ / ____|/____  >|   __/ (____  / \___  > \___  >
+\/      \/ \/          \/ |__|         \/      \/      \/
+```
+
+
+# Skyspace
 ## A Survival City Building Roguelike
 
-In *The Game of Life* you are the first few settlers on a hostile
+In *Skyspace* you are the first few settlers on a hostile
 planet in a far-removed star system. You are all alone, but if you
 succed in showing your homeworld that this new frontier is habitable
 and profitable, more settlers will join you.
 
-*The Game of Life* is a strategically deep, complex (but not
+*Skyspace* is a strategically deep, complex (but not
 complicated), permissive world. It wants to be your sandbox: there are
 as few restrictions as possible on what you can do. You start with
 only a few tools in your toolbox and through your own prowess, smarts
 and enginuity you can expand your abilities. There's no limit to how
 far you can go!
 
-In *The Game of Life* you start out with a single character. This
+In *Skyspace* you start out with a single character. This
 represents your first settler. You designate jobs and your settler
 will proceed to do them. You goal for the first part of the game is to
 survive. If you keep your settler alive long enough, others will start
@@ -26,7 +36,7 @@ gain skill in certain areas, they'll start being able to expand to
 similar areas, as well as completing the jobs they're talented at
 faster.
 
-In *The Game of Life* your entire environment is interacive. You can
+In *Skyspace* your entire environment is interacive. You can
 cut down trees, gather plants, delve into mountains, re-channel
 rivers, dig holes, harness the flow of magma from underground and
 build any number of things. Plants have different medicinal properties
