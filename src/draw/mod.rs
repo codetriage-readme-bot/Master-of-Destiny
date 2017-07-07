@@ -32,14 +32,11 @@ pub fn draw_map(root: &mut RootConsole,
             .zip(0..wid)
         {
             let tiles = &world.map[my][mx].tiles;
+            let len = tiles.len() - 1;
 
             match tiles.get(world.level as usize) {
                 None => {
-                    match tiles.get((world.level - 1) as usize) {
-                        None => (Tile::Empty).draw_char(root, (x, y)),
-                        Some(tile) => tile.draw_char(root, (x, y)),
-                    };
-                    (Tile::Empty).draw_char(root, (x, y));
+                    tiles[len].draw_char(root, (x, y));
                 }
                 Some(tile) => tile.draw_char(root, (x, y)),
             }
@@ -69,17 +66,19 @@ pub fn draw_map(root: &mut RootConsole,
             (world.cursor.1 >= 0 &&
              world.cursor.1 < world.map.len() as i32)
         {
+            let (cx, cy) = (world.cursor.0 as usize,
+                            world.cursor.1 as usize);
+            let tiles = &world.map[cy][cx].tiles;
+            let len = (tiles.len() - 1) as i32;
             window.print(1,
                          3,
-                         world.map[world.cursor.1 as usize][world.cursor
-                                                            .0 as
-                                                            usize]
-                         .tiles
-                         .get(world.level as usize)
-                         .unwrap_or(&Tile::Empty)
-                         .describe());
-            root.set_char_background(world.cursor.0,
-                                     world.cursor.1,
+                         if len < world.level {
+                             tiles[len as usize].describe()
+                         } else {
+                             tiles[world.level as usize].describe()
+                         });
+            root.set_char_background(cx as i32,
+                                     cy as i32,
                                      Color::new(255, 255, 0),
                                      BackgroundFlag::Lighten);
         }

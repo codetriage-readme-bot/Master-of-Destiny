@@ -3,7 +3,7 @@
 ## Will Trovinger
 
 - [ ] Work tileset
-- [ ]  Explore Dwarf Fortress
+- [ ] Explore Dwarf Fortress
 
 ## Chris Dumas
 
@@ -16,5 +16,5 @@
 - [x] Generate rocks properly
 - [ ] Fix water generation
 - [ ] Generate dirt
-- [ ] Improve perlin noise generator, perhaps switch to diamond
+- [ ] Use tiles
 - [ ] Add tree canopies

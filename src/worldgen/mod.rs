@@ -673,12 +673,7 @@ impl DrawChar for Tile {
                                  Color::new(227, 140, 45),
                                  Color::new(255, 0, 0));
             }
-            &Tile::Empty => {
-                root.put_char(pos.0 as i32,
-                              pos.1 as i32,
-                              ' ',
-                              BackgroundFlag::None);
-            }
+            &Tile::Empty => {}
         }
     }
 }
@@ -742,8 +737,8 @@ fn add_hill(heightmap: *mut tcod_sys::TCOD_heightmap_t,
     }
 }
 
-const THRESHOLD: f32 = 1.0;
-const WATER_THRESHOLD: f32 = 10.0;
+const THRESHOLD: f32 = 0.5;
+const SEA_LEVEL: f32 = 23.0;
 const VEG_THRESHOLD: f32 = 200.0;
 const RAMP_THRESHOLD: f32 = 0.015;
 impl World {
@@ -820,12 +815,12 @@ impl World {
 
                 let mut tiles: Vec<Tile> = vec![];
                 let mut biomes: Vec<Biome> = vec![];
-                let wh = height - 9.0;
-                if wh <= 7.0 {
-                    for z in 0..(wh as isize - 1) {
+                if height <= SEA_LEVEL {
+                    let dist = (SEA_LEVEL - height) as isize;
+                    for z in 0..dist {
                         tiles.push(Tile::Water(World::purity(),
                                                State::Liquid,
-                                               wh as i32 - z as i32));
+                                               (dist - z) as i32));
                     }
                 } else {
                     for z in 0..(height as isize - 1) {
@@ -842,7 +837,9 @@ impl World {
                                                                         z,
                                                                     b));
                                     } else {
-                                        tiles.push(Tile::Vegitation(VegTypes::Treetrunk, 1, State::Solid));
+                                        tiles.push(Tile::Vegitation(VegTypes::Treetrunk,
+                                                                    1,
+                                                                    State::Solid));
                                     }
                                 }
                             }
@@ -881,6 +878,10 @@ impl World {
 
         println!("Done world generation!");
         world
+    }
+
+    pub unsafe fn delete_heightmap(&self) {
+        tcod_sys::TCOD_heightmap_delete(self.heightmap);
     }
 
     unsafe fn get_height(&self, x: usize, y: usize) -> f32 {

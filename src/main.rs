@@ -18,12 +18,18 @@ use physics::liquid;
 use physics::stone;
 use worldgen::{World, WorldState, clamp};
 
+const SHOW_FONT: &'static str = "cheepicus16x16_ro.png";
+const SHOW_SIZE: (i32, i32) = (100, 60);
+const DEV_FONT: &'static str = "terminal12x12_gs_ro.png";
+const DEV_SIZE: (i32, i32) = (200, 100);
+
+
 fn main() {
-    let screen_size = (120, 60);
+    let screen_size = DEV_SIZE;
     let mut root = RootConsole::initializer()
         .size(screen_size.0, screen_size.1)
         .title("The Game of Life")
-        .font("cheepicus16x16_ro.png", FontLayout::AsciiInRow)
+        .font(DEV_FONT, FontLayout::AsciiInRow)
         .init();
 
     tcod::system::set_fps(20);
@@ -116,5 +122,9 @@ fn main() {
             }
         }
         draw_map(&mut root, &world_state, show_hud);
+    }
+
+    unsafe {
+        world_state.map.delete_heightmap();
     }
 }

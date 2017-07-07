@@ -1,7 +1,8 @@
 [package]
-name = "gandorf"
-version = "0.1.0"
-authors = ["christopherdumas"]
+name = "TGoL"
+version = "0.1.4"
+authors = ["Christopher Dumas <christopherdumas@gmail.com>",
+"William Trovinger <william.trovinger@icloud.com"]
 
 [dependencies]
 tcod = "0.11"
