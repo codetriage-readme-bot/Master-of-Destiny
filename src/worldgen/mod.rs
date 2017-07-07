@@ -799,7 +799,7 @@ impl World {
             stone_vein_noise: Noise::init_with_dimensions(3)
                 .lacunarity(0.43)
                 .hurst(-0.9)
-                .noise_type(NoiseType::Simplex)
+                .noise_type(NoiseType::Perlin)
                 .random(random::Rng::new_with_seed(random::Algo::MT, seed))
                 .init(),
         };
@@ -932,6 +932,7 @@ impl World {
     }
 
     fn rock_choice<T: Clone>(list: &[T; 2], rn: isize) -> T {
+        println!("{}", rn);
         if rn < 0 {
             list[0].clone()
         } else {
@@ -939,12 +940,10 @@ impl World {
         }
     }
     pub fn rock_type(&self, (x, y): (usize, usize), height: isize) -> Tile {
-        let rn = self.stone_vein_noise
-                     .get_turbulence(&mut [x as f32,
-                                           y as f32,
-                                           height as f32],
-                                     3) as isize;
-
+        let rn =
+            (self.stone_vein_noise
+                 .get_fbm(&mut [x as f32, y as f32, height as f32], 6) *
+                 10.0) as isize;
         let sedimentary = &[SedimentaryRocks::Conglomerate,
                             SedimentaryRocks::Limestone];
         let igneous = &[IgneousRocks::Obsidian, IgneousRocks::Basalt];
