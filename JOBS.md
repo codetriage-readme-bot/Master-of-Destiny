@@ -20,6 +20,6 @@
 - [x] Generate rocks properly
 - [x] Fix water generation
 - [x] Get rock viens working
-- [ ] Generate dirt
+- [x] Generate dirt
 - [ ] Use tiles
 - [ ] Add tree canopies

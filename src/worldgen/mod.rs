@@ -41,7 +41,10 @@ fn can_be_restricted(tile: Tile) -> bool {
 }
 
 fn adjacent((x, y): (usize, usize)) -> Vec<(usize, usize)> {
-    vec![(x + 1, y), (x - 1, y), (x, y - 1), (x, y + 1)]
+    vec![(x + 1, y),
+         (x.checked_sub(1).unwrap_or(0), y),
+         (x, y.checked_sub(1).unwrap_or(0)),
+         (x, y + 1)]
 }
 
 /////// ROCK
@@ -423,10 +426,10 @@ impl DrawChar for VegTypes {
 
 type Ferenheight = i32;
 type Percent = usize;
+#[derive(Copy, Clone)]
 pub struct Biome {
     temperature_high_f: Ferenheight,
     temperature_low_f: Ferenheight,
-    name: String,
     humidity_pcnt: Percent,
     percipitation_chance: Percent,
 }
@@ -676,11 +679,13 @@ impl DrawChar for Tile {
 // A unit is a 1x1 cross section of the layered world, including a ref
 // to the biome its part of.
 // Each tile is 1 foot tall.
+#[derive(Clone)]
 pub struct Unit {
-    pub tiles: Vec<Tile>,
     pub biomes: Vec<Biome>,
+    pub tiles: Vec<Tile>,
 }
 
+// World contains the current state of the PHYSICAL world
 pub struct World {
     pub map: Vec<Vec<Unit>>,
     heightmap: *mut tcod_sys::TCOD_heightmap_t,
@@ -810,40 +815,11 @@ impl World {
             let mut line = vec![];
             for x in 0..sx {
                 let height = unsafe { world.get_height(x, y) };
-
-                let ll = line.len();
-                let wl = world.len();
-                let adj = adjacent((x, y))
-                    .iter()
-                    .map(|p| if x < ll && y >= wl {
-                             line.get(x)
-                                 .unwrap_or(&Unit {
-                                                biomes: vec![],
-                                                tiles: vec![],
-                                            })
-                                 .tiles
-                                 .get(height as usize)
-                                 .unwrap_or(&Tile::Empty)
-                         } else if y < wl {
-                             world[y]
-                                 .get(x)
-                                 .unwrap_or(&Unit {
-                                                biomes: vec![],
-                                                tiles: vec![],
-                                            })
-                                 .tiles
-                                 .get(height as usize)
-                                 .unwrap_or(&Tile::Empty)
-                         } else {
-                             &Tile::Empty
-                         })
-                    .collect::<Vec<_>>();
                 let slope = unsafe {
                     tcod_sys::TCOD_heightmap_get_slope(heightmap,
                                                        x as i32,
                                                        y as i32)
                 };
-
                 let mut tiles: Vec<Tile> = vec![];
                 let mut biomes: Vec<Biome> = vec![];
                 if height <= SEA_LEVEL {
@@ -854,9 +830,31 @@ impl World {
                                                (dist - z) as i32));
                     }
                 } else {
+                    let adj = adjacent((x, y))
+                        .iter()
+                        .map(|&(x, y)| {
+                            let list = if y > world.len() {
+                                vec![]
+                            } else if y == world.len() {
+                                line.clone()
+                            } else {
+                                world[y].clone()
+                            };
+
+                            if x >= list.len() {
+                                Tile::Empty
+                            } else {
+                                if height as usize >= list[x].tiles.len() {
+                                    Tile::Empty
+                                } else {
+                                    list[x].tiles[height as usize]
+                                }
+                            }
+                        })
+                        .collect::<Vec<_>>();
                     for z in 0..(height as isize - 1) {
                         biomes.push(world.biome_from_height(z));
-                        tiles.push(world.rock_type(adj, (x, y), z));
+                        tiles.push(world.rock_type(adj.clone(), (x, y), z));
                     }
                     if height <= VEG_THRESHOLD {
                         match world.get_vegetation((x, y)) {
@@ -887,14 +885,13 @@ impl World {
                         let tile = tile.unwrap();
                         let last = (tiles.len() - 1) as usize;
                         if can_be_restricted(tile) {
-                            if slope < -RAMP_THRESHOLD {
-                                tiles[last] =
-                            Tile::Ramp(restricted_from_tile(tile.clone()),
-                                       Slope::Down);
+                            let r = restricted_from_tile(tile.clone());
+                            tiles[last] = if slope < -RAMP_THRESHOLD {
+                                Tile::Ramp(r, Slope::Down)
                             } else if slope > RAMP_THRESHOLD {
-                                tiles[last] =
-                            Tile::Ramp(restricted_from_tile(tile.clone()),
-                                       Slope::Up);
+                                Tile::Ramp(r, Slope::Up)
+                            } else {
+                                tile
                             }
                         }
                     }
@@ -956,7 +953,6 @@ impl World {
         Biome {
             temperature_high_f: 75,
             temperature_low_f: 52,
-            name: "LowMed".to_string(),
             humidity_pcnt: 60,
             percipitation_chance: 70,
         }
@@ -970,25 +966,28 @@ impl World {
         }
     }
 
-    fn soil_choice(rn: f32, adj: Vec<&Tile>) -> SoilTypes {
+    fn soil_choice(rn: f32, adj: Vec<Tile>) -> SoilTypes {
         let water_adjacent = adj.iter()
                                 .find(|x| match **x {
-                                          &Tile::Water(..) => true,
+                                          Tile::Water(..) => true,
                                           _ => false,
                                       })
                                 .is_some();
         let veg_adjacent = adj.iter()
                               .find(|x| match **x {
-                                        &Tile::Vegitation(..) => true,
+                                        Tile::Vegitation(..) => true,
                                         _ => false,
                                     })
                               .is_some();
-        let sedimentary_adjacent = adj.iter()
-                                      .find(|x| match **x {
-            &Tile::Stone(StoneTypes::Sedimentary(..), ..) => true,
-            _ => false,
-        })
-                                      .is_some();
+        let sedimentary_adjacent =
+            adj.iter()
+               .find(|x| match **x {
+                         Tile::Stone(StoneTypes::Sedimentary(..), ..) => {
+                             true
+                         }
+                         _ => false,
+                     })
+               .is_some();
         if water_adjacent {
             SoilTypes::Sandy
         } else if veg_adjacent && water_adjacent {
@@ -1005,7 +1004,7 @@ impl World {
     }
 
     pub fn rock_type(&self,
-                     adj: Vec<&Tile>,
+                     adj: Vec<Tile>,
                      (x, y): (usize, usize),
                      height: isize)
         -> Tile {

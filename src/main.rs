@@ -21,7 +21,7 @@ use worldgen::{World, WorldState, clamp};
 const SHOW_FONT: &'static str = "cheepicus16x16_ro.png";
 const SHOW_SIZE: (i32, i32) = (100, 60);
 const DEV_FONT: &'static str = "terminal12x12_gs_ro.png";
-const DEV_SIZE: (i32, i32) = (200, 100);
+const DEV_SIZE: (i32, i32) = (150, 65);
 
 
 fn main() {
