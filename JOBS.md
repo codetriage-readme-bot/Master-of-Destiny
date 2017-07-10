@@ -21,7 +21,9 @@
 - [x] Fix water generation
 - [x] Get rock viens working
 - [x] Generate dirt
-- [ ] Dig hills
+- [x] Dig hills
+- [ ] Night/day cycle
+- [ ] Terrain collision detection
 - [ ] Generate biomes by height
 - [ ] Generate biomes by adjacency and rainfall
 - [ ] Generate vegitation by biome

@@ -2,7 +2,8 @@ use tcod::{OffscreenConsole, RootConsole};
 use tcod::colors::Color;
 use tcod::console;
 use tcod::console::{BackgroundFlag, Console};
-use worldgen::{Tile, WorldState};
+use worldgen::WorldState;
+use worldgen::terrain::Tile;
 
 pub trait DrawChar {
     fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize));
