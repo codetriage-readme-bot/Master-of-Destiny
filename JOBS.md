@@ -21,5 +21,10 @@
 - [x] Fix water generation
 - [x] Get rock viens working
 - [x] Generate dirt
+- [ ] Dig hills
+- [ ] Generate biomes by height
+- [ ] Generate biomes by adjacency and rainfall
+- [ ] Generate vegitation by biome
+- [ ] Generate loam under plants
 - [ ] Use tiles
 - [ ] Add tree canopies

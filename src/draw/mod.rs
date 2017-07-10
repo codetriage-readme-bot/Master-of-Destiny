@@ -37,8 +37,8 @@ pub fn draw_map(root: &mut RootConsole,
             match tiles.get(world.level as usize) {
                 None => {
                     tiles.get(len)
-                         .unwrap_or(&Tile::Empty)
-                         .draw_char(root, (x, y));
+                        .unwrap_or(&Tile::Empty)
+                        .draw_char(root, (x, y));
                 }
                 Some(tile) => tile.draw_char(root, (x, y)),
             }
@@ -64,9 +64,9 @@ pub fn draw_map(root: &mut RootConsole,
                              world.screen.0,
                              world.screen.1));
         if (world.cursor.0 >= 0 &&
-                world.cursor.0 < world.map[0].len() as i32) &&
+            world.cursor.0 < world.map[0].len() as i32) &&
             (world.cursor.1 >= 0 &&
-                 world.cursor.1 < world.map.len() as i32)
+             world.cursor.1 < world.map.len() as i32)
         {
             let (cx, cy) = (world.cursor.0 as usize,
                             world.cursor.1 as usize);
@@ -76,12 +76,12 @@ pub fn draw_map(root: &mut RootConsole,
                          3,
                          if len < world.level {
                              tiles.get(len as usize)
-                                  .unwrap_or(&Tile::Empty)
-                                  .describe()
+                                 .unwrap_or(&Tile::Empty)
+                                 .describe()
                          } else {
                              tiles.get(world.level as usize)
-                                  .unwrap_or(&Tile::Empty)
-                                  .describe()
+                                 .unwrap_or(&Tile::Empty)
+                                 .describe()
                          });
             root.set_char_background(cx as i32,
                                      cy as i32,

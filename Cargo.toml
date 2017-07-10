@@ -1,6 +1,9 @@
 [package]
 name = "skyspace"
 version = "0.1.4"
+repository = "https://github.com/christopherdumas/Skyspace"
+deskription = "A sci-fi citybuilding survival roguelike-like. Graphics and UI/UX design by William Trovinger, gameplay and system design and programming by Christopher Dumas."
+homepage = "christopherdumas.github.io/Skyspace"
 authors = ["Christopher Dumas <christopherdumas@gmail.com>",
 "William Trovinger <william.trovinger@icloud.com"]
 

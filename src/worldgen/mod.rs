@@ -737,6 +737,32 @@ fn add_hill(heightmap: *mut tcod_sys::TCOD_heightmap_t,
     }
 }
 
+fn dig_hill(heightmap: *mut tcod_sys::TCOD_heightmap_t,
+            (hmw, hmh): (usize, usize),
+            num_hills: i32,
+            base_radius: f32,
+            radius: f32,
+            height: f32,
+            rndn: tcod_sys::TCOD_random_t) {
+    unsafe {
+        for _ in 0..num_hills {
+            let radius =
+                tcod_sys::TCOD_random_get_float(rndn,
+                                                base_radius *
+                                                    (1.0 - radius),
+                                                base_radius *
+                                                    (1.0 + radius));
+            let xh = tcod_sys::TCOD_random_get_int(rndn, 0, hmw as i32 - 1);
+            let yh = tcod_sys::TCOD_random_get_int(rndn, 0, hmh as i32 - 1);
+            tcod_sys::TCOD_heightmap_dig_hill(heightmap,
+                                              xh as f32,
+                                              yh as f32,
+                                              radius,
+                                              height);
+        }
+    }
+}
+
 const THRESHOLD: f32 = 0.5;
 const SEA_LEVEL: f32 = 17.0;
 const VEG_THRESHOLD: f32 = 200.0;
@@ -783,12 +809,12 @@ impl World {
                      0.3,
                      rndn);
             tcod_sys::TCOD_heightmap_normalize(heightmap, 0.0, 100.0);
-            add_hill(heightmap,
+            dig_hill(heightmap,
                      size,
-                     150,
-                     16.0 * sx as f32 / 100.0,
+                     300,
+                     16.0 * sx as f32 / 200.0,
+                     0.6,
                      0.3,
-                     0.2,
                      rndn);
             tcod_sys::TCOD_heightmap_normalize(heightmap, 0.0, 100.0);
             tcod_sys::TCOD_heightmap_rain_erosion(heightmap,
@@ -966,7 +992,7 @@ impl World {
         }
     }
 
-    fn soil_choice(rn: f32, adj: Vec<Tile>) -> SoilTypes {
+    fn soil_choice(adj: Vec<Tile>) -> SoilTypes {
         let water_adjacent = adj.iter()
                                 .find(|x| match **x {
                                           Tile::Water(..) => true,
@@ -1026,7 +1052,7 @@ impl World {
                         let v = World::rock_choice(metamorphic, rn);
                         StoneTypes::Metamorphic(v.clone())
                     } else if height as f32 <= SEA_LEVEL + 3.0 {
-                        let v = World::soil_choice(rn, adj);
+                        let v = World::soil_choice(adj);
                         StoneTypes::Soil(v.clone())
                     } else if height as f32 <= SEA_LEVEL + 13.0 {
                         let v = World::rock_choice(sedimentary, rn);
@@ -1101,6 +1127,8 @@ pub struct WorldState {
 
 impl WorldState {
     pub fn new(world: World, s: (usize, usize)) -> WorldState {
+        // Find the highest height in the map's row. Max start's out
+        // as None, so we have to initialize it if it is.
         let f = |vec: &Vec<Unit>| -> Option<usize> {
             vec.iter()
                .fold(None, |max, unit: &Unit| match max {
@@ -1114,6 +1142,8 @@ impl WorldState {
                 }
             })
         };
+
+        // find the highest height in this list of rows. Same as above.
         let toplevel = world.map
                             .iter()
                             .fold(None, |max, ref vec| match max {
