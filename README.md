@@ -78,11 +78,11 @@ cleanup, from a refactor to prehaps a performance issue.
 Authors:
 
 - William Trovinger
-> Github: @mrgrish
-> Email: william.trovinger@icloud.com
-> Job: Graphic artist and UX/UI designer, game interface/mechanics designer
+> Github: @mrgrish<br>
+> Email: william.trovinger@icloud.com<br>
+> Job: Graphic artist and UX/UI designer, game interface/mechanics designer<br>
 
 - Christopher Dumas
-> Github: @christopherdumas
-> Email: christopherdumas@gmail.com
-> Job: Lead programmer and game simulation/mechanics expert
+> Github: @christopherdumas<br>
+> Email: christopherdumas@gmail.com<br>
+> Job: Lead programmer and game simulation/mechanics expert<br>
