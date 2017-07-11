@@ -1,10 +1,10 @@
 <pre>
-  _________ __                                                    
- /   _____/|  | __ ___.__.  ____________  _____     ____    ____  
- \_____  \ |  |/ /<   |  | /  ___/\____ \ \__  \  _/ ___\ _/ __ \ 
- /        \|    <  \___  | \___ \ |  |_> > / __ \_\  \___ \  ___/ 
+_________ __
+/   _____/|  | __ ___.__.  ____________  _____     ____    ____
+\_____  \ |  |/ /<   |  | /  ___/\____ \ \__  \  _/ ___\ _/ __ \
+/        \|    <  \___  | \___ \ |  |_> > / __ \_\  \___ \  ___/
 /_______  /|__|_ \ / ____|/____  >|   __/ (____  / \___  > \___  >
-        \/      \/ \/          \/ |__|         \/      \/      \/ 
+\/      \/ \/          \/ |__|         \/      \/      \/
 </pre>
 
 
@@ -57,7 +57,11 @@ aliens.
 
 ## Feature List (1000ft view)
 
-- [ ] Overall world generation (mountains, hills, plants, cliffs, water)
+After about very two-three stages, I'll do some kind of codebase
+cleanup, from a refactor to prehaps a performance issue.
+
+- [x] Overall world generation (mountains, hills, plants, cliffs, water)
+- [ ] Time
 - [ ] Seasons
 - [ ] Animal AI (eating, sleeping, breading, hunting)
 - [ ] Settler AI (same as animal, but with social abilities)
