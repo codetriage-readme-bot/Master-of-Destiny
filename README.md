@@ -71,3 +71,18 @@ cleanup, from a refactor to prehaps a performance issue.
 - [ ] Constructive directives for settler AI
 - [ ] Workshops, constructions
 - [ ] Machenery
+
+
+## Credits
+
+Authors:
+
+- William Trovinger
+> Github: @mrgrish
+> Email: william.trovinger@icloud.com
+> Job: Graphic artist and UX/UI designer, game interface/mechanics designer
+
+- Christopher Dumas
+> Github: @christopherdumas
+> Email: christopherdumas@gmail.com
+> Job: Lead programmer and game simulation/mechanics expert
