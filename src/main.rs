@@ -1,7 +1,8 @@
 #![feature(box_syntax, box_patterns)]
 extern crate tcod;
+extern crate tcod_sys;
 
-use tcod::{FontLayout, RootConsole};
+use tcod::{FontLayout, Renderer, RootConsole};
 use tcod::Console;
 use tcod::input;
 use tcod::input::KeyCode;
@@ -16,22 +17,41 @@ use draw::draw_map;
 use physics::liquid;
 use physics::stone;
 use worldgen::{World, WorldState, clamp};
+use worldgen::terrain::{BASE, TILES};
 
-const SHOW_FONT: &'static str = "cheepicus16x16_ro.png";
+const SHOW_FONT: &'static str = "assets/master16x16_ro.png";
+const DEV_FONT: &'static str = "assets/terminal12x12_gs_ro.png";
+
 const SHOW_SIZE: (i32, i32) = (100, 60);
-const DEV_FONT: &'static str = "terminal12x12_gs_ro.png";
 const DEV_SIZE: (i32, i32) = (150, 75);
+const MAP_SIZE: (usize, usize) = (160, 160);
+
 const MOVE_DIST: i32 = 5;
-const MAP_SIZE: (usize, usize) = (240, 240);
 const CYCLE_LENGTH: usize = 500;
 
+unsafe fn load_custom_font(rows: usize) {
+    let mut loc = BASE;
+    for y in 17..(17 + rows) {
+        tcod_sys::TCOD_console_map_ascii_codes_to_font(loc as i32,
+                                                       16,
+                                                       0,
+                                                       y as i32);
+        loc += 16;
+    }
+}
+
 fn main() {
-    let screen_size = DEV_SIZE;
+    let screen_size = SHOW_SIZE;
     let mut root = RootConsole::initializer()
         .size(screen_size.0, screen_size.1)
         .title("Skyspace")
         .font(SHOW_FONT, FontLayout::AsciiInRow)
         .init();
+    if TILES {
+        unsafe {
+            load_custom_font(2);
+        }
+    }
 
     tcod::system::set_fps(20);
     root.set_keyboard_repeat(0, 0);
@@ -49,8 +69,8 @@ fn main() {
     while !root.window_closed() {
         time += time::get_world_time() - world_time;
         time %= CYCLE_LENGTH;
-
         world_time = time::get_world_time();
+
         world_state.time_of_day = time::calculate_time_of_day(time,
                                                               CYCLE_LENGTH);
 
@@ -126,7 +146,7 @@ fn main() {
                 }
             }
         }
-        draw_map(&mut root, &world_state, show_hud);
+        draw_map(&mut root, &world_state, show_hud, time);
     }
 
     unsafe {

@@ -1,13 +1,43 @@
 extern crate tcod;
 
+use std;
+
 use draw::{Describe, DrawChar};
 use tcod::colors::Color;
 
 use tcod::RootConsole;
 use tcod::chars;
 use tcod::console::{BackgroundFlag, Console};
-use tcod::map;
 
+pub const TILES: bool = false;
+pub const BASE: u32 = 256;
+const TILES_BENTGRASS: u32 = BASE;
+const TILES_BLUEGRASS: u32 = (BASE + 1);
+const TILES_CHICKWEED: u32 = (BASE + 2);
+const TILES_DANDELION: u32 = (BASE + 3);
+const TILES_PASTUREGRASS: u32 = (BASE + 4);
+const TILES_RYEGRASS: u32 = (BASE + 5);
+const TILES_CLAY: u32 = (BASE + 6);
+const TILES_CONGLOMERATE: u32 = (BASE + 7);
+const TILES_GNEISS: u32 = (BASE + 8);
+const TILES_LIMESTONE: u32 = (BASE + 9);
+const TILES_LOAMY: u32 = (BASE + 10);
+const TILES_MARBLE: u32 = (BASE + 11);
+const TILES_OBSIDIAN: u32 = (BASE + 12);
+const TILES_PEATY: u32 = (BASE + 13);
+const TILES_SANDY: u32 = (BASE + 14);
+const TILES_SILTY: u32 = (BASE + 15);
+const TILES_WATER: u32 = (BASE + 16);
+const TILES_LAVA: u32 = (BASE + 17);
+const TILES_CRABAPPLE: u32 = (BASE + 18);
+const TILES_BASALT: u32 = (BASE + 19);
+const TILES_BANYON: u32 = (BASE + 20);
+const TILES_BROOMSHRUB: u32 = (BASE + 21);
+const TILES_PINE: u32 = (BASE + 22);
+const TILES_REDBUD: u32 = (BASE + 23);
+const TILES_REDWOOD: u32 = (BASE + 24);
+const TILES_RHODODENDRON: u32 = (BASE + 25);
+const TILES_TREETRUNK: u32 = (BASE + 26);
 
 /////// ROCK
 // Possible igneous rock kinds
@@ -30,17 +60,29 @@ impl DrawChar for IgneousRocks {
     fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
         match self {
             &IgneousRocks::Obsidian => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_OBSIDIAN)
+                        .unwrap() as char
+                } else {
+                    chars::BLOCK1
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 chars::BLOCK1,
+                                 chr,
                                  Color::new(12, 12, 12),
                                  Color::new(2, 2, 2))
             }
             &IgneousRocks::Basalt => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_BASALT)
+                        .unwrap() as char
+                } else {
+                    chars::BLOCK3
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 chars::BLOCK2,
-                                 Color::new(20, 20, 12),
+                                 chr,
+                                 Color::new(40, 40, 12),
                                  Color::new(2, 2, 2))
             }
         };
@@ -67,16 +109,28 @@ impl DrawChar for MetamorphicRocks {
     fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
         match self {
             &MetamorphicRocks::Gneiss => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_GNEISS)
+                        .unwrap() as char
+                } else {
+                    chars::BLOCK2
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 chars::BLOCK2,
+                                 chr,
                                  Color::new(125, 85, 62),
                                  Color::new(2, 2, 2))
             }
             &MetamorphicRocks::Marble => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_MARBLE)
+                        .unwrap() as char
+                } else {
+                    chars::BLOCK1
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 chars::BLOCK1,
+                                 chr,
                                  Color::new(250, 250, 250),
                                  Color::new(12, 12, 12))
             }
@@ -108,16 +162,28 @@ impl DrawChar for SedimentaryRocks {
     fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
         match self {
             &SedimentaryRocks::Limestone => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_LIMESTONE)
+                        .unwrap() as char
+                } else {
+                    chars::BLOCK3
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 chars::BLOCK3,
+                                 chr,
                                  Color::new(125, 85, 62),
                                  Color::new(255, 255, 255))
             }
             &SedimentaryRocks::Conglomerate => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_CONGLOMERATE)
+                        .unwrap() as char
+                } else {
+                    chars::BLOCK2
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 chars::BLOCK2,
+                                 chr,
                                  Color::new(130, 100, 50),
                                  Color::new(200, 200, 200))
             }
@@ -151,37 +217,66 @@ impl DrawChar for SoilTypes {
     fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
         match self {
             &SoilTypes::Clay => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_CLAY).unwrap() as char
+                } else {
+                    '='
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 '=',
+                                 chr,
                                  Color::new(167, 107, 41),
                                  Color::new(191, 100, 35))
             }
             &SoilTypes::Sandy => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_SANDY)
+                        .unwrap() as char
+                } else {
+                    '='
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 '=',
+                                 chr,
                                  Color::new(167, 107, 41),
                                  Color::new(191, 100, 35))
             }
             &SoilTypes::Silty => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_SILTY)
+                        .unwrap() as char
+                } else {
+                    '='
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 '=',
+                                 chr,
                                  Color::new(133, 126, 108),
                                  Color::new(99, 94, 80))
             }
             &SoilTypes::Peaty => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_PEATY)
+                        .unwrap() as char
+                } else {
+                    '='
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 '=',
+                                 chr,
                                  Color::new(159, 145, 95),
                                  Color::new(119, 108, 71))
             }
             &SoilTypes::Loamy => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_LOAMY)
+                        .unwrap() as char
+                } else {
+                    '='
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 '=',
+                                 chr,
                                  Color::new(86, 59, 56),
                                  Color::new(64, 44, 41))
             }   
@@ -286,97 +381,174 @@ impl DrawChar for VegTypes {
     fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
         match self {
             &VegTypes::Bluegrass => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_PASTUREGRASS)
+                        .unwrap() as char
+                } else {
+                    '"'
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 '"',
+                                 chr,
                                  Color::new(0, 50, 200),
                                  Color::new(50, 200, 50));
             }
             &VegTypes::Treetrunk => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_TREETRUNK)
+                        .unwrap() as char
+                } else {
+                    'O'
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 'O',
+                                 chr,
                                  Color::new(139, 69, 19),
                                  Color::new(50, 200, 50));
             }
             &VegTypes::Bentgrass => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_BENTGRASS)
+                        .unwrap() as char
+                } else {
+                    ','
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 ',',
+                                 chr,
                                  Color::new(0, 255, 0),
                                  Color::new(50, 200, 50));
             }
             &VegTypes::Ryegrass => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_RYEGRASS)
+                        .unwrap() as char
+                } else {
+                    '`'
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 '`',
+                                 chr,
                                  Color::new(150, 200, 0),
                                  Color::new(50, 200, 50));
             }
 
             &VegTypes::Dandelion => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_DANDELION)
+                        .unwrap() as char
+                } else {
+                    chars::EXCLAM_DOUBLE
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 chars::EXCLAM_DOUBLE,
+                                 chr,
                                  Color::new(255, 255, 255),
                                  Color::new(50, 200, 50));
             }
             &VegTypes::Chickweed => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_CHICKWEED)
+                        .unwrap() as char
+                } else {
+                    '!'
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 '!',
+                                 chr,
                                  Color::new(255, 255, 254),
                                  Color::new(30, 190, 30));
             }
 
             &VegTypes::BroomShrub => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_BROOMSHRUB)
+                        .unwrap() as char
+                } else {
+                    '\u{f4}'
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 '\u{f4}',
+                                 chr,
                                  Color::new(79, 121, 66),
                                  Color::new(227, 255, 0));
             }
             &VegTypes::Rhododendron => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_RHODODENDRON)
+                        .unwrap() as char
+                } else {
+                    '\u{f4}'
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 '\u{f4}',
+                                 chr,
                                  Color::new(176, 90, 100),
                                  Color::new(227, 255, 0));
             }
 
             &VegTypes::Crabapple => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_CRABAPPLE)
+                        .unwrap() as char
+                } else {
+                    chars::CLUB
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 chars::CLUB,
+                                 chr,
                                  Color::new(186, 85, 211),
                                  Color::new(50, 200, 50));
             }
             &VegTypes::Redbud => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_REDBUD)
+                        .unwrap() as char
+                } else {
+                    chars::CLUB
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 chars::CLUB,
+                                 chr,
                                  Color::new(216, 191, 216),
                                  Color::new(50, 200, 50));
             }
 
             &VegTypes::Pine => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_PINE).unwrap() as char
+                } else {
+                    chars::ARROW_N
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 chars::ARROW_N,
+                                 chr,
                                  Color::new(255, 255, 250),
                                  Color::new(50, 200, 50));
             }
             &VegTypes::Redwood => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_REDWOOD)
+                        .unwrap() as char
+                } else {
+                    '\u{17}'
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 '\u{17}',
+                                 chr,
                                  Color::new(255, 100, 100),
                                  Color::new(50, 200, 50));
             }
             &VegTypes::Banyon => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_BANYON)
+                        .unwrap() as char
+                } else {
+                    chars::CLUB
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 chars::CLUB,
+                                 chr,
                                  Color::new(255, 255, 255),
                                  Color::new(50, 200, 50));
             }
@@ -452,9 +624,14 @@ impl DrawChar for RestrictedTile {
                 s.draw_char(root, pos)
             }
             &RestrictedTile::Stone(_, State::Liquid) => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_LAVA).unwrap() as char
+                } else {
+                    '~'
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 '~',
+                                 chr,
                                  Color::new(0, 0, 0),
                                  Color::new(255, 0, 0));
             }   
@@ -582,6 +759,12 @@ impl DrawChar for Tile {
             }
             &Tile::Stone(ref s, State::Solid) => s.draw_char(root, pos),
             &Tile::Stone(_, State::Liquid) => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_OBSIDIAN)
+                        .unwrap() as char
+                } else {
+                    chars::BLOCK1
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  '~',
@@ -590,6 +773,12 @@ impl DrawChar for Tile {
             }
             &Tile::Stone(_, State::Gas) => panic!("Stones can't be a gas!"),
             &Tile::Water(_, State::Solid, _) => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_OBSIDIAN)
+                        .unwrap() as char
+                } else {
+                    chars::BLOCK1
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  '#',
@@ -597,10 +786,16 @@ impl DrawChar for Tile {
                                  Color::new(100, 255, 100));
             }
             &Tile::Water(_, State::Liquid, ref depth) => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_WATER)
+                        .unwrap() as char
+                } else {
+                    '\u{f7}'
+                };
                 if depth <= &2 {
                     root.put_char_ex(pos.0 as i32,
                                      pos.1 as i32,
-                                     '\u{f7}',
+                                     chr,
                                      Color::new(0, 105, 148),
                                      Color::new(0, 159, 225));
                 } else {
@@ -617,6 +812,12 @@ impl DrawChar for Tile {
                 }
             }   
             &Tile::Water(_, State::Gas, _) => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_OBSIDIAN)
+                        .unwrap() as char
+                } else {
+                    chars::BLOCK1
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  '\u{a7}',
@@ -625,6 +826,12 @@ impl DrawChar for Tile {
             }
             &Tile::Vegitation(ref v, ..) => v.draw_char(root, pos),
             &Tile::Fire => {
+                let chr = if TILES {
+                    std::char::from_u32(TILES_OBSIDIAN)
+                        .unwrap() as char
+                } else {
+                    chars::BLOCK1
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chars::YEN,

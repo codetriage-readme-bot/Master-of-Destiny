@@ -22,11 +22,14 @@
 - [x] Get rock viens working
 - [x] Generate dirt
 - [x] Dig hills
+- [ ] Use tiles
 - [ ] Night/day cycle
-- [ ] Terrain collision detection
+- [ ] Weather cycle
+- [ ] Season cycle
 - [ ] Generate biomes by height
-- [ ] Generate biomes by adjacency and rainfall
+- [ ] Generate biomes by season
 - [ ] Generate vegitation by biome
 - [ ] Generate loam under plants
-- [ ] Use tiles
 - [ ] Add tree canopies
+- [ ] Terrain collision detection
+- [ ] Update game loop to be more reliable

@@ -1,5 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
+#[derive(Debug)]
 pub enum Time {
     Night2,
     Morning,

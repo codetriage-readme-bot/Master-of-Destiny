@@ -15,7 +15,8 @@ pub trait Describe {
 
 pub fn draw_map(root: &mut RootConsole,
                 world: &WorldState,
-                show_hud: bool) {
+                show_hud: bool,
+                time: usize) {
     root.clear();
     let wid = root.width() as usize;
     let hig = root.height() as usize;
@@ -47,7 +48,7 @@ pub fn draw_map(root: &mut RootConsole,
     }
 
     if show_hud {
-        let frame_start_pos = (wid as i32 / 3) * 2 - 10;
+        let frame_start_pos = (wid as i32 / 3) * 2 + 5;
         let frame_width = wid as i32 - frame_start_pos;
         let frame_height = hig as i32;
         let mut window = &OffscreenConsole::new(frame_width, frame_height);
@@ -89,6 +90,13 @@ pub fn draw_map(root: &mut RootConsole,
                                      Color::new(255, 255, 0),
                                      BackgroundFlag::Lighten);
         }
+        window.print(1,
+                     4,
+                     format!("Time of Day: {:?}", world.time_of_day));
+        window.print(1,
+                     5,
+                     format!("Percentage of Night/Day Cycle: {}",
+                             time as f32 / 500 as f32));
         console::blit(window,
                       (0, 0),
                       (frame_width, frame_height),
