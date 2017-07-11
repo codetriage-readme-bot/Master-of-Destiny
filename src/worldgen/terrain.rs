@@ -9,7 +9,7 @@ use tcod::RootConsole;
 use tcod::chars;
 use tcod::console::{BackgroundFlag, Console};
 
-pub const TILES: bool = false;
+pub const TILES: bool = true;
 pub const BASE: u32 = 256;
 const TILES_BENTGRASS: u32 = BASE;
 const TILES_BLUEGRASS: u32 = (BASE + 1);
@@ -62,7 +62,7 @@ impl DrawChar for IgneousRocks {
             &IgneousRocks::Obsidian => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_OBSIDIAN)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     chars::BLOCK1
                 };
@@ -75,7 +75,7 @@ impl DrawChar for IgneousRocks {
             &IgneousRocks::Basalt => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_BASALT)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     chars::BLOCK3
                 };
@@ -111,7 +111,7 @@ impl DrawChar for MetamorphicRocks {
             &MetamorphicRocks::Gneiss => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_GNEISS)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     chars::BLOCK2
                 };
@@ -124,7 +124,7 @@ impl DrawChar for MetamorphicRocks {
             &MetamorphicRocks::Marble => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_MARBLE)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     chars::BLOCK1
                 };
@@ -164,7 +164,7 @@ impl DrawChar for SedimentaryRocks {
             &SedimentaryRocks::Limestone => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_LIMESTONE)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     chars::BLOCK3
                 };
@@ -177,7 +177,7 @@ impl DrawChar for SedimentaryRocks {
             &SedimentaryRocks::Conglomerate => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_CONGLOMERATE)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     chars::BLOCK2
                 };
@@ -218,7 +218,7 @@ impl DrawChar for SoilTypes {
         match self {
             &SoilTypes::Clay => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_CLAY).unwrap() as char
+                    std::char::from_u32(TILES_CLAY).unwrap()
                 } else {
                     '='
                 };
@@ -231,7 +231,7 @@ impl DrawChar for SoilTypes {
             &SoilTypes::Sandy => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_SANDY)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     '='
                 };
@@ -244,7 +244,7 @@ impl DrawChar for SoilTypes {
             &SoilTypes::Silty => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_SILTY)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     '='
                 };
@@ -257,7 +257,7 @@ impl DrawChar for SoilTypes {
             &SoilTypes::Peaty => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_PEATY)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     '='
                 };
@@ -270,7 +270,7 @@ impl DrawChar for SoilTypes {
             &SoilTypes::Loamy => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_LOAMY)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     '='
                 };
@@ -383,7 +383,7 @@ impl DrawChar for VegTypes {
             &VegTypes::Bluegrass => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_PASTUREGRASS)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     '"'
                 };
@@ -396,7 +396,7 @@ impl DrawChar for VegTypes {
             &VegTypes::Treetrunk => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_TREETRUNK)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     'O'
                 };
@@ -409,7 +409,7 @@ impl DrawChar for VegTypes {
             &VegTypes::Bentgrass => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_BENTGRASS)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     ','
                 };
@@ -422,7 +422,7 @@ impl DrawChar for VegTypes {
             &VegTypes::Ryegrass => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_RYEGRASS)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     '`'
                 };
@@ -436,7 +436,7 @@ impl DrawChar for VegTypes {
             &VegTypes::Dandelion => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_DANDELION)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     chars::EXCLAM_DOUBLE
                 };
@@ -449,7 +449,7 @@ impl DrawChar for VegTypes {
             &VegTypes::Chickweed => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_CHICKWEED)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     '!'
                 };
@@ -463,7 +463,7 @@ impl DrawChar for VegTypes {
             &VegTypes::BroomShrub => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_BROOMSHRUB)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     '\u{f4}'
                 };
@@ -476,7 +476,7 @@ impl DrawChar for VegTypes {
             &VegTypes::Rhododendron => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_RHODODENDRON)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     '\u{f4}'
                 };
@@ -490,7 +490,7 @@ impl DrawChar for VegTypes {
             &VegTypes::Crabapple => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_CRABAPPLE)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     chars::CLUB
                 };
@@ -503,7 +503,7 @@ impl DrawChar for VegTypes {
             &VegTypes::Redbud => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_REDBUD)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     chars::CLUB
                 };
@@ -516,7 +516,7 @@ impl DrawChar for VegTypes {
 
             &VegTypes::Pine => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_PINE).unwrap() as char
+                    std::char::from_u32(TILES_PINE).unwrap()
                 } else {
                     chars::ARROW_N
                 };
@@ -529,7 +529,7 @@ impl DrawChar for VegTypes {
             &VegTypes::Redwood => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_REDWOOD)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     '\u{17}'
                 };
@@ -542,7 +542,7 @@ impl DrawChar for VegTypes {
             &VegTypes::Banyon => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_BANYON)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     chars::CLUB
                 };
@@ -625,7 +625,7 @@ impl DrawChar for RestrictedTile {
             }
             &RestrictedTile::Stone(_, State::Liquid) => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_LAVA).unwrap() as char
+                    std::char::from_u32(TILES_LAVA).unwrap()
                 } else {
                     '~'
                 };
@@ -710,24 +710,30 @@ impl DrawChar for Tile {
                 match s {
                     &Slope::Up => {
                         undertile.draw_char(root, pos);
-                        root.put_char(pos.0 as i32,
-                                      pos.1 as i32,
-                                      chars::ARROW2_N,
-                                      BackgroundFlag::None);
+                        if !TILES {
+                            root.put_char(pos.0 as i32,
+                                          pos.1 as i32,
+                                          chars::ARROW2_N,
+                                          BackgroundFlag::None);
+                        }
                     }
                     &Slope::None => {
                         undertile.draw_char(root, pos);
-                        root.put_char(pos.0 as i32,
-                                      pos.1 as i32,
-                                      '.',
-                                      BackgroundFlag::None);
+                        if !TILES {
+                            root.put_char(pos.0 as i32,
+                                          pos.1 as i32,
+                                          '.',
+                                          BackgroundFlag::None);
+                        }
                     }
                     &Slope::Down => {
                         undertile.draw_char(root, pos);
-                        root.put_char(pos.0 as i32,
-                                      pos.1 as i32,
-                                      chars::ARROW2_S,
-                                      BackgroundFlag::None);
+                        if !TILES {
+                            root.put_char(pos.0 as i32,
+                                          pos.1 as i32,
+                                          chars::ARROW2_S,
+                                          BackgroundFlag::None);
+                        }
                     }
                 }
             }
@@ -760,14 +766,13 @@ impl DrawChar for Tile {
             &Tile::Stone(ref s, State::Solid) => s.draw_char(root, pos),
             &Tile::Stone(_, State::Liquid) => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_OBSIDIAN)
-                        .unwrap() as char
+                    std::char::from_u32(TILES_LAVA).unwrap()
                 } else {
-                    chars::BLOCK1
+                    '~'
                 };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
-                                 '~',
+                                 chr,
                                  Color::new(0, 0, 0),
                                  Color::new(255, 0, 0));
             }
@@ -775,7 +780,7 @@ impl DrawChar for Tile {
             &Tile::Water(_, State::Solid, _) => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_OBSIDIAN)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     chars::BLOCK1
                 };
@@ -788,7 +793,7 @@ impl DrawChar for Tile {
             &Tile::Water(_, State::Liquid, ref depth) => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_WATER)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     '\u{f7}'
                 };
@@ -814,7 +819,7 @@ impl DrawChar for Tile {
             &Tile::Water(_, State::Gas, _) => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_OBSIDIAN)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     chars::BLOCK1
                 };
@@ -828,7 +833,7 @@ impl DrawChar for Tile {
             &Tile::Fire => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_OBSIDIAN)
-                        .unwrap() as char
+                        .unwrap()
                 } else {
                     chars::BLOCK1
                 };

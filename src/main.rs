@@ -3,7 +3,8 @@ extern crate tcod;
 extern crate tcod_sys;
 
 use tcod::{FontLayout, Renderer, RootConsole};
-use tcod::Console;
+use tcod::colors::*;
+use tcod::console::{BackgroundFlag, Console};
 use tcod::input;
 use tcod::input::KeyCode;
 
@@ -31,7 +32,7 @@ const CYCLE_LENGTH: usize = 500;
 
 unsafe fn load_custom_font(rows: usize) {
     let mut loc = BASE;
-    for y in 17..(17 + rows) {
+    for y in 16..(16 + rows) {
         tcod_sys::TCOD_console_map_ascii_codes_to_font(loc as i32,
                                                        16,
                                                        0,
@@ -45,6 +46,7 @@ fn main() {
     let mut root = RootConsole::initializer()
         .size(screen_size.0, screen_size.1)
         .title("Skyspace")
+        .font_dimensions(16, 19)
         .font(SHOW_FONT, FontLayout::AsciiInRow)
         .init();
     if TILES {

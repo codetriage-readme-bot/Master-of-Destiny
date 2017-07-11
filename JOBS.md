@@ -22,7 +22,7 @@
 - [x] Get rock viens working
 - [x] Generate dirt
 - [x] Dig hills
-- [ ] Use tiles
+- [x] Use tiles
 - [ ] Night/day cycle
 - [ ] Weather cycle
 - [ ] Season cycle
