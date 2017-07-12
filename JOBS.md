@@ -3,10 +3,16 @@
 ## Will Trovinger
 
 - [x] Work tileset grass
-- [ ] Work tileset trees
-- [ ] Work tileset bushes
+- [x] Work tileset trees
+- [x] Work tileset bushes
 - [x] Work tileset stone
 - [x] Work tileset dirt
+- [ ] Fix trees
+- [ ] Reduce noise/make tiles easier to see
+- [ ] Upscale tiles?
+- [ ] Make logo?
+- [x] Snow, ice other weather tiles.
+- [ ] Animal tiles
 - [ ] Explore Dwarf Fortress
 
 ## Chris Dumas
@@ -23,6 +29,11 @@
 - [x] Generate dirt
 - [x] Dig hills
 - [x] Use tiles
+- [x] Factor out game handling code from main
+- [ ] Group types of plants
+- [ ] Add tree canopies
+- [ ] Add multiple screens (menu, game, pause)
+- [ ] Update game loop to be more reliable
 - [ ] Night/day cycle
 - [ ] Weather cycle
 - [ ] Season cycle
@@ -30,6 +41,4 @@
 - [ ] Generate biomes by season
 - [ ] Generate vegitation by biome
 - [ ] Generate loam under plants
-- [ ] Add tree canopies
 - [ ] Terrain collision detection
-- [ ] Update game loop to be more reliable

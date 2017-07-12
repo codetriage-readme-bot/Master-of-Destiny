@@ -69,7 +69,11 @@ impl DrawChar for IgneousRocks {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(12, 12, 12),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(12, 12, 12)
+                                 },
                                  Color::new(2, 2, 2))
             }
             &IgneousRocks::Basalt => {
@@ -82,7 +86,11 @@ impl DrawChar for IgneousRocks {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(40, 40, 12),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(40, 40, 12)
+                                 },
                                  Color::new(2, 2, 2))
             }
         };
@@ -118,7 +126,11 @@ impl DrawChar for MetamorphicRocks {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(125, 85, 62),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(125, 85, 62)
+                                 },
                                  Color::new(2, 2, 2))
             }
             &MetamorphicRocks::Marble => {
@@ -131,7 +143,11 @@ impl DrawChar for MetamorphicRocks {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(250, 250, 250),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(250, 250, 250)
+                                 },
                                  Color::new(12, 12, 12))
             }
         };
@@ -171,7 +187,11 @@ impl DrawChar for SedimentaryRocks {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(125, 85, 62),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(125, 85, 62)
+                                 },
                                  Color::new(255, 255, 255))
             }
             &SedimentaryRocks::Conglomerate => {
@@ -184,7 +204,11 @@ impl DrawChar for SedimentaryRocks {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(130, 100, 50),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(130, 100, 50)
+                                 },
                                  Color::new(200, 200, 200))
             }
         };
@@ -225,7 +249,11 @@ impl DrawChar for SoilTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(167, 107, 41),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(167, 107, 41)
+                                 },
                                  Color::new(191, 100, 35))
             }
             &SoilTypes::Sandy => {
@@ -238,7 +266,11 @@ impl DrawChar for SoilTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(167, 107, 41),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(167, 107, 41)
+                                 },
                                  Color::new(191, 100, 35))
             }
             &SoilTypes::Silty => {
@@ -251,7 +283,11 @@ impl DrawChar for SoilTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(133, 126, 108),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(133, 126, 108)
+                                 },
                                  Color::new(99, 94, 80))
             }
             &SoilTypes::Peaty => {
@@ -264,7 +300,11 @@ impl DrawChar for SoilTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(159, 145, 95),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(159, 145, 95)
+                                 },
                                  Color::new(119, 108, 71))
             }
             &SoilTypes::Loamy => {
@@ -277,7 +317,11 @@ impl DrawChar for SoilTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(86, 59, 56),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(86, 59, 56)
+                                 },
                                  Color::new(64, 44, 41))
             }   
         }
@@ -390,7 +434,11 @@ impl DrawChar for VegTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(0, 50, 200),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(0, 50, 200)
+                                 },
                                  Color::new(50, 200, 50));
             }
             &VegTypes::Treetrunk => {
@@ -403,7 +451,11 @@ impl DrawChar for VegTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(139, 69, 19),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(139, 69, 19)
+                                 },
                                  Color::new(50, 200, 50));
             }
             &VegTypes::Bentgrass => {
@@ -416,7 +468,11 @@ impl DrawChar for VegTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(0, 255, 0),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(0, 255, 0)
+                                 },
                                  Color::new(50, 200, 50));
             }
             &VegTypes::Ryegrass => {
@@ -429,7 +485,11 @@ impl DrawChar for VegTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(150, 200, 0),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(150, 200, 0)
+                                 },
                                  Color::new(50, 200, 50));
             }
 
@@ -443,7 +503,11 @@ impl DrawChar for VegTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(255, 255, 255),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(255, 255, 255)
+                                 },
                                  Color::new(50, 200, 50));
             }
             &VegTypes::Chickweed => {
@@ -456,7 +520,11 @@ impl DrawChar for VegTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(255, 255, 254),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(255, 255, 254)
+                                 },
                                  Color::new(30, 190, 30));
             }
 
@@ -470,7 +538,11 @@ impl DrawChar for VegTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(79, 121, 66),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(79, 121, 66)
+                                 },
                                  Color::new(227, 255, 0));
             }
             &VegTypes::Rhododendron => {
@@ -483,7 +555,11 @@ impl DrawChar for VegTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(176, 90, 100),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(176, 90, 100)
+                                 },
                                  Color::new(227, 255, 0));
             }
 
@@ -497,7 +573,11 @@ impl DrawChar for VegTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(186, 85, 211),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(186, 85, 211)
+                                 },
                                  Color::new(50, 200, 50));
             }
             &VegTypes::Redbud => {
@@ -510,7 +590,11 @@ impl DrawChar for VegTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(216, 191, 216),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(216, 191, 216)
+                                 },
                                  Color::new(50, 200, 50));
             }
 
@@ -523,7 +607,11 @@ impl DrawChar for VegTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(255, 255, 250),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(255, 255, 250)
+                                 },
                                  Color::new(50, 200, 50));
             }
             &VegTypes::Redwood => {
@@ -536,7 +624,11 @@ impl DrawChar for VegTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(255, 100, 100),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(255, 100, 100)
+                                 },
                                  Color::new(50, 200, 50));
             }
             &VegTypes::Banyon => {
@@ -549,7 +641,11 @@ impl DrawChar for VegTypes {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(255, 255, 255),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(255, 255, 255)
+                                 },
                                  Color::new(50, 200, 50));
             }
         }
@@ -632,7 +728,11 @@ impl DrawChar for RestrictedTile {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(0, 0, 0),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(0, 0, 0)
+                                 },
                                  Color::new(255, 0, 0));
             }   
             &RestrictedTile::Stone(_, State::Gas) => {
@@ -773,7 +873,11 @@ impl DrawChar for Tile {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
-                                 Color::new(0, 0, 0),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(0, 0, 0)
+                                 },
                                  Color::new(255, 0, 0));
             }
             &Tile::Stone(_, State::Gas) => panic!("Stones can't be a gas!"),
@@ -787,7 +891,11 @@ impl DrawChar for Tile {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  '#',
-                                 Color::new(255, 255, 255),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(255, 255, 255)
+                                 },
                                  Color::new(100, 255, 100));
             }
             &Tile::Water(_, State::Liquid, ref depth) => {
@@ -801,7 +909,11 @@ impl DrawChar for Tile {
                     root.put_char_ex(pos.0 as i32,
                                      pos.1 as i32,
                                      chr,
-                                     Color::new(0, 105, 148),
+                                     if TILES {
+                                         Color::new(255, 255, 255)
+                                     } else {
+                                         Color::new(0, 105, 148)
+                                     },
                                      Color::new(0, 159, 225));
                 } else {
                     root.put_char_ex(pos.0 as i32,
@@ -812,7 +924,11 @@ impl DrawChar for Tile {
                                          .collect::<Vec<_>>()
                                          [0] as
                                          char,
-                                     Color::new(0, 105, 148),
+                                     if TILES {
+                                         Color::new(255, 255, 255)
+                                     } else {
+                                         Color::new(0, 105, 148)
+                                     },
                                      Color::new(0, 159, 225));
                 }
             }   
@@ -826,7 +942,11 @@ impl DrawChar for Tile {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  '\u{a7}',
-                                 Color::new(0, 105, 148),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(0, 105, 148)
+                                 },
                                  Color::new(0, 159, 225));
             }
             &Tile::Vegitation(ref v, ..) => v.draw_char(root, pos),
@@ -840,7 +960,11 @@ impl DrawChar for Tile {
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chars::YEN,
-                                 Color::new(227, 140, 45),
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(227, 140, 45)
+                                 },
                                  Color::new(255, 0, 0));
             }
             &Tile::Empty => {}

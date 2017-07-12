@@ -502,16 +502,15 @@ pub struct WorldState {
     pub cursor: (i32, i32),
     pub level: i32,
     pub life: Vec<Box<life::Living>>,
-    pub map: World,
+    pub map: Option<World>,
     pub highest_level: usize,
     pub time_of_day: Time,
     pub tcod_map: map::Map,
 }
 
 impl WorldState {
-    pub fn new(world: World, s: (usize, usize)) -> WorldState {
-        // Find the highest height in the map's row. Max start's out
-        // as None, so we have to initialize it if it is.
+    pub fn update(&self) {}
+    pub fn add_map(&mut self, world: World) {
         let f = |vec: &Vec<Unit>| -> Option<usize> {
             vec.iter()
                .fold(None, |max, unit: &Unit| match max {
@@ -540,14 +539,18 @@ impl WorldState {
                 }
             }
         });
+        self.map = Some(world);
+        self.highest_level = toplevel.unwrap();
+    }
+    pub fn new(s: (usize, usize)) -> WorldState {
         WorldState {
             screen: (0, 0),
             level: 31,
-            highest_level: toplevel.unwrap(),
+            highest_level: 0,
             cursor: (0, 0),
             time_of_day: Time::Morning,
             life: vec![],
-            map: world,
+            map: None,
             tcod_map: map::Map::new(s.0 as i32, s.1 as i32),
         }
     }
