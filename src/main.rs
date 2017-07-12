@@ -52,6 +52,7 @@ unsafe fn load_custom_font(rows: usize) {
 enum GameScreen {
     Menu,
     Game,
+    Loading,
     Paused,
 }
 
@@ -61,10 +62,68 @@ struct Calc {
     pub screen_size: (i32, i32),
 }
 
+struct Menu {
+    bboxes: Vec<((i32, i32), (i32, i32))>,
+    start_pos: (i32, i32),
+    button_size: (i32, i32),
+    pub items: Vec<String>,
+}
+
+impl Menu {
+    pub fn calculate_bboxes(pos: (i32, i32),
+                            number: i32,
+                            size: (i32, i32))
+        -> Vec<((i32, i32), (i32, i32))> {
+        (0..number)
+            .map(|n| {
+                let y = pos.1 + n * size.1;
+                ((pos.0, y), (pos.0 + size.0, y))
+            })
+            .collect()
+    }
+
+    pub fn bbox_colliding(&self, loc: (i32, i32)) -> Option<String> {
+        for (i, &(bbs, bbe)) in self.bboxes.iter().enumerate() {
+            if (loc.0 >= bbs.0 && loc.1 <= bbs.1) &&
+                (loc.0 <= bbe.0 && loc.1 >= bbe.1)
+            {
+                return Some(self.items[i].clone());
+            }
+        }
+        None
+    }
+
+    pub fn draw(&self,
+                mut root: &mut RootConsole,
+                world_state: &WorldState) {
+        root.set_default_foreground(Color::new(0, 0, 0));
+        for (i, &(bbs, _)) in self.bboxes.iter().enumerate() {
+            let item = self.items[i].clone();
+            if self.bbox_colliding(world_state.cursor)
+                   .unwrap_or("Nothing".to_string()) ==
+                *item
+            {
+                root.set_default_background(Color::new(255, 255, 255));
+            } else {
+                root.set_default_background(Color::new(100, 100, 100));
+            }
+
+            root.print_ex(bbs.0,
+                          bbs.1,
+                          BackgroundFlag::Set,
+                          TextAlignment::Center,
+                          item);
+        }
+        root.set_default_foreground(Color::new(255, 255, 255));
+        root.set_default_background(Color::new(0, 0, 0));
+    }
+}
+
 struct Game {
     show_hud: bool,
     constants: Calc,
     world_time: usize,
+    menu: Menu,
     pub time: usize,
     pub screen: GameScreen,
     pub world_state: WorldState,
@@ -82,12 +141,20 @@ impl Game {
             world_time: 0,
             time: 0,
             screen: GameScreen::Menu,
+            menu: Menu {
+                start_pos: (screen_size.0 / 2, 30),
+                items: vec!["   Start   ".to_string(),
+                            "    Exit   ".to_string()],
+                button_size: (7, 1),
+                bboxes: Menu::calculate_bboxes((screen_size.0 / 2, 30),
+                                               2,
+                                               (7, 1)),
+            },
             world_state: WorldState::new(MAP_SIZE),
         }
     }
 
     pub fn init_game(&mut self) {
-        self.screen = GameScreen::Game;
         self.world_time = time::get_world_time();
 
         let world = World::new(MAP_SIZE, self.world_time as u32);
@@ -98,10 +165,27 @@ impl Game {
              MAP_SIZE.1 as i32 - self.constants.screen_size.1 - 1);
         self.constants.highest_world = self.world_state.highest_level as
             i32 - 1;
+        self.screen = GameScreen::Game;
     }
 
     pub fn draw(&mut self, mut root: &mut RootConsole) {
         match self.screen {
+            GameScreen::Loading => {
+                root.print_ex(self.constants.screen_size.0 / 2,
+                              2,
+                              BackgroundFlag::Set,
+                              TextAlignment::Center,
+                              "Loading...");
+                for y in 0..20 {
+                    for x in 1..17 {
+                        root.put_char(x,
+                                      y + 4,
+                                      std::char::from_u32((x * y) as u32)
+                                          .unwrap(),
+                                      BackgroundFlag::None);
+                    }
+                }
+            }
             GameScreen::Menu => {
                 root.clear();
                 for (i, line) in TITLE_CARD.iter().enumerate() {
@@ -111,11 +195,8 @@ impl Game {
                                   TextAlignment::Left,
                                   line.to_string());
                 }
-                root.print_ex(self.constants.screen_size.0 / 2,
-                              30,
-                              BackgroundFlag::Set,
-                              TextAlignment::Center,
-                              "Press any key to start");
+
+                self.menu.draw(root, &self.world_state);
             }
             GameScreen::Game => {
                 self.time += time::get_world_time() - self.world_time;
@@ -166,13 +247,37 @@ impl Game {
                    self.constants.max_screen_move.1,
                    0))
     }
-    fn handle_mouse(&self, mouse: &input::Mouse) {}
+    fn handle_mouse(&mut self, mouse: &input::Mouse) {
+        match self.screen {
+            GameScreen::Menu => {
+                if mouse.lbutton_pressed {
+                    let bitem =
+                        self.menu
+                            .bbox_colliding(self.world_state.cursor);
+                    match bitem {
+                        Some(item) => {
+                            match item.as_ref() {
+                                "   Start   " => self.init_game(),
+                                "    Exit   " => std::process::exit(0),
+                                _ => {}
+                            }
+                        }
+                        None => {}
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
 
     fn handle_key(&mut self, key: &input::Key) {
         match self.screen {
+            GameScreen::Loading => {}
             GameScreen::Menu => {
                 match key.code {
-                    _ => self.init_game(),
+                    KeyCode::Char => self.init_game(),
+                    KeyCode::Spacebar => self.init_game(),
+                    _ => {}
                 }
             }
             GameScreen::Paused => {
