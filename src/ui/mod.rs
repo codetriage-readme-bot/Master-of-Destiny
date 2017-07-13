@@ -3,7 +3,7 @@ use tcod::colors::*;
 use tcod::console::{BackgroundFlag, Console, TextAlignment};
 
 pub trait DrawUI {
-    fn draw(&self, mut root: &mut RootConsole, cursor: (i32, i32));
+    fn draw(&self, root: &mut RootConsole, cursor: (i32, i32));
 }
 pub trait MouseUI {
     fn bbox_colliding(&self, cursor: (i32, i32)) -> Option<String>;
@@ -32,9 +32,8 @@ impl Button {
 impl MouseUI for Button {
     fn bbox_colliding(&self, loc: (i32, i32)) -> Option<String> {
         let (bbs, bbe) = self.bbox;
-        println!("{:?} <= {:?} <= {:?}", bbs, loc, bbe);
-        if (loc.0 >= bbs.0 && loc.1 <= bbs.1) &&
-            (loc.0 <= bbe.0 && loc.1 >= bbe.1)
+        if (loc.0 >= bbs.0 - 4 && loc.1 <= bbs.1) &&
+            (loc.0 <= bbe.0 - 4 && loc.1 >= bbe.1)
         {
             Some(self.id.clone())
         } else {
@@ -44,7 +43,7 @@ impl MouseUI for Button {
 }
 
 impl DrawUI for Button {
-    fn draw(&self, mut root: &mut RootConsole, cursor: (i32, i32)) {
+    fn draw(&self, root: &mut RootConsole, cursor: (i32, i32)) {
         root.set_default_foreground(BLACK);
         if self.bbox_colliding(cursor).is_some() {
             root.set_default_background(WHITE);
@@ -93,7 +92,7 @@ impl Layout {
 }
 
 impl DrawUI for Layout {
-    fn draw(&self, mut root: &mut RootConsole, cursor: (i32, i32)) {
+    fn draw(&self, root: &mut RootConsole, cursor: (i32, i32)) {
         for button in self.buttons.iter() {
             button.draw(root, cursor);
         }

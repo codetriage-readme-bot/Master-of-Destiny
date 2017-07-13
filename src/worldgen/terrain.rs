@@ -50,7 +50,9 @@ pub enum IgneousRocks {
 impl Describe for IgneousRocks {
     fn describe(&self) -> String {
         match self {
-            &IgneousRocks::Obsidian => "Igneous obisidian".to_string(),
+            &IgneousRocks::Obsidian => {
+                "Igneous obisidian".to_string()
+            }
             &IgneousRocks::Basalt => "Igneous basalt".to_string(),
         }
     }
@@ -107,8 +109,12 @@ pub enum MetamorphicRocks {
 impl Describe for MetamorphicRocks {
     fn describe(&self) -> String {
         match self {
-            &MetamorphicRocks::Gneiss => "Metamorphic gneiss".to_string(),
-            &MetamorphicRocks::Marble => "Metamorphic marble".to_string(),
+            &MetamorphicRocks::Gneiss => {
+                "Metamorphic gneiss".to_string()
+            }
+            &MetamorphicRocks::Marble => {
+                "Metamorphic marble".to_string()
+            }
         }
     }
 }
@@ -657,7 +663,16 @@ impl DrawChar for VegTypes {
 type Ferenheight = i32;
 type Percent = usize;
 #[derive(Copy, Clone)]
+pub enum BiomeType {
+    Swamp,
+    Jungle,
+    Forest,
+    Pasture,
+    Beach,
+}
+#[derive(Copy, Clone)]
 pub struct Biome {
+    pub biome_type: BiomeType,
     pub temperature_night_f: Ferenheight,
     pub temperature_day_f: Ferenheight,
     pub percipitation_chance: Percent,
@@ -703,8 +718,12 @@ impl Describe for RestrictedTile {
         match self {
             &RestrictedTile::Stone(ref s, ref state) => {
                 match state {
-                    &State::Solid => format!("Rough {}", s.describe()),
-                    &State::Liquid => format!("Molten {}", s.describe()),
+                    &State::Solid => {
+                        format!("Rough {}", s.describe())
+                    }
+                    &State::Liquid => {
+                        format!("Molten {}", s.describe())
+                    }
                     _ => panic!("Panic! In the Code"),
                 }
             }
@@ -763,7 +782,9 @@ impl Describe for Tile {
             &Tile::Empty => "Emtpy space".to_string(),
             &Tile::Ramp(ref s, ref slope) => {
                 match slope {
-                    &Slope::Up => format!("Up hill of {}", s.describe()),
+                    &Slope::Up => {
+                        format!("Up hill of {}", s.describe())
+                    }
                     &Slope::Down => {
                         format!("Down hill of {}", s.describe())
                     }
@@ -785,15 +806,21 @@ impl Describe for Tile {
                     &LiquidPurity::Toxic => "toxic",
                 };
                 match state {
-                    &State::Gas => format!("Cloud of {} steam", purity_str),
+                    &State::Gas => {
+                        format!("Cloud of {} steam", purity_str)
+                    }
                     &State::Solid => format!("{} ice", purity_str),
                     &State::Liquid => format!("{} water", purity_str),
                 }
             }
             &Tile::Stone(ref s, ref state) => {
                 match state {
-                    &State::Solid => format!("Rough {}", s.describe()),
-                    &State::Liquid => format!("Molten {}", s.describe()),
+                    &State::Solid => {
+                        format!("Rough {}", s.describe())
+                    }
+                    &State::Liquid => {
+                        format!("Molten {}", s.describe())
+                    }
                     _ => panic!("Panic! In the Code"),
                 }
             }
@@ -863,7 +890,9 @@ impl DrawChar for Tile {
                     _ => panic!("Shouldn't be moveable!"),
                 }
             }
-            &Tile::Stone(ref s, State::Solid) => s.draw_char(root, pos),
+            &Tile::Stone(ref s, State::Solid) => {
+                s.draw_char(root, pos)
+            }
             &Tile::Stone(_, State::Liquid) => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_LAVA).unwrap()
@@ -880,7 +909,9 @@ impl DrawChar for Tile {
                                  },
                                  Color::new(255, 0, 0));
             }
-            &Tile::Stone(_, State::Gas) => panic!("Stones can't be a gas!"),
+            &Tile::Stone(_, State::Gas) => {
+                panic!("Stones can't be a gas!")
+            }
             &Tile::Water(_, State::Solid, _) => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_OBSIDIAN)

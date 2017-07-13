@@ -71,7 +71,7 @@ struct Game {
     show_hud: bool,
     constants: Calc,
     world_time: usize,
-    menu: ui::Layout,
+    menu: Layout,
     pub time: usize,
     pub screen: GameScreen,
     pub world_state: WorldState,
@@ -89,11 +89,11 @@ impl Game {
             world_time: 0,
             time: 0,
             screen: GameScreen::Menu,
-            menu: ui::Layout::new(vec!["New Game", "Use Seed",
-                                       "Quit Now"],
-                                  (screen_size.0 / 2, 30),
-                                  (8, 0),
-                                  8),
+            menu: Layout::new(vec!["New Game", "Use Seed",
+                                   "Quit Now"],
+                              (screen_size.0 / 2, 30),
+                              (8, 0),
+                              8),
             world_state: WorldState::new(MAP_SIZE),
         }
     }
@@ -114,7 +114,7 @@ impl Game {
         self.screen = GameScreen::Game;
     }
 
-    pub fn draw(&mut self, mut root: &mut RootConsole) {
+    pub fn draw(&mut self, root: &mut RootConsole) {
         match self.screen {
             GameScreen::Loading => {
                 root.print_ex(self.constants.screen_size.0 / 2,
@@ -156,7 +156,7 @@ impl Game {
                     time::calculate_time_of_day(self.time,
                                                 CYCLE_LENGTH);
                 self.world_state.update();
-                draw_map(&mut root,
+                draw_map(root,
                          &self.world_state,
                          self.show_hud,
                          self.time);

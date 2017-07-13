@@ -31,16 +31,16 @@
 - [x] Use tiles
 - [x] Factor out game handling code from main
 - [x] Menu screen
-- [ ] Build reusable UI stuff
-- [ ] Group types of plants
-- [ ] Add tree canopies
-- [ ] Add multiple screens (menu, game, pause)
-- [ ] Update game loop to be more reliable
+- [x] Build reusable UI stuff
+- [x] Add multiple screens (menu, game, pause)
 - [ ] Night/day cycle
 - [ ] Weather cycle
 - [ ] Season cycle
+- [ ] Add tree canopies
+- [ ] Update game loop to be more reliable
 - [ ] Generate biomes by height
 - [ ] Generate biomes by season
 - [ ] Generate vegitation by biome
 - [ ] Generate loam under plants
+- [ ] Group types of plants
 - [ ] Terrain collision detection
