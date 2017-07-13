@@ -30,6 +30,8 @@
 - [x] Dig hills
 - [x] Use tiles
 - [x] Factor out game handling code from main
+- [x] Menu screen
+- [ ] Build reusable UI stuff
 - [ ] Group types of plants
 - [ ] Add tree canopies
 - [ ] Add multiple screens (menu, game, pause)
