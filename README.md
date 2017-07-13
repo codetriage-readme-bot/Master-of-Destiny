@@ -61,6 +61,8 @@ After about very two-three stages, I'll do some kind of codebase
 cleanup, from a refactor to prehaps a performance issue.
 
 - [x] Overall world generation (mountains, hills, plants, cliffs, water)
+- [x] UI
+- [x] Physics
 - [ ] Time
 - [ ] Seasons
 - [ ] Animal AI (eating, sleeping, breading, hunting)
