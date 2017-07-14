@@ -257,7 +257,7 @@ impl World {
                 let mut tiles: Vec<Tile> = vec![];
                 let mut biomes: Vec<Biome> = vec![];
                 if height <= SEA_LEVEL {
-                    let dist = (SEA_LEVEL - height) as isize;
+                    let dist = height as isize + 7;
                     for z in 0..dist {
                         tiles.push(Tile::Water(World::purity(),
                                                State::Liquid,
@@ -288,13 +288,21 @@ impl World {
                             }
                         })
                         .collect::<Vec<_>>();
+                    let water_adjacent =
+                        adj.iter()
+                           .find(|x| match **x {
+                                     Tile::Water(..) => true,
+                                     _ => false,
+                                 })
+                           .is_some();
+
                     for z in 0..(height as isize - 1) {
                         biomes.push(world.biome_from_height(z));
                         tiles.push(world.rock_type(adj.clone(),
                                                    (x, y),
                                                    z));
                     }
-                    if height <= VEG_THRESHOLD {
+                    if height <= VEG_THRESHOLD && !water_adjacent {
                         match world.get_vegetation((x, y)) {
                             Tile::Vegitation(a, height, b) => {
                                 for z in 0..height {
@@ -409,9 +417,10 @@ impl World {
     fn soil_choice(adj: Vec<Tile>) -> SoilTypes {
         let water_adjacent = adj.iter()
                                 .find(|x| match **x {
-                                          Tile::Water(..) => true,
-                                          _ => false,
-                                      })
+            Tile::Water(..) => true,
+            Tile::Stone(StoneTypes::Soil(SoilTypes::Sandy), ..) => true,
+            _ => false,
+        })
                                 .is_some();
         let veg_adjacent = adj.iter()
                               .find(|x| match **x {
@@ -462,7 +471,7 @@ impl World {
                     if height < 10 {
                         let v = World::rock_choice(igneous, rn);
                         StoneTypes::Igneous(v.clone())
-                    } else if height as f32 <= SEA_LEVEL - 3.0 {
+                    } else if height as f32 <= SEA_LEVEL - 4.0 {
                         let v = World::rock_choice(metamorphic, rn);
                         StoneTypes::Metamorphic(v.clone())
                     } else if height as f32 <= SEA_LEVEL + 3.0 {

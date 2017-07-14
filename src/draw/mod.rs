@@ -37,13 +37,14 @@ pub fn draw_map(root: &mut RootConsole,
                     .zip(0..wid)
                 {
                     let tiles = &world_map[my][mx].tiles;
-                    let len = tiles.len().checked_sub(1).unwrap_or(0);
 
                     match tiles.get(world.level as usize) {
                         None => {
+                            /*
                             tiles.get(len)
-                                .unwrap_or(&Tile::Empty)
-                                .draw_char(root, (x, y));
+                            .unwrap_or(&Tile::Empty)
+                            .draw_char(root, (x, y));*/
+                            (Tile::Empty).draw_char(root, (x, y));
                         }
                         Some(tile) => tile.draw_char(root, (x, y)),
                     }

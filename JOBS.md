@@ -33,7 +33,11 @@
 - [x] Menu screen
 - [x] Build reusable UI stuff
 - [x] Add multiple screens (menu, game, pause)
-- [ ] Improve overall UI (pause menu, mouse cursor, sidebar)
+- [x] Improve overall UI (pause menu, mouse cursor, sidebar)
+- [x] Fix identification function
+- [x] Fix missing tiles
+- [x] Generate beaches
+- [ ] Increase beach size
 - [ ] Night/day cycle
 - [ ] Weather cycle
 - [ ] Season cycle

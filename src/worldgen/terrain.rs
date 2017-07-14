@@ -998,7 +998,13 @@ impl DrawChar for Tile {
                                  },
                                  Color::new(255, 0, 0));
             }
-            &Tile::Empty => {}
+            &Tile::Empty => {
+                root.put_char_ex(pos.0 as i32,
+                                 pos.1 as i32,
+                                 ' ',
+                                 Color::new(150, 150, 150),
+                                 Color::new(150, 150, 150));
+            }
         }
     }
 }

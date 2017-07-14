@@ -2,7 +2,7 @@
 extern crate tcod;
 extern crate tcod_sys;
 
-use tcod::{FontLayout, Renderer, RootConsole};
+use tcod::{FontLayout, FontType, Renderer, RootConsole};
 use tcod::console::{BackgroundFlag, Console, TextAlignment};
 use tcod::input;
 use tcod::input::KeyCode;
@@ -28,7 +28,7 @@ const MAP_SIZE: (usize, usize) = (160, 160);
 
 const MOVE_DIST: i32 = 5;
 
-const DEBUG: bool = true;
+const DEBUG: bool = false;
 const TITLE_CARD: [&'static str; 6] = ["   _________ __",
                                        "  /   _____/|  | __ ___.__.  ____________  _____     ____    ____",
                                        "  \\_____  \\ |  |/ /<   |  | /  ___/\\____ \\ \\__  \\  _/ ___\\ _/ __ \\",
@@ -338,7 +338,8 @@ fn main() {
     let mut root = RootConsole::initializer()
         .size(screen_size.0, screen_size.1)
         .title("Skyspace")
-        .renderer(Renderer::SDL)
+        .font_type(FontType::Default)
+        .renderer(Renderer::OpenGL)
         .font_dimensions(16, 19)
         .font(SHOW_FONT, FontLayout::AsciiInRow)
         .init();
