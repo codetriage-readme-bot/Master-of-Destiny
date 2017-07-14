@@ -39,7 +39,7 @@ Total: 100
 pub fn calculate_time_of_day(time: usize,
                              cycle_length: usize)
                              -> Time {
-    let percent = time as f32 / cycle_length as f32;
+    let percent = (time % cycle_length) as f32 / cycle_length as f32;
 
     if percent == 0.0 || percent >= 95.0 {
         Time::Midnight

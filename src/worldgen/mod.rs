@@ -4,6 +4,7 @@ extern crate tcod_sys;
 use life;
 
 use self::rand::Rng;
+use std::cell::RefCell;
 use std::cmp;
 use std::ops::{Index, Range};
 
@@ -14,7 +15,11 @@ use tcod::random;
 pub mod terrain;
 use self::terrain::*;
 
-use time::Time;
+use physics;
+use physics::liquid;
+use physics::stone;
+
+use time::*;
 
 pub fn clamp<T: Ord>(value: T, max: T, min: T) -> T {
     cmp::min(max, cmp::max(min, value))
@@ -41,11 +46,18 @@ fn can_be_restricted(tile: Tile) -> bool {
     }
 }
 
-fn adjacent((x, y): (usize, usize)) -> Vec<(usize, usize)> {
+pub fn strict_adjacent((x, y): (usize, usize))
+    -> Vec<(usize, usize)> {
     vec![(x + 1, y),
          (x.checked_sub(1).unwrap_or(0), y),
          (x, y.checked_sub(1).unwrap_or(0)),
          (x, y + 1)]
+}
+
+pub fn weak_adjacent(p: (usize, usize)) -> Vec<(usize, usize)> {
+    let mut v = strict_adjacent(p);
+    v.push(p);
+    v
 }
 
 // A unit is a 1x1 cross section of the layered world, including a ref
@@ -252,7 +264,7 @@ impl World {
                                                (dist - z) as i32));
                     }
                 } else {
-                    let adj = adjacent((x, y))
+                    let adj = strict_adjacent((x, y))
                         .iter()
                         .map(|&(x, y)| {
                             let list = if y > world.len() {
@@ -521,18 +533,23 @@ impl World {
 }
 
 pub struct WorldState {
+    pub map_size: (usize, usize),
     pub screen: (i32, i32),
     pub cursor: (i32, i32),
     pub level: i32,
     pub life: Vec<Box<life::Living>>,
-    pub map: Option<World>,
+    pub map: Option<RefCell<World>>,
     pub highest_level: usize,
     pub time_of_day: Time,
     pub tcod_map: map::Map,
 }
 
+const CYCLE_LENGTH: usize = 100;
 impl WorldState {
-    pub fn update(&self) {}
+    pub fn update(&mut self, time: usize, dt: usize) {
+        self.time_of_day = calculate_time_of_day(time, CYCLE_LENGTH);
+        physics::run(self, dt);
+    }
     pub fn add_map(&mut self, world: World) {
         let f = |vec: &Vec<Unit>| -> Option<usize> {
             vec.iter()
@@ -562,7 +579,7 @@ impl WorldState {
                 }
             }
         });
-        self.map = Some(world);
+        self.map = Some(RefCell::new(world));
         self.highest_level = toplevel.unwrap();
     }
     pub fn new(s: (usize, usize)) -> WorldState {
@@ -574,6 +591,7 @@ impl WorldState {
             time_of_day: Time::Morning,
             life: vec![],
             map: None,
+            map_size: s,
             tcod_map: map::Map::new(s.0 as i32, s.1 as i32),
         }
     }

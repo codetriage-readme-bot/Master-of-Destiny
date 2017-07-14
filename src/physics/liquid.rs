@@ -1,3 +1,6 @@
+use worldgen::World;
+use worldgen::terrain::*;
+
 pub struct Container<L: Liquid<L>> {
     size: i32,
     name: &'static str,
@@ -39,3 +42,6 @@ pub trait Liquid<L: Liquid<L>> {
     fn amount(&self) -> i32;
     fn new(&self, quantity: i32) -> L;
 }
+
+pub fn solid_physics(ws: &mut World, tl: Tile, aj: Vec<Tile>) {}
+pub fn liquid_physics(ws: &mut World, tl: Tile, aj: Vec<Tile>) {}

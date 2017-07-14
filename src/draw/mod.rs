@@ -18,7 +18,8 @@ pub fn draw_map(root: &mut RootConsole,
                 show_hud: bool,
                 time: usize) {
     match world.map {
-        Some(ref world_map) => {
+        Some(ref wmap) => {
+            let world_map = wmap.borrow();
             root.clear();
             let wid = root.width() as usize;
             let hig = root.height() as usize;
@@ -60,9 +61,11 @@ pub fn draw_map(root: &mut RootConsole,
                                    frame_width,
                                    frame_height,
                                    true,
-                                   BackgroundFlag::Default,
+                                   BackgroundFlag::Set,
                                    Some("Tools"));
-                window.print(1, 1, format!("Height: {}", world.level));
+                window.print(1,
+                             1,
+                             format!("Height: {}", world.level));
                 window.print(1,
                              2,
                              format!("Screen Position: {}, {}",
@@ -76,7 +79,8 @@ pub fn draw_map(root: &mut RootConsole,
                     let (cx, cy) = (world.cursor.0 as usize,
                                     world.cursor.1 as usize);
                     let tiles = &world_map[cy][cx].tiles;
-                    let len = tiles.len().checked_sub(1).unwrap_or(0) as
+                    let len =
+                        tiles.len().checked_sub(1).unwrap_or(0) as
                         i32;
                     window.print(1,
                                  3,
@@ -98,10 +102,7 @@ pub fn draw_map(root: &mut RootConsole,
                              4,
                              format!("Time of Day: {:?}",
                                      world.time_of_day));
-                window.print(1,
-                             5,
-                             format!("Percentage of Night/Day Cycle: {}",
-                                     time as f32 / 500 as f32));
+                window.print(1, 5, format!("Real Time: {}", time));
                 console::blit(window,
                               (0, 0),
                               (frame_width, frame_height),

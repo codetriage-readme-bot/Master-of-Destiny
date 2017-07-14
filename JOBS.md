@@ -33,13 +33,16 @@
 - [x] Menu screen
 - [x] Build reusable UI stuff
 - [x] Add multiple screens (menu, game, pause)
-- [ ] Fix certain tiles not drawing
+- [ ] Improve overall UI (pause menu, mouse cursor, sidebar)
 - [ ] Night/day cycle
 - [ ] Weather cycle
 - [ ] Season cycle
+- [ ] Fix certain tiles not drawing
+- [ ] Add loading screen
+- [ ] Basic physics (cave-ins, gravity)
 - [ ] Load terrain from seed
 - [ ] Add tree canopies
-- [ ] Update game loop to be more reliable
+- [x] Update game loop to be more reliable
 - [ ] Generate biomes by height
 - [ ] Generate biomes by season
 - [ ] Generate vegitation by biome

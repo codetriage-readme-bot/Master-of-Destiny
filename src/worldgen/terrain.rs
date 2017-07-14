@@ -41,7 +41,7 @@ const TILES_TREETRUNK: u32 = (BASE + 26);
 
 /////// ROCK
 // Possible igneous rock kinds
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum IgneousRocks {
     Obsidian,
     Basalt,
@@ -100,7 +100,7 @@ impl DrawChar for IgneousRocks {
 }
 
 // Possible metamorphic rock kinds
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum MetamorphicRocks {
     Gneiss,
     Marble,
@@ -133,7 +133,7 @@ impl DrawChar for MetamorphicRocks {
                                  pos.1 as i32,
                                  chr,
                                  if TILES {
-                                     Color::new(0, 0, 0)
+                                     Color::new(255, 255, 255)
                                  } else {
                                      Color::new(125, 85, 62)
                                  },
@@ -161,7 +161,7 @@ impl DrawChar for MetamorphicRocks {
 }
 
 // Possible Sedimentary rock kinds
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum SedimentaryRocks {
     Limestone,
     Conglomerate,
@@ -194,7 +194,7 @@ impl DrawChar for SedimentaryRocks {
                                  pos.1 as i32,
                                  chr,
                                  if TILES {
-                                     Color::new(0, 0, 0)
+                                     Color::new(255, 255, 255)
                                  } else {
                                      Color::new(125, 85, 62)
                                  },
@@ -222,7 +222,7 @@ impl DrawChar for SedimentaryRocks {
 }
 
 // Soil types
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum SoilTypes {
     Clay,
     Sandy,
@@ -335,7 +335,7 @@ impl DrawChar for SoilTypes {
 }
 
 // Stone types (SCIENCE!)
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum StoneTypes {
     Sedimentary(SedimentaryRocks),
     Igneous(IgneousRocks),
@@ -367,7 +367,7 @@ impl DrawChar for StoneTypes {
 
 /////// WATER
 // This is a DF-type game, so... extra fidelty!
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum LiquidPurity {
     // Helps with healing
     Pure,
@@ -385,7 +385,7 @@ pub enum LiquidPurity {
 
 /////// VEGITATION
 // Vegiatation type, least to most rare, common to least common.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum VegTypes {
     // Small grasses (height 1)
     Bluegrass,
@@ -662,7 +662,7 @@ impl DrawChar for VegTypes {
 
 type Ferenheight = i32;
 type Percent = usize;
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum BiomeType {
     Swamp,
     Jungle,
@@ -670,7 +670,7 @@ pub enum BiomeType {
     Pasture,
     Beach,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct Biome {
     pub biome_type: BiomeType,
     pub temperature_night_f: Ferenheight,
@@ -680,7 +680,7 @@ pub struct Biome {
 
 /////// GENERAL
 // State: the 3 physical forms + fire because it's convenient.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum State {
     Liquid,
     Solid,
@@ -692,7 +692,7 @@ pub type Height = i32;
 pub type Depth = i32;
 
 // North is up, South is down, East is left, West is right.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Compass {
     North,
     South,
@@ -700,14 +700,14 @@ pub enum Compass {
     West,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Slope {
     Up,
     Down,
     None,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum RestrictedTile {
     Stone(StoneTypes, State),
     Vegitation(VegTypes, Height, State),
@@ -765,7 +765,7 @@ impl DrawChar for RestrictedTile {
 }
 // General types of tiles (very broad) and their current state.
 // FIXME: use restricted tile instead of duplicating functionality. Composition over inheritence!
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Tile {
     Empty,
     Ramp(RestrictedTile, Slope),

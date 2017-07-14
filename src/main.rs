@@ -3,7 +3,6 @@ extern crate tcod;
 extern crate tcod_sys;
 
 use tcod::{FontLayout, Renderer, RootConsole};
-use tcod::colors::*;
 use tcod::console::{BackgroundFlag, Console, TextAlignment};
 use tcod::input;
 use tcod::input::KeyCode;
@@ -15,27 +14,21 @@ mod ui;
 mod worldgen;
 mod time;
 
-use ui::{DrawUI, Layout, MouseUI};
+use ui::{Button, DrawUI, Layout, MouseUI};
         
 use draw::draw_map;
-
-use physics::liquid;
-use physics::stone;
 
 use worldgen::{World, WorldState, clamp};
 use worldgen::terrain::{BASE, TILES};
 
 const SHOW_FONT: &'static str = "assets/master16x16_ro.png";
-const DEV_FONT: &'static str = "assets/terminal12x12_gs_ro.png";
 
-const SHOW_SIZE: (i32, i32) = (120, 64);
-const DEV_SIZE: (i32, i32) = (150, 75);
+const SHOW_SIZE: (i32, i32) = (100, 60);
 const MAP_SIZE: (usize, usize) = (160, 160);
 
 const MOVE_DIST: i32 = 5;
-const CYCLE_LENGTH: usize = 500;
 
-const GAME: bool = true;
+const DEBUG: bool = true;
 const TITLE_CARD: [&'static str; 6] = ["   _________ __",
                                        "  /   _____/|  | __ ___.__.  ____________  _____     ____    ____",
                                        "  \\_____  \\ |  |/ /<   |  | /  ___/\\____ \\ \\__  \\  _/ ___\\ _/ __ \\",
@@ -70,11 +63,14 @@ struct Calc {
 struct Game {
     show_hud: bool,
     constants: Calc,
-    world_time: usize,
+    last_time: usize,
     menu: Layout,
+    pause_menu: Layout,
+    show_tools: Button,
     pub time: usize,
     pub screen: GameScreen,
     pub world_state: WorldState,
+    seed: u32,
 }
 
 impl Game {
@@ -86,24 +82,33 @@ impl Game {
                 highest_world: 0,
                 screen_size: screen_size,
             },
-            world_time: 0,
+            last_time: 0,
             time: 0,
             screen: GameScreen::Menu,
-            menu: Layout::new(vec!["New Game", "Use Seed",
-                                   "Quit Now"],
+            show_tools: Button::new("Menu \u{1A}",
+                                    (screen_size.0 - 7,
+                                     screen_size.1 - 2),
+                                    (6, 1)),
+            menu: Layout::new(vec!["New Game", "Use Seed", "Exit"],
                               (screen_size.0 / 2, 30),
                               (8, 0),
                               8),
+            pause_menu: Layout::new(vec!["Main Menu",
+                                         "Back",
+                                         "Fullscreen",
+                                         "Exit"],
+                                    (screen_size.0 / 2, 4),
+                                    (10, 0),
+                                    10),
             world_state: WorldState::new(MAP_SIZE),
+            seed: 0,
         }
     }
 
     pub fn init_game(&mut self, seed: Option<u32>) {
-        self.world_time = time::get_world_time();
-
-        let world = World::new(MAP_SIZE,
-                               seed.unwrap_or(self.world_time as
-                                                  u32));
+        self.last_time = time::get_world_time();
+        self.seed = seed.unwrap_or(self.last_time as u32);
+        let world = World::new(MAP_SIZE, self.seed);
         self.world_state.add_map(world);
 
         self.constants.max_screen_move =
@@ -117,20 +122,19 @@ impl Game {
     pub fn draw(&mut self, root: &mut RootConsole) {
         match self.screen {
             GameScreen::Loading => {
+                root.clear();
                 root.print_ex(self.constants.screen_size.0 / 2,
                               2,
                               BackgroundFlag::Set,
                               TextAlignment::Center,
                               "Loading...");
-                for y in 0..20 {
-                    for x in 1..17 {
-                        root.put_char(x,
-                                      y + 4,
-                                      std::char::from_u32((x * y) as
-                                                              u32)
+                for c in 0..(16 * 19) {
+                    root.put_char(c % self.constants.screen_size.0,
+                                  c / self.constants.screen_size.0 +
+                                      3,
+                                  std::char::from_u32(c as u32)
                                       .unwrap(),
-                                      BackgroundFlag::None);
-                    }
+                                  BackgroundFlag::Set);
                 }
             }
             GameScreen::Menu => {
@@ -148,25 +152,27 @@ impl Game {
                     .draw(root, self.world_state.cursor);
             }
             GameScreen::Game => {
-                self.time += time::get_world_time() - self.world_time;
-                self.time %= CYCLE_LENGTH;
-                self.world_time = time::get_world_time();
-
-                self.world_state.time_of_day =
-                    time::calculate_time_of_day(self.time,
-                                                CYCLE_LENGTH);
-                self.world_state.update();
+                let current_time = time::get_world_time();
+                self.world_state.update(current_time,
+                                        current_time -
+                                            self.last_time);
+                self.last_time = current_time;
                 draw_map(root,
                          &self.world_state,
                          self.show_hud,
-                         self.time);
+                         self.last_time);
+                self.show_tools
+                    .draw(root, self.world_state.cursor);
             }
             GameScreen::Paused => {
+                root.clear();
                 root.print_ex(self.constants.screen_size.0 / 2,
                               2,
                               BackgroundFlag::Set,
                               TextAlignment::Center,
                               "Paused");
+                self.pause_menu
+                    .draw(root, self.world_state.cursor);
             }
         }
         match input::check_for_event(input::KEY | input::MOUSE) {
@@ -176,10 +182,7 @@ impl Game {
                     input::Event::Mouse(ref mouse) => {
                         self.world_state.cursor = (mouse.cx as i32,
                                                    mouse.cy as i32);
-                        root.set_char(mouse.cx as i32,
-                                      mouse.cy as i32,
-                                      '^');
-                        self.handle_mouse(mouse);
+                        self.handle_mouse(root, mouse);
                     }
                     input::Event::Key(ref key) => {
                         if key.pressed {
@@ -200,7 +203,9 @@ impl Game {
                    self.constants.max_screen_move.1,
                    0))
     }
-    fn handle_mouse(&mut self, mouse: &input::Mouse) {
+    fn handle_mouse(&mut self,
+                    root: &mut RootConsole,
+                    mouse: &input::Mouse) {
         match self.screen {
             GameScreen::Menu => {
                 if mouse.lbutton_pressed {
@@ -212,7 +217,52 @@ impl Game {
                             match item.trim().as_ref() {
                                 "new_game" => self.init_game(None),
                                 "use_seed" => self.init_game(None),
-                                "quit_now" => std::process::exit(0),
+                                "exit" => std::process::exit(0),
+                                _ => {}
+                            }
+                        }
+                        None => {}
+                    }
+                }
+            }
+            GameScreen::Game => {
+                if mouse.lbutton_pressed {
+                    if self.show_tools
+                           .bbox_colliding(self.world_state.cursor)
+                           .is_some()
+                    {
+                        if self.show_hud {
+                            self.show_tools.text = "Menu \u{1B}"
+                                .to_string();
+                            self.show_hud = false;
+                        } else {
+                            self.show_tools.text = "Menu \u{1a}"
+                                .to_string();
+                            self.show_hud = true;
+                        }
+                    }
+                }
+            }
+            GameScreen::Paused => {
+                if mouse.lbutton_pressed {
+                    let bitem =
+                        self.pause_menu
+                            .bbox_colliding(self.world_state.cursor);
+                    match bitem {
+                        Some(item) => {
+                            match item.trim().as_ref() {
+                                "main_menu" => {
+                                    self.screen = GameScreen::Menu
+                                }
+                                "fullscreen" => {
+                                    let fullscreen =
+                                        root.is_fullscreen();
+                                    root.set_fullscreen(!fullscreen);
+                                }
+                                "back" => {
+                                    self.screen = GameScreen::Game
+                                }
+                                "exit" => std::process::exit(0),
                                 _ => {}
                             }
                         }
@@ -227,13 +277,7 @@ impl Game {
     fn handle_key(&mut self, key: &input::Key) {
         match self.screen {
             GameScreen::Loading => {}
-            GameScreen::Menu => {
-                match key.code {
-                    KeyCode::Char => self.init_game(None),
-                    KeyCode::Spacebar => self.init_game(None),
-                    _ => {}
-                }
-            }
+            GameScreen::Menu => {}
             GameScreen::Paused => {
                 match key.code {
                     KeyCode::Spacebar => {
@@ -249,7 +293,15 @@ impl Game {
                         self.screen = GameScreen::Paused
                     }
                     KeyCode::Tab => {
-                        self.show_hud = !self.show_hud;
+                        if self.show_hud {
+                            self.show_tools.text = "Menu \u{1B}"
+                                .to_string();
+                            self.show_hud = false;
+                        } else {
+                            self.show_tools.text = "Menu \u{1a}"
+                                .to_string();
+                            self.show_hud = true;
+                        }
                     }
                     KeyCode::Char => {
                         match key.printable {
@@ -298,32 +350,24 @@ fn main() {
     }
 
     let mut game = Game::new(screen_size);
-    for line in TITLE_CARD.iter() {
-        println!("{}", line);
+    if DEBUG {
+        game.screen = GameScreen::Loading;
+        for line in TITLE_CARD.iter() {
+            println!("{}", line);
+        }
     }
 
     tcod::system::set_fps(20);
     root.set_keyboard_repeat(0, 0);
 
     while !root.window_closed() {
-        if GAME {
-            game.draw(&mut root);
-        } else {
-            root.clear();
-            let _ = input::check_for_event(input::KEY | input::MOUSE);
-            for c in 0..(16 * 19) {
-                root.put_char(c % screen_size.0,
-                              c / screen_size.0,
-                              std::char::from_u32(c as u32).unwrap(),
-                              BackgroundFlag::Set);
-            }
-        }
+        game.draw(&mut root);
         root.flush();
     }
 
     unsafe {
         match game.world_state.map {
-            Some(x) => x.delete_heightmap(),
+            Some(x) => x.borrow().delete_heightmap(),
             None => {}
         }
     }

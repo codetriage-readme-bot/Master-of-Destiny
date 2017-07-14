@@ -17,13 +17,13 @@ pub struct Button {
 }
 
 impl Button {
-    fn new(name: &'static str,
-           pos: (i32, i32),
-           size: (i32, i32))
-           -> Button {
+    pub fn new(name: &'static str,
+               pos: (i32, i32),
+               size: (i32, i32))
+               -> Button {
         Button {
             bbox: calculate_bbox(pos, size),
-            text: name.to_string(),
+            text: format!("{:1$}", name, size.0 as usize),
             id: name.replace(" ", "_").to_lowercase(),
         }
     }
