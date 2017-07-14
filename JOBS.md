@@ -37,9 +37,11 @@
 - [x] Build reusable UI stuff
 - [x] Add multiple screens (menu, game, pause)
 - [x] Improve overall UI (pause menu, mouse cursor, sidebar)
-- [ ] Fix identification function
+- [x] Fix identification function
 - [x] Fix missing tiles
 - [x] Generate beaches
+- [ ] Show cursor more consistantly over tiles
+- [ ] Balance soil distorbution
 - [ ] Increase beach size
 - [ ] Night/day cycle
 - [ ] Weather cycle
