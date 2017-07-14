@@ -7,11 +7,14 @@
 - [x] Work tileset bushes
 - [x] Work tileset stone
 - [x] Work tileset dirt
-- [ ] Fix trees
+- [ ] Improve trees (banyon)
+- [ ] Add reduced-noise grass to background of treese
 - [ ] Reduce noise/make tiles easier to see
+- [ ] Make rubble tile for each type of dirt, make wood log tile
+- [ ] Make 4-frame water animation
+- [x] Snow, ice other weather tiles.
 - [ ] Upscale tiles?
 - [ ] Make logo?
-- [x] Snow, ice other weather tiles.
 - [ ] Animal tiles
 - [ ] Explore Dwarf Fortress
 
@@ -34,7 +37,7 @@
 - [x] Build reusable UI stuff
 - [x] Add multiple screens (menu, game, pause)
 - [x] Improve overall UI (pause menu, mouse cursor, sidebar)
-- [x] Fix identification function
+- [ ] Fix identification function
 - [x] Fix missing tiles
 - [x] Generate beaches
 - [ ] Increase beach size
