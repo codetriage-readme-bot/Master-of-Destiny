@@ -302,20 +302,30 @@ fn main() {
         println!("{}", line);
     }
 
-    if GAME {
-        tcod::system::set_fps(20);
-        root.set_keyboard_repeat(0, 0);
+    tcod::system::set_fps(20);
+    root.set_keyboard_repeat(0, 0);
 
-        while !root.window_closed() {
+    while !root.window_closed() {
+        if GAME {
             game.draw(&mut root);
-            root.flush();
-        }
-
-        unsafe {
-            match game.world_state.map {
-                Some(x) => x.delete_heightmap(),
-                None => {}
+        } else {
+            root.clear();
+            let _ = input::check_for_event(input::KEY | input::MOUSE);
+            for c in 0..(16 * 19) {
+                root.put_char(c % screen_size.0,
+                              c / screen_size.0,
+                              std::char::from_u32(c as u32).unwrap(),
+                              BackgroundFlag::Set);
             }
         }
+        root.flush();
     }
+
+    unsafe {
+        match game.world_state.map {
+            Some(x) => x.delete_heightmap(),
+            None => {}
+        }
+    }
+
 }

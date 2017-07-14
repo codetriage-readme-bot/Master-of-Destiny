@@ -133,7 +133,7 @@ impl DrawChar for MetamorphicRocks {
                                  pos.1 as i32,
                                  chr,
                                  if TILES {
-                                     Color::new(255, 255, 255)
+                                     Color::new(0, 0, 0)
                                  } else {
                                      Color::new(125, 85, 62)
                                  },
@@ -194,7 +194,7 @@ impl DrawChar for SedimentaryRocks {
                                  pos.1 as i32,
                                  chr,
                                  if TILES {
-                                     Color::new(255, 255, 255)
+                                     Color::new(0, 0, 0)
                                  } else {
                                      Color::new(125, 85, 62)
                                  },

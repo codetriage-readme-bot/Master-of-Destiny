@@ -7,9 +7,6 @@ use self::rand::Rng;
 use std::cmp;
 use std::ops::{Index, Range};
 
-use tcod::RootConsole;
-use tcod::chars;
-use tcod::console::{BackgroundFlag, Console};
 use tcod::map;
 use tcod::noise::{Noise, NoiseType};
 use tcod::random;
@@ -26,7 +23,9 @@ pub fn clamp<T: Ord>(value: T, max: T, min: T) -> T {
 fn restricted_from_tile(tile: Tile) -> RestrictedTile {
     match tile {
         Tile::Stone(a, b) => RestrictedTile::Stone(a, b),
-        Tile::Vegitation(a, b, c) => RestrictedTile::Vegitation(a, b, c),
+        Tile::Vegitation(a, b, c) => {
+            RestrictedTile::Vegitation(a, b, c)
+        }
         _ => {
             panic!("Type error. Cannot allow restricted type of kind {:?}",
                    tile)
@@ -107,9 +106,17 @@ where
                                                     (1.0 - radius),
                                                 base_radius *
                                                     (1.0 + radius));
-            let xh = tcod_sys::TCOD_random_get_int(rndn, 0, hmw as i32 - 1);
-            let yh = tcod_sys::TCOD_random_get_int(rndn, 0, hmh as i32 - 1);
-            operation(heightmap, xh as f32, yh as f32, radius, height);
+            let xh = tcod_sys::TCOD_random_get_int(rndn,
+                                                   0,
+                                                   hmw as i32 - 1);
+            let yh = tcod_sys::TCOD_random_get_int(rndn,
+                                                   0,
+                                                   hmh as i32 - 1);
+            operation(heightmap,
+                      xh as f32,
+                      yh as f32,
+                      radius,
+                      height);
         }
     }
 }
@@ -161,14 +168,16 @@ impl World {
             .lacunarity(0.3)
             .hurst(-0.9)
             .noise_type(NoiseType::Simplex)
-            .random(random::Rng::new_with_seed(random::Algo::MT, seed))
+            .random(random::Rng::new_with_seed(random::Algo::MT,
+                                               seed))
             .init();
 
         let (sx, sy) = size;
 
         // And here we see a small C hiding in the maw of a Rust. <low-level>
-        let heightmap =
-            unsafe { tcod_sys::TCOD_heightmap_new(sx as i32, sy as i32) };
+        let heightmap = unsafe {
+            tcod_sys::TCOD_heightmap_new(sx as i32, sy as i32)
+        };
         unsafe {
             let rndn =
                 tcod_sys::TCOD_random_new_from_seed(tcod_sys::TCOD_RNG_MT,
@@ -178,8 +187,10 @@ impl World {
                                           tcod_sys::TCOD_NOISE_PERLIN);
             tcod_sys::TCOD_heightmap_add_fbm(heightmap,
                                              noise,
-                                             2.20 * (sx as f32) / 400.0,
-                                             2.20 * (sx as f32) / 400.0,
+                                             2.20 * (sx as f32) /
+                                                 400.0,
+                                             2.20 * (sx as f32) /
+                                                 400.0,
                                              0.0,
                                              0.0,
                                              10.0,
@@ -201,7 +212,8 @@ impl World {
                              rndn);
             tcod_sys::TCOD_heightmap_normalize(heightmap, 0.0, 100.0);
             tcod_sys::TCOD_heightmap_rain_erosion(heightmap,
-                                                  (sx * sy + 100) as i32,
+                                                  (sx * sy + 100) as
+                                                      i32,
                                                   0.06,
                                                   0.02,
                                                   rndn);
@@ -217,7 +229,8 @@ impl World {
                 .lacunarity(0.43)
                 .hurst(-0.9)
                 .noise_type(NoiseType::Perlin)
-                .random(random::Rng::new_with_seed(random::Algo::MT, seed))
+                .random(random::Rng::new_with_seed(random::Algo::MT,
+                                                   seed))
                 .init(),
         };
         for y in 0..sy {
@@ -253,7 +266,9 @@ impl World {
                             if x >= list.len() {
                                 Tile::Empty
                             } else {
-                                if height as usize >= list[x].tiles.len() {
+                                if height as usize >=
+                                    list[x].tiles.len()
+                                {
                                     Tile::Empty
                                 } else {
                                     list[x].tiles[height as usize]
@@ -263,7 +278,9 @@ impl World {
                         .collect::<Vec<_>>();
                     for z in 0..(height as isize - 1) {
                         biomes.push(world.biome_from_height(z));
-                        tiles.push(world.rock_type(adj.clone(), (x, y), z));
+                        tiles.push(world.rock_type(adj.clone(),
+                                                   (x, y),
+                                                   z));
                     }
                     if height <= VEG_THRESHOLD {
                         match world.get_vegetation((x, y)) {
@@ -294,7 +311,8 @@ impl World {
                         let tile = tile.unwrap();
                         let last = (tiles.len() - 1) as usize;
                         if can_be_restricted(tile) {
-                            let r = restricted_from_tile(tile.clone());
+                            let r =
+                                restricted_from_tile(tile.clone());
                             tiles[last] = if slope < -RAMP_THRESHOLD {
                                 Tile::Ramp(r, Slope::Down)
                             } else if slope > RAMP_THRESHOLD {
@@ -324,7 +342,8 @@ impl World {
     unsafe fn get_height(&self, x: usize, y: usize) -> f32 {
         tcod_sys::TCOD_heightmap_get_value(self.heightmap,
                                            x as i32,
-                                           y as i32) * THRESHOLD
+                                           y as i32) *
+            THRESHOLD
     }
 
     pub fn purity() -> LiquidPurity {
@@ -360,6 +379,7 @@ impl World {
 
     pub fn biome_from_height(&self, height: isize) -> Biome {
         Biome {
+            biome_type: BiomeType::Pasture,
             temperature_day_f: 75,
             temperature_night_f: 52,
             percipitation_chance: 70,
@@ -390,9 +410,8 @@ impl World {
         let sedimentary_adjacent =
             adj.iter()
                .find(|x| match **x {
-                         Tile::Stone(StoneTypes::Sedimentary(..), ..) => {
-                             true
-                         }
+                         Tile::Stone(StoneTypes::Sedimentary(..),
+                                     ..) => true,
                          _ => false,
                      })
                .is_some();
@@ -416,10 +435,11 @@ impl World {
                      (x, y): (usize, usize),
                      height: isize)
         -> Tile {
-        let rn =
-            self.stone_vein_noise
-                .get_fbm(&mut [x as f32, y as f32, height as f32], 2) *
-                100.0;
+        let rn = self.stone_vein_noise
+                     .get_fbm(&mut [x as f32,
+                                    y as f32,
+                                    height as f32],
+                              2) * 100.0;
         let sedimentary = &[SedimentaryRocks::Conglomerate,
                             SedimentaryRocks::Limestone];
         let igneous = &[IgneousRocks::Obsidian, IgneousRocks::Basalt];
@@ -460,21 +480,24 @@ impl World {
         let vn = self.vegetation_noise
                      .get_fbm(&mut [x as f32, y as f32], 1) *
             100.0;
-        let veg_levels =
-            vec![[VegTypes::Bluegrass,
-                  VegTypes::Bentgrass,
-                  VegTypes::Ryegrass],
-                 [VegTypes::Dandelion,
-                  VegTypes::Chickweed,
-                  VegTypes::Dandelion],
-                 [VegTypes::Redbud,
-                  VegTypes::Rhododendron,
-                  VegTypes::BroomShrub],
-                 [VegTypes::Crabapple,
-                  VegTypes::Redbud,
-                  VegTypes::Crabapple],
-                 [VegTypes::Pine, VegTypes::Crabapple, VegTypes::Pine],
-                 [VegTypes::Redwood, VegTypes::Pine, VegTypes::Banyon]];
+        let veg_levels = vec![[VegTypes::Bluegrass,
+                               VegTypes::Bentgrass,
+                               VegTypes::Ryegrass],
+                              [VegTypes::Dandelion,
+                               VegTypes::Chickweed,
+                               VegTypes::Dandelion],
+                              [VegTypes::Redbud,
+                               VegTypes::Rhododendron,
+                               VegTypes::BroomShrub],
+                              [VegTypes::Crabapple,
+                               VegTypes::Redbud,
+                               VegTypes::Crabapple],
+                              [VegTypes::Pine,
+                               VegTypes::Crabapple,
+                               VegTypes::Pine],
+                              [VegTypes::Redwood,
+                               VegTypes::Pine,
+                               VegTypes::Banyon]];
         let mut trng = rand::thread_rng(); // I don't know why this should be mutable!
         let veg = if vn < 0.0 {
             (trng.choose(&veg_levels[0]), 1)
