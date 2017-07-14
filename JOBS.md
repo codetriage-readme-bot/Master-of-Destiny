@@ -56,3 +56,4 @@
 - [ ] Generate loam under plants
 - [ ] Group types of plants
 - [ ] Terrain collision detection
+- [ ] Render text using SDL
