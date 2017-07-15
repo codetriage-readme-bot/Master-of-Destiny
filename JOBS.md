@@ -40,8 +40,9 @@
 - [x] Fix identification function
 - [x] Fix missing tiles
 - [x] Generate beaches
-- [ ] Show cursor more consistantly over tiles
-- [ ] Balance soil distorbution
+- [x] Show cursor more consistantly over tiles
+- [x] Improve main menu responsiveness
+- [ ] Balance soil distrobution
 - [ ] Increase beach size
 - [ ] Night/day cycle
 - [ ] Weather cycle
@@ -58,4 +59,9 @@
 - [ ] Generate loam under plants
 - [ ] Group types of plants
 - [ ] Terrain collision detection
-- [ ] Render text using SDL
+- [ ] Animals
+- [ ] Use Guile to write AI and properties
+- [ ] Generate animals by ecosystem
+- [ ] Animal predators/prey
+- [ ] Special animal behaviour
+- [ ] Render text using SDL?
