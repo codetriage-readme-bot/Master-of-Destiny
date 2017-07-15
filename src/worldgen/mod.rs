@@ -434,7 +434,6 @@ impl World {
                                            v || matches!(*x, Tile::Vegitation(..)),
                                            sd || matches!(*x, Tile::Stone(..)))
                                       });
-        println!("{}", sand_adjacent);
         if water_adjacent || sand_adjacent {
             SoilTypes::Sandy
         } else if veg_adjacent && water_adjacent ||

@@ -43,6 +43,8 @@
 - [x] Show cursor more consistantly over tiles
 - [x] Improve main menu responsiveness
 - [x] Balance soil distrobution
+- [x] Better way to render depth
+- [x] Better way to render ramps
 - [ ] Increase beach size
 - [ ] Night/day cycle
 - [ ] Weather cycle
