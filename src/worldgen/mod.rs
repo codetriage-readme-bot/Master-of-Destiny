@@ -25,6 +25,16 @@ pub fn clamp<T: Ord>(value: T, max: T, min: T) -> T {
     cmp::min(max, cmp::max(min, value))
 }
 
+macro_rules! matches {
+    ($e:expr, $p:pat) => (
+        match $e {
+            $p => true,
+            _ => false
+        }
+    )
+}
+
+
 fn restricted_from_tile(tile: Tile) -> RestrictedTile {
     match tile {
         Tile::Stone(a, b) => RestrictedTile::Stone(a, b),
@@ -415,39 +425,31 @@ impl World {
     }
 
     fn soil_choice(adj: Vec<Tile>) -> SoilTypes {
-        let water_adjacent = adj.iter()
-                                .find(|x| match **x {
-            Tile::Water(..) => true,
-            Tile::Stone(StoneTypes::Soil(SoilTypes::Sandy), ..) => true,
-            _ => false,
-        })
-                                .is_some();
-        let veg_adjacent = adj.iter()
-                              .find(|x| match **x {
-                                        Tile::Vegitation(..) => true,
-                                        _ => false,
-                                    })
-                              .is_some();
-        let sedimentary_adjacent =
-            adj.iter()
-               .find(|x| match **x {
-                         Tile::Stone(StoneTypes::Sedimentary(..),
-                                     ..) => true,
-                         _ => false,
-                     })
-               .is_some();
-        if water_adjacent {
+        let (water_adjacent, sand_adjacent, veg_adjacent, sedimentary_adjacent) = adj.iter()
+                                .fold((false, false, false, false),
+                                      |(w, s, v, sd), x|
+                                      {
+                                          (w || matches!(*x, Tile::Water(..)),
+                                           s || matches!(*x, Tile::Stone(StoneTypes::Soil(SoilTypes::Sandy), _)),
+                                           v || matches!(*x, Tile::Vegitation(..)),
+                                           sd || matches!(*x, Tile::Stone(..)))
+                                      });
+        if water_adjacent || sand_adjacent {
             SoilTypes::Sandy
-        } else if veg_adjacent && water_adjacent {
+        } else if veg_adjacent && water_adjacent ||
+                   (water_adjacent && !sand_adjacent)
+        {
             SoilTypes::Peaty
         } else if veg_adjacent {
             SoilTypes::Loamy
         } else if sedimentary_adjacent {
             SoilTypes::Silty
-        } else if sedimentary_adjacent && water_adjacent {
+        } else if (sedimentary_adjacent && water_adjacent) ||
+                   sand_adjacent
+        {
             SoilTypes::Clay
         } else {
-            SoilTypes::Loamy
+            SoilTypes::Peaty
         }
     }
 

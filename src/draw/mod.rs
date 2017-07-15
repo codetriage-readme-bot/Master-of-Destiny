@@ -2,8 +2,9 @@ use tcod::{OffscreenConsole, RootConsole};
 use tcod::colors::Color;
 use tcod::console;
 use tcod::console::{BackgroundFlag, Console};
+
 use worldgen::WorldState;
-use worldgen::terrain::Tile;
+use worldgen::terrain::{TILES, Tile};
 
 pub trait DrawChar {
     fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize));
@@ -37,14 +38,13 @@ pub fn draw_map(root: &mut RootConsole,
                     .zip(0..wid)
                 {
                     let tiles = &world_map[my][mx].tiles;
+                    let len = tiles.len().checked_sub(1).unwrap_or(0);
 
                     match tiles.get(world.level as usize) {
                         None => {
-                            /*
                             tiles.get(len)
-                            .unwrap_or(&Tile::Empty)
-                            .draw_char(root, (x, y));*/
-                            (Tile::Empty).draw_char(root, (x, y));
+                                .unwrap_or(&Tile::Empty)
+                                .draw_char(root, (x, y));
                         }
                         Some(tile) => tile.draw_char(root, (x, y)),
                     }
@@ -80,24 +80,27 @@ pub fn draw_map(root: &mut RootConsole,
                     let (cx, cy) = (world.cursor.0 as usize,
                                     world.cursor.1 as usize);
                     let tiles = &world_map[cy][cx].tiles;
-                    let len =
-                        tiles.len().checked_sub(1).unwrap_or(0) as
-                        i32;
+                    let len = tiles.len().checked_sub(1).unwrap_or(0);
                     window.print(1,
                                  3,
-                                 if len < world.level {
+                                 if len < world.level as usize {
                                      tiles.get(len as usize)
-                                         .unwrap_or(&Tile::Empty)
-                                         .describe()
                                  } else {
                                      tiles.get(world.level as usize)
-                                         .unwrap_or(&Tile::Empty)
-                                         .describe()
-                                 });
+                                 }
+                                 .unwrap_or(&Tile::Empty)
+                                 .describe());
                     root.set_char_background(cx as i32,
                                              cy as i32,
                                              Color::new(255, 255, 0),
                                              BackgroundFlag::Lighten);
+                    if TILES {
+                        root.set_char_foreground(cx as i32,
+                                                 cy as i32,
+                                                 Color::new(100,
+                                                            100,
+                                                            0));
+                    }
                 }
                 window.print(1,
                              4,
