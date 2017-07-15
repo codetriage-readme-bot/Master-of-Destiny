@@ -42,12 +42,12 @@
 - [x] Generate beaches
 - [x] Show cursor more consistantly over tiles
 - [x] Improve main menu responsiveness
-- [ ] Balance soil distrobution
+- [x] Balance soil distrobution
 - [ ] Increase beach size
 - [ ] Night/day cycle
 - [ ] Weather cycle
 - [ ] Season cycle
-- [ ] Fix certain tiles not drawing
+- [x] Fix certain tiles not drawing
 - [ ] Add loading screen
 - [ ] Basic physics (cave-ins, gravity)
 - [ ] Load terrain from seed
@@ -60,7 +60,7 @@
 - [ ] Group types of plants
 - [ ] Terrain collision detection
 - [ ] Animals
-- [ ] Use Guile to write AI and properties
+- [ ] Use Lua to write AI and properties
 - [ ] Generate animals by ecosystem
 - [ ] Animal predators/prey
 - [ ] Special animal behaviour
