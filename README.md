@@ -54,6 +54,50 @@ characters, or they might die or go insane. You must also defend not
 only against the elements but also against beasts and malevolent
 aliens.
 
+## Installation
+
+For now, since the project is currently in development, we do not have a binary executable. Instead you will have to...
+
+- Install SDL2
+- Install Rust
+- Install Cargo (should come with Rust)
+- Download the project
+- Run `cargo run` in the project's directory
+
+## Contributing (contact info below)
+
+### Who to talk to
+
+Speak with Christopher if you:
+
+- Want to contribute to the codebase
+- Want to discuss simulation design
+- Want to contribute to the website
+
+Speak with William if you:
+
+- Want to contribute graphics
+- Want to discuss interface design or overall game design
+- Want to contribute sound/music.
+
+### Required knowledge
+Be able to do/use...
+
+All of:
+- Git
+- GitHub
+- Markdown
+
+One of:
+- Music
+- Sound effects
+- Graphics
+- Game design
+- UI design
+- Marketing
+- Web design
+- Rust programming
+- Lua programming
 
 ## Feature List (1000ft view)
 
@@ -74,8 +118,12 @@ cleanup, from a refactor to prehaps a performance issue.
 - [ ] Workshops, constructions
 - [ ] Machenery
 
+## More Info
 
-## Credits
+- [Screenshots](https://github.com/christopherdumas/Skyspace/tree/master/assets/screenshots) are available.
+- Christopher can be emailed at any time.
+
+## Contacts
 
 Authors:
 
