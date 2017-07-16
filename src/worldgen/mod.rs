@@ -441,15 +441,23 @@ impl World {
         {
             SoilTypes::Peaty
         } else if veg_adjacent {
-            SoilTypes::Loamy
+            *rand::thread_rng()
+                .choose(&[SoilTypes::Loamy, SoilTypes::Peaty])
+                .unwrap()
         } else if sedimentary_adjacent {
-            SoilTypes::Silty
-        } else if (sedimentary_adjacent && water_adjacent) ||
-                   sand_adjacent
+            *rand::thread_rng()
+                .choose(&[SoilTypes::Sandy,
+                          SoilTypes::Clay,
+                          SoilTypes::Silty])
+                .unwrap()
+        } else if water_adjacent &&
+                   (sand_adjacent || sedimentary_adjacent)
         {
             SoilTypes::Clay
         } else {
-            SoilTypes::Peaty
+            *rand::thread_rng()
+                .choose(&[SoilTypes::Clay, SoilTypes::Loamy])
+                .unwrap()
         }
     }
 

@@ -40,13 +40,16 @@
 - [x] Fix identification function
 - [x] Fix missing tiles
 - [x] Generate beaches
-- [ ] Show cursor more consistantly over tiles
-- [ ] Balance soil distorbution
+- [x] Show cursor more consistantly over tiles
+- [x] Improve main menu responsiveness
+- [x] Balance soil distrobution
+- [x] Better way to render depth
+- [x] Better way to render ramps
 - [ ] Increase beach size
 - [ ] Night/day cycle
 - [ ] Weather cycle
 - [ ] Season cycle
-- [ ] Fix certain tiles not drawing
+- [x] Fix certain tiles not drawing
 - [ ] Add loading screen
 - [ ] Basic physics (cave-ins, gravity)
 - [ ] Load terrain from seed
@@ -58,4 +61,9 @@
 - [ ] Generate loam under plants
 - [ ] Group types of plants
 - [ ] Terrain collision detection
-- [ ] Render text using SDL
+- [ ] Animals
+- [ ] Use Lua to write AI and properties
+- [ ] Generate animals by ecosystem
+- [ ] Animal predators/prey
+- [ ] Special animal behaviour
+- [ ] Render text using SDL?

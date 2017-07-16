@@ -38,6 +38,9 @@ const TILES_REDBUD: u32 = (BASE + 23);
 const TILES_REDWOOD: u32 = (BASE + 24);
 const TILES_RHODODENDRON: u32 = (BASE + 25);
 const TILES_TREETRUNK: u32 = (BASE + 26);
+const TILES_PUDDLE: u32 = (BASE + 27);
+const TILES_ICE: u32 = (BASE + 28);
+const TILES_SNOW: u32 = (BASE + 29);
 
 /////// ROCK
 // Possible igneous rock kinds
@@ -194,7 +197,7 @@ impl DrawChar for SedimentaryRocks {
                                  pos.1 as i32,
                                  chr,
                                  if TILES {
-                                     Color::new(255, 255, 255)
+                                     Color::new(150, 150, 150)
                                  } else {
                                      Color::new(125, 85, 62)
                                  },
@@ -842,6 +845,12 @@ impl DrawChar for Tile {
                                           pos.1 as i32,
                                           chars::ARROW2_N,
                                           BackgroundFlag::None);
+                        } else {
+                            root.set_char_foreground(pos.0 as i32,
+                                                     pos.1 as i32,
+                                                     Color::new(160,
+                                                                160,
+                                                                160));
                         }
                     }
                     &Slope::None => {
@@ -860,6 +869,12 @@ impl DrawChar for Tile {
                                           pos.1 as i32,
                                           chars::ARROW2_S,
                                           BackgroundFlag::None);
+                        } else {
+                            root.set_char_foreground(pos.0 as i32,
+                                                     pos.1 as i32,
+                                                     Color::new(160,
+                                                                160,
+                                                                160));
                         }
                     }
                 }
@@ -914,8 +929,7 @@ impl DrawChar for Tile {
             }
             &Tile::Water(_, State::Solid, _) => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_OBSIDIAN)
-                        .unwrap()
+                    std::char::from_u32(TILES_ICE).unwrap()
                 } else {
                     chars::BLOCK1
                 };
@@ -929,39 +943,22 @@ impl DrawChar for Tile {
                                  },
                                  Color::new(100, 255, 100));
             }
-            &Tile::Water(_, State::Liquid, ref depth) => {
+            &Tile::Water(_, State::Liquid, _) => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_WATER)
                         .unwrap()
                 } else {
                     '\u{f7}'
                 };
-                if depth <= &2 {
-                    root.put_char_ex(pos.0 as i32,
-                                     pos.1 as i32,
-                                     chr,
-                                     if TILES {
-                                         Color::new(255, 255, 255)
-                                     } else {
-                                         Color::new(0, 105, 148)
-                                     },
-                                     Color::new(0, 159, 225));
-                } else {
-                    root.put_char_ex(pos.0 as i32,
-                                     pos.1 as i32,
-                                     format!("{}", depth)
-                                         .bytes()
-                                         .take(1)
-                                         .collect::<Vec<_>>()
-                                         [0] as
-                                         char,
-                                     if TILES {
-                                         Color::new(255, 255, 255)
-                                     } else {
-                                         Color::new(0, 105, 148)
-                                     },
-                                     Color::new(0, 159, 225));
-                }
+                root.put_char_ex(pos.0 as i32,
+                                 pos.1 as i32,
+                                 chr,
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(0, 105, 148)
+                                 },
+                                 Color::new(0, 159, 225));
             }   
             &Tile::Water(_, State::Gas, _) => {
                 let chr = if TILES {

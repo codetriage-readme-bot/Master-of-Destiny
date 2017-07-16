@@ -106,6 +106,14 @@ impl Game {
     }
 
     pub fn init_game(&mut self, seed: Option<u32>) {
+        let lpos = self.menu.buttons[self.menu.buttons.len() - 1]
+            .bbox
+            .0;
+        self.menu.buttons.insert(0,
+                                 Button::new("Resume",
+                                             (lpos.0 + 8 % 8,
+                                              lpos.1 + 1),
+                                             (8, 0)));
         self.last_time = time::get_world_time();
         self.seed = seed.unwrap_or(self.last_time as u32);
         let world = World::new(MAP_SIZE, self.seed);
@@ -217,6 +225,9 @@ impl Game {
                             match item.trim().as_ref() {
                                 "new_game" => self.init_game(None),
                                 "use_seed" => self.init_game(None),
+                                "resume" => {
+                                    self.screen = GameScreen::Game
+                                }
                                 "exit" => std::process::exit(0),
                                 _ => {}
                             }

@@ -43,8 +43,20 @@ pub fn draw_map(root: &mut RootConsole,
                     match tiles.get(world.level as usize) {
                         None => {
                             tiles.get(len)
-                                .unwrap_or(&Tile::Empty)
-                                .draw_char(root, (x, y));
+                                 .unwrap_or(&Tile::Empty)
+                                 .draw_char(root, (x, y));
+                            if TILES {
+                                root.set_char_foreground(x as i32,
+                                                         y as i32,
+                                                         Color::new(150,
+                                                                    150,
+                                                                    150));
+                            } else {
+                                root.set_char_background(x as i32,
+                                             y as i32,
+                                             Color::new(100, 100, 100),
+                                             BackgroundFlag::Darken);
+                            }
                         }
                         Some(tile) => tile.draw_char(root, (x, y)),
                     }
@@ -73,9 +85,9 @@ pub fn draw_map(root: &mut RootConsole,
                                      world.screen.0,
                                      world.screen.1));
                 if (world.cursor.0 >= 0 &&
-                    world.cursor.0 < world_map[0].len() as i32) &&
+                        world.cursor.0 < world_map[0].len() as i32) &&
                     (world.cursor.1 >= 0 &&
-                     world.cursor.1 < world_map.len() as i32)
+                         world.cursor.1 < world_map.len() as i32)
                 {
                     let (cx, cy) = (world.cursor.0 as usize,
                                     world.cursor.1 as usize);
@@ -92,14 +104,16 @@ pub fn draw_map(root: &mut RootConsole,
                                  .describe());
                     root.set_char_background(cx as i32,
                                              cy as i32,
-                                             Color::new(255, 255, 0),
-                                             BackgroundFlag::Lighten);
+                                             Color::new(100,
+                                                        100,
+                                                        100),
+                                             BackgroundFlag::Darken);
                     if TILES {
                         root.set_char_foreground(cx as i32,
                                                  cy as i32,
                                                  Color::new(100,
                                                             100,
-                                                            0));
+                                                            100));
                     }
                 }
                 window.print(1,
