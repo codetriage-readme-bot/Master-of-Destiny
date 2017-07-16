@@ -45,6 +45,7 @@
 - [x] Balance soil distrobution
 - [x] Better way to render depth
 - [x] Better way to render ramps
+- [x] Improve depth rendering for debugging, make more 3D
 - [ ] Increase beach size
 - [ ] Night/day cycle
 - [ ] Weather cycle

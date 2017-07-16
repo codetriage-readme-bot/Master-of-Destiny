@@ -1,9 +1,11 @@
+use std;
 use tcod::{OffscreenConsole, RootConsole};
 use tcod::colors::Color;
 use tcod::console;
 use tcod::console::{BackgroundFlag, Console};
 
-use worldgen::WorldState;
+use time;
+use worldgen::{CYCLE_LENGTH, WorldState};
 use worldgen::terrain::{TILES, Tile};
 
 pub trait DrawChar {
@@ -46,11 +48,19 @@ pub fn draw_map(root: &mut RootConsole,
                                  .unwrap_or(&Tile::Empty)
                                  .draw_char(root, (x, y));
                             if TILES {
+                                let raw_c = (255 as usize)
+                                    .checked_sub((world.level as
+                                                      usize -
+                                                      len) *
+                                                     5)
+                                    .unwrap_or(0);
+                                let c = std::cmp::max(raw_c, 10) as
+                                    u8;
                                 root.set_char_foreground(x as i32,
                                                          y as i32,
-                                                         Color::new(150,
-                                                                    150,
-                                                                    150));
+                                                         Color::new(c,
+                                                                    c,
+                                                                    c));
                             } else {
                                 root.set_char_background(x as i32,
                                              y as i32,
@@ -120,7 +130,10 @@ pub fn draw_map(root: &mut RootConsole,
                              4,
                              format!("Time of Day: {:?}",
                                      world.time_of_day));
-                window.print(1, 5, format!("Real Time: {}", time));
+                window.print(1,
+                             5,
+                             format!("Real Time: {}",
+                                     time::calculate_percent_of_day(time as f32, CYCLE_LENGTH as f32)));
                 console::blit(window,
                               (0, 0),
                               (frame_width, frame_height),

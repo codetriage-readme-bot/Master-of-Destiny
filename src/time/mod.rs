@@ -10,6 +10,10 @@ pub enum Time {
     Midnight,
 }
 
+pub fn calculate_percent_of_day(time: f32, cycle_length: f32) -> f32 {
+    ((time % cycle_length) / cycle_length) * 100.0
+}
+
 /*
 Step: 5
 Total: 100
@@ -39,8 +43,8 @@ Total: 100
 pub fn calculate_time_of_day(time: usize,
                              cycle_length: usize)
                              -> Time {
-    let percent = (time % cycle_length) as f32 / cycle_length as f32;
-
+    let percent = calculate_percent_of_day(time as f32,
+                                           cycle_length as f32);
     if percent == 0.0 || percent >= 95.0 {
         Time::Midnight
     } else if percent <= 20.0 {

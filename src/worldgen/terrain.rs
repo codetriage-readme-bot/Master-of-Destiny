@@ -845,12 +845,6 @@ impl DrawChar for Tile {
                                           pos.1 as i32,
                                           chars::ARROW2_N,
                                           BackgroundFlag::None);
-                        } else {
-                            root.set_char_foreground(pos.0 as i32,
-                                                     pos.1 as i32,
-                                                     Color::new(160,
-                                                                160,
-                                                                160));
                         }
                     }
                     &Slope::None => {
@@ -869,12 +863,6 @@ impl DrawChar for Tile {
                                           pos.1 as i32,
                                           chars::ARROW2_S,
                                           BackgroundFlag::None);
-                        } else {
-                            root.set_char_foreground(pos.0 as i32,
-                                                     pos.1 as i32,
-                                                     Color::new(140,
-                                                                140,
-                                                                140));
                         }
                     }
                 }

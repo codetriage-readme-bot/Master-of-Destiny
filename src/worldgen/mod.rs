@@ -561,7 +561,7 @@ pub struct WorldState {
     pub tcod_map: map::Map,
 }
 
-const CYCLE_LENGTH: usize = 100;
+pub const CYCLE_LENGTH: usize = 100;
 impl WorldState {
     pub fn update(&mut self, time: usize, dt: usize) {
         self.time_of_day = calculate_time_of_day(time, CYCLE_LENGTH);
