@@ -872,9 +872,9 @@ impl DrawChar for Tile {
                         } else {
                             root.set_char_foreground(pos.0 as i32,
                                                      pos.1 as i32,
-                                                     Color::new(160,
-                                                                160,
-                                                                160));
+                                                     Color::new(140,
+                                                                140,
+                                                                140));
                         }
                     }
                 }

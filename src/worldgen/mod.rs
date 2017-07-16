@@ -446,9 +446,7 @@ impl World {
                 .unwrap()
         } else if sedimentary_adjacent {
             *rand::thread_rng()
-                .choose(&[SoilTypes::Sandy,
-                          SoilTypes::Clay,
-                          SoilTypes::Silty])
+                .choose(&[SoilTypes::Clay, SoilTypes::Silty])
                 .unwrap()
         } else if water_adjacent &&
                    (sand_adjacent || sedimentary_adjacent)

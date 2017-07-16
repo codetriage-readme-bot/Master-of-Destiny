@@ -9,6 +9,9 @@ _________ __
 
 
 # Skyspace
+
+[![Code Triagers Badge](https://www.codetriage.com/christopherdumas/skyspace/badges/users.svg)](https://www.codetriage.com/christopherdumas/skyspace)
+
 ## A Survival City Building Roguelike
 
 In *Skyspace* you are the first settler on a hostile planet in a
