@@ -49,7 +49,11 @@
 - [ ] Increase beach size
 - [x] Night/day cycle
 - [ ] Weather cycle
-- [ ] Season cycle
+- [x] Season cycle
+- [x] Year cycle
+- [x] Full calendar
+- [x] Regular day time
+- [x] Improve HUD
 - [x] Fix certain tiles not drawing
 - [ ] Add loading screen
 - [ ] Basic physics (cave-ins, gravity)

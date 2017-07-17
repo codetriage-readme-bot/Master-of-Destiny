@@ -114,7 +114,7 @@ pub fn draw_map(root: &mut RootConsole,
                                  .describe());
                     if len != world.level as usize {
                         window.print(1,
-                                 6,
+                                 8,
                                  format!("Distance from Level: {}",
                                          world.level as i32 - len as i32));
                     }
@@ -133,13 +133,17 @@ pub fn draw_map(root: &mut RootConsole,
                     }
                 }
                 window.print(1,
-                             4,
-                             format!("Time of Day: {:?}",
-                                     world.time_of_day));
-                window.print(1,
                              5,
-                             format!("Real Time: {}",
-                                     time::calculate_percent_of_day(time as f32, CYCLE_LENGTH as f32)));
+                             format!("It is the {}",
+                                     world.time_of_day.describe()));
+                window.print(1,
+                             6,
+                             format!("{}",
+                                     world.calendar.describe()));
+                window.print(1,
+                             9,
+                             format!("The time is {}",
+                                     world.clock.describe()));
                 console::blit(window,
                               (0, 0),
                               (frame_width, frame_height),

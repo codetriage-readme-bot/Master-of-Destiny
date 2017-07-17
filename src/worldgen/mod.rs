@@ -19,7 +19,8 @@ use physics;
 use physics::liquid;
 use physics::stone;
 
-use time::*;
+use time;
+use time::{Calendar, Clock, Time};
 
 pub fn clamp<T: Ord>(value: T, max: T, min: T) -> T {
     cmp::min(max, cmp::max(min, value))
@@ -550,6 +551,7 @@ impl World {
 }
 
 pub struct WorldState {
+    days: usize,
     pub map_size: (usize, usize),
     pub screen: (i32, i32),
     pub cursor: (i32, i32),
@@ -559,12 +561,20 @@ pub struct WorldState {
     pub highest_level: usize,
     pub time_of_day: Time,
     pub tcod_map: map::Map,
+    pub calendar: Calendar,
+    pub clock: Clock,
 }
 
 pub const CYCLE_LENGTH: usize = 100;
 impl WorldState {
     pub fn update(&mut self, time: usize, dt: usize) {
-        self.time_of_day = calculate_time_of_day(time, CYCLE_LENGTH);
+        self.clock.update_deltatime(dt);
+        self.time_of_day = Time::from_clock_time(&self.clock);
+        if self.time_of_day == Time::Midnight {
+            self.clock.time = (0, 0);
+            self.days += 1;
+            self.calendar.update_to_day(self.days);
+        }
         physics::run(self, dt);
     }
     pub fn add_map(&mut self, world: World) {
@@ -605,9 +615,15 @@ impl WorldState {
             level: 31,
             highest_level: 0,
             cursor: (0, 0),
+            calendar: Calendar {
+                dmy: (12, 6, 100),
+                season: time::Season::Summer,
+            },
+            days: 36512,
             time_of_day: Time::Morning,
             life: vec![],
             map: None,
+            clock: Clock { time: (12, 30) },
             map_size: s,
             tcod_map: map::Map::new(s.0 as i32, s.1 as i32),
         }
