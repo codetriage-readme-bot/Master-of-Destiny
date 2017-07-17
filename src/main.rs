@@ -379,7 +379,7 @@ fn main() {
 
     unsafe {
         match game.world_state.map {
-            Some(x) => x.borrow().delete_heightmap(),
+            Some(x) => x.delete_heightmap(),
             None => {}
         }
     }

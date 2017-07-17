@@ -48,7 +48,7 @@
 - [x] Improve depth rendering for debugging, make more 3D
 - [ ] Increase beach size
 - [x] Night/day cycle
-- [ ] Weather cycle
+- [x] Weather cycle
 - [x] Season cycle
 - [x] Year cycle
 - [x] Full calendar
@@ -57,6 +57,7 @@
 - [x] Fix certain tiles not drawing
 - [ ] Add loading screen
 - [ ] Basic physics (cave-ins, gravity)
+- [ ] Tide/waves (depends on physics)
 - [ ] Load terrain from seed
 - [ ] Add tree canopies
 - [x] Update game loop to be more reliable

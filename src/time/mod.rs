@@ -1,3 +1,6 @@
+extern crate rand;
+
+use self::rand::Rng;
 use draw::Describe;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -50,7 +53,7 @@ pub enum Season {
 }
 
 impl Season {
-    pub fn from_year(month: usize) -> Self {
+    pub fn from_month(month: usize) -> Self {
         if 3 <= month && month <= 5 {
             Season::Spring
         } else if 6 <= month && month <= 8 {
@@ -63,9 +66,51 @@ impl Season {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum Weather {
+    Raining,
+    Snowing,
+    Sunny,
+    Overcast,
+}
+
+impl Weather {
+    pub fn from_season_time(season: Season, hours: usize) -> Weather {
+        match season {
+            Season::Autumn => {
+                rand::thread_rng()
+                    .choose(&[Weather::Sunny, Weather::Overcast])
+                    .unwrap()
+                    .clone()
+            }
+            Season::Winter => {
+                rand::thread_rng()
+                    .choose(&[Weather::Snowing, Weather::Overcast])
+                    .unwrap()
+                    .clone()
+            }
+            Season::Spring => {
+                rand::thread_rng()
+                    .choose(&[Weather::Sunny, Weather::Raining])
+                    .unwrap()
+                    .clone()
+            }
+            Season::Summer => {
+                rand::thread_rng()
+                    .choose(&[Weather::Sunny,
+                              Weather::Raining,
+                              Weather::Raining])
+                    .unwrap()
+                    .clone()
+            }
+        }
+    }
+}
+
 pub struct Calendar {
     pub dmy: (usize, usize, usize),
     pub season: Season,
+    pub weather: Weather,
 }
 
 impl Describe for Calendar {
@@ -79,9 +124,20 @@ impl Describe for Calendar {
 }
 
 impl Calendar {
-    pub fn update_to_day(&mut self, days: usize) {
+    pub fn new(d: usize, m: usize, y: usize, clock: &Clock) -> Self {
+        Calendar {
+            dmy: (d, m, y),
+            season: Season::from_month(m),
+            weather: Weather::from_season_time(Season::from_month(m),
+                                               clock.time.0),
+        }
+    }
+    pub fn update_to_day(&mut self, days: usize, clock: &Clock) {
         self.dmy = (days % 30, days / 30, days / 356);
-        self.season = Season::from_year(self.dmy.2);
+        self.season = Season::from_month(self.dmy.1);
+        self.weather =
+            Weather::from_season_time(Season::from_month(self.dmy.1),
+                                      clock.time.0);
     }
 }
 

@@ -22,7 +22,7 @@ pub fn draw_map(root: &mut RootConsole,
                 time: usize) {
     match world.map {
         Some(ref wmap) => {
-            let world_map = wmap.borrow();
+            let world_map = wmap;
             root.clear();
             let wid = root.width() as usize;
             let hig = root.height() as usize;
@@ -39,7 +39,7 @@ pub fn draw_map(root: &mut RootConsole,
                 for (mx, x) in (screen_start_x..screen_end_x)
                     .zip(0..wid)
                 {
-                    let tiles = &world_map[my][mx].tiles;
+                    let tiles = &world_map[my].borrow()[mx].tiles;
                     let len = tiles.len().checked_sub(1).unwrap_or(0);
 
                     match tiles.get(world.level as usize) {
@@ -86,37 +86,40 @@ pub fn draw_map(root: &mut RootConsole,
                                    true,
                                    BackgroundFlag::Set,
                                    Some("Tools"));
-                window.print(1,
-                             1,
-                             format!("Height: {}", world.level));
-                window.print(1,
-                             2,
-                             format!("Screen Position: {}, {}",
-                                     world.screen.0,
-                                     world.screen.1));
+                let mut hud_info: [String; 8] =
+                    [format!("Height: {}", world.level),
+                     format!("Screen Position: {}, {}",
+                             world.screen.0,
+                             world.screen.1),
+                     format!("ToD: {}",
+                             world.time_of_day.describe()),
+                     format!("Date: {}", world.calendar.describe()),
+                     format!("Clock: {}", world.clock.describe()),
+                     format!("Weather: {:?}",
+                             world.calendar.weather),
+                     String::new(),
+                     String::new()];
                 if (world.cursor.0 >= 0 &&
-                        world.cursor.0 < world_map[0].len() as i32) &&
+                        world.cursor.0 <
+                            world_map[0].borrow().len() as i32) &&
                     (world.cursor.1 >= 0 &&
                          world.cursor.1 < world_map.len() as i32)
                 {
                     let (cx, cy) = (world.cursor.0 as usize,
                                     world.cursor.1 as usize);
-                    let tiles = &world_map[cy][cx].tiles;
+                    let tiles = &world_map[cy].borrow()[cx].tiles;
                     let len = tiles.len().checked_sub(1).unwrap_or(0);
-                    window.print(1,
-                                 3,
-                                 if len < world.level as usize {
-                                     tiles.get(len as usize)
-                                 } else {
-                                     tiles.get(world.level as usize)
-                                 }
-                                 .unwrap_or(&Tile::Empty)
-                                 .describe());
+                    hud_info[6] = if len < world.level as usize {
+                                      tiles.get(len as usize)
+                                  } else {
+                                      tiles.get(world.level as usize)
+                                  }
+                                  .unwrap_or(&Tile::Empty)
+                                  .describe();
                     if len != world.level as usize {
-                        window.print(1,
-                                 8,
-                                 format!("Distance from Level: {}",
-                                         world.level as i32 - len as i32));
+                        hud_info[7] = format!("Distance from Level: {}",
+                                              world.level as i32 -
+                                                  len as i32);
                     }
                     root.set_char_background(cx as i32,
                                              cy as i32,
@@ -132,18 +135,9 @@ pub fn draw_map(root: &mut RootConsole,
                                                             100));
                     }
                 }
-                window.print(1,
-                             5,
-                             format!("It is the {}",
-                                     world.time_of_day.describe()));
-                window.print(1,
-                             6,
-                             format!("{}",
-                                     world.calendar.describe()));
-                window.print(1,
-                             9,
-                             format!("The time is {}",
-                                     world.clock.describe()));
+                for (i, line) in hud_info.iter().enumerate() {
+                    window.print(1, i as i32 + 1, line);
+                }
                 console::blit(window,
                               (0, 0),
                               (frame_width, frame_height),

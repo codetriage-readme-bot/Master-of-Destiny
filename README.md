@@ -75,8 +75,9 @@ cleanup, from a refactor to prehaps a performance issue.
 - [x] Overall world generation (mountains, hills, plants, cliffs, water)
 - [x] UI
 - [x] Physics
-- [ ] Time
-- [ ] Seasons
+- [x] Time
+- [x] Seasons
+- [ ] Environmental effects (biomes, weather)
 - [ ] Animal AI (eating, sleeping, breading, hunting)
 - [ ] Settler AI (same as animal, but with social abilities)
 - [ ] Destrutive directives (chop down trees, delve, etc) for settler AI

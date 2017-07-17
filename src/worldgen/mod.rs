@@ -82,27 +82,23 @@ pub struct Unit {
 
 // World contains the current state of the PHYSICAL world
 pub struct World {
-    pub map: Vec<Vec<Unit>>,
+    pub map: Vec<RefCell<Vec<Unit>>>,
     heightmap: *mut tcod_sys::TCOD_heightmap_t,
     vegetation_noise: Noise,
     stone_vein_noise: Noise,
 }
 
 impl Index<usize> for World {
-    type Output = Vec<Unit>;
-    fn index(&self, location: usize) -> &Vec<Unit> {
-        match self {
-            &World { ref map, .. } => &map[location],
-        }
+    type Output = RefCell<Vec<Unit>>;
+    fn index(&self, location: usize) -> &Self::Output {
+        &self.map[location]
     }
 }
 
 impl Index<Range<usize>> for World {
-    type Output = [Vec<Unit>];
-    fn index(&self, location: Range<usize>) -> &[Vec<Unit>] {
-        match self {
-            &World { ref map, .. } => &map[location],
-        }
+    type Output = [RefCell<Vec<Unit>>];
+    fn index(&self, location: Range<usize>) -> &Self::Output {
+        &self.map[location]
     }
 }
 
@@ -278,14 +274,15 @@ impl World {
                     let adj = strict_adjacent((x, y))
                         .iter()
                         .map(|&(x, y)| {
-                            let list = if y > world.len() {
-                                vec![]
+                            let ref_list = if y > world.len() {
+                                RefCell::new(vec![])
                             } else if y == world.len() {
-                                line.clone()
+                                RefCell::new(line.clone())
                             } else {
                                 world[y].clone()
                             };
 
+                            let list = ref_list.borrow();
                             if x >= list.len() {
                                 Tile::Empty
                             } else {
@@ -404,7 +401,9 @@ impl World {
 
     pub fn push(&mut self, value: Vec<Unit>) {
         match *self {
-            World { ref mut map, .. } => map.push(value),
+            World { ref mut map, .. } => {
+                map.push(RefCell::new(value))
+            }
         }
     }
 
@@ -557,7 +556,7 @@ pub struct WorldState {
     pub cursor: (i32, i32),
     pub level: i32,
     pub life: Vec<Box<life::Living>>,
-    pub map: Option<RefCell<World>>,
+    pub map: Option<World>,
     pub highest_level: usize,
     pub time_of_day: Time,
     pub tcod_map: map::Map,
@@ -573,13 +572,16 @@ impl WorldState {
         if self.time_of_day == Time::Midnight {
             self.clock.time = (0, 0);
             self.days += 1;
-            self.calendar.update_to_day(self.days);
+            self.calendar
+                .update_to_day(self.days, &self.clock);
         }
         physics::run(self, dt);
     }
     pub fn add_map(&mut self, world: World) {
-        let f = |vec: &Vec<Unit>| -> Option<usize> {
-            vec.iter()
+        let f = |vec: &RefCell<Vec<Unit>>| -> Option<usize> {
+            vec.clone()
+               .into_inner()
+               .iter()
                .fold(None, |max, unit: &Unit| match max {
                 None => Some(unit.tiles.len()),
                 q @ Some(_) => {
@@ -595,7 +597,7 @@ impl WorldState {
         // find the highest height in this list of rows. Same as above.
         let toplevel = world.map
                             .iter()
-                            .fold(None, |max, ref vec| match max {
+                            .fold(None, |max, vec| match max {
             None => f(vec),
             q @ Some(_) => {
                 match f(vec) {
@@ -606,24 +608,22 @@ impl WorldState {
                 }
             }
         });
-        self.map = Some(RefCell::new(world));
+        self.map = Some(world);
         self.highest_level = toplevel.unwrap();
     }
     pub fn new(s: (usize, usize)) -> WorldState {
+        let clock = Clock { time: (12, 30) };
         WorldState {
             screen: (0, 0),
             level: 31,
             highest_level: 0,
             cursor: (0, 0),
-            calendar: Calendar {
-                dmy: (12, 6, 100),
-                season: time::Season::Summer,
-            },
+            calendar: Calendar::new(12, 6, 100, &clock),
             days: 36512,
             time_of_day: Time::Morning,
             life: vec![],
             map: None,
-            clock: Clock { time: (12, 30) },
+            clock: clock,
             map_size: s,
             tcod_map: map::Map::new(s.0 as i32, s.1 as i32),
         }
