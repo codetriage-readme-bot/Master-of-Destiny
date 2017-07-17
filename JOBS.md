@@ -47,7 +47,7 @@
 - [x] Better way to render ramps
 - [x] Improve depth rendering for debugging, make more 3D
 - [ ] Increase beach size
-- [ ] Night/day cycle
+- [x] Night/day cycle
 - [ ] Weather cycle
 - [ ] Season cycle
 - [x] Fix certain tiles not drawing

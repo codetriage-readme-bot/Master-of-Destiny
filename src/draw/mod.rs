@@ -48,11 +48,11 @@ pub fn draw_map(root: &mut RootConsole,
                                  .unwrap_or(&Tile::Empty)
                                  .draw_char(root, (x, y));
                             if TILES {
-                                let raw_c = (255 as usize)
+                                let raw_c = (256 as usize)
                                     .checked_sub((world.level as
                                                       usize -
                                                       len) *
-                                                     5)
+                                                     8)
                                     .unwrap_or(0);
                                 let c = std::cmp::max(raw_c, 10) as
                                     u8;
@@ -112,6 +112,12 @@ pub fn draw_map(root: &mut RootConsole,
                                  }
                                  .unwrap_or(&Tile::Empty)
                                  .describe());
+                    if len != world.level as usize {
+                        window.print(1,
+                                 6,
+                                 format!("Distance from Level: {}",
+                                         world.level as i32 - len as i32));
+                    }
                     root.set_char_background(cx as i32,
                                              cy as i32,
                                              Color::new(100,
