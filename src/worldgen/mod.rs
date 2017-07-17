@@ -16,10 +16,7 @@ pub mod terrain;
 use self::terrain::*;
 
 use physics;
-use physics::liquid;
-use physics::stone;
 
-use time;
 use time::{Calendar, Clock, Time};
 
 pub fn clamp<T: Ord>(value: T, max: T, min: T) -> T {
