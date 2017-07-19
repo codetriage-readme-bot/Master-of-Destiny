@@ -7,6 +7,7 @@ use self::rand::Rng;
 use std::cell::RefCell;
 use std::cmp;
 use std::ops::{Index, Range};
+use std::rc::Rc;
 
 use tcod::map;
 use tcod::noise::{Noise, NoiseType};
@@ -79,21 +80,21 @@ pub struct Unit {
 
 // World contains the current state of the PHYSICAL world
 pub struct World {
-    pub map: Vec<RefCell<Vec<Unit>>>,
+    pub map: Vec<RefCell<Vec<Rc<Unit>>>>,
     heightmap: *mut tcod_sys::TCOD_heightmap_t,
     vegetation_noise: Noise,
     stone_vein_noise: Noise,
 }
 
 impl Index<usize> for World {
-    type Output = RefCell<Vec<Unit>>;
+    type Output = RefCell<Vec<Rc<Unit>>>;
     fn index(&self, location: usize) -> &Self::Output {
         &self.map[location]
     }
 }
 
 impl Index<Range<usize>> for World {
-    type Output = [RefCell<Vec<Unit>>];
+    type Output = [RefCell<Vec<Rc<Unit>>>];
     fn index(&self, location: Range<usize>) -> &Self::Output {
         &self.map[location]
     }
@@ -348,10 +349,10 @@ impl World {
                         }
                     }
                 }
-                line.push(Unit {
-                              tiles: tiles,
-                              biomes: biomes,
-                          });
+                line.push(Rc::new(Unit {
+                                      tiles: tiles,
+                                      biomes: biomes,
+                                  }));
             }
             world.push(line);
         }
@@ -396,7 +397,7 @@ impl World {
         }
     }
 
-    pub fn push(&mut self, value: Vec<Unit>) {
+    pub fn push(&mut self, value: Vec<Rc<Unit>>) {
         match *self {
             World { ref mut map, .. } => {
                 map.push(RefCell::new(value))
@@ -575,11 +576,12 @@ impl WorldState {
         physics::run(self, dt);
     }
     pub fn add_map(&mut self, world: World) {
-        let f = |vec: &RefCell<Vec<Unit>>| -> Option<usize> {
+        let f = |vec: &RefCell<Vec<Rc<Unit>>>| -> Option<usize> {
             vec.clone()
                .into_inner()
                .iter()
-               .fold(None, |max, unit: &Unit| match max {
+               .map(|x| x.clone())
+               .fold(None, |max, unit: Rc<Unit>| match max {
                 None => Some(unit.tiles.len()),
                 q @ Some(_) => {
                     if q.unwrap() < unit.tiles.len() {

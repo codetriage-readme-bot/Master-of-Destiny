@@ -1,4 +1,6 @@
-use worldgen::World;
+use std::collections::HashMap;
+use std::rc::Rc;
+use worldgen::Unit;
 use worldgen::terrain::*;
 
 pub struct Container<L: Liquid<L>> {
@@ -43,5 +45,11 @@ pub trait Liquid<L: Liquid<L>> {
     fn new(&self, quantity: i32) -> L;
 }
 
-pub fn solid_physics(ws: &mut World, tl: Tile, aj: Vec<Tile>) {}
-pub fn liquid_physics(ws: &mut World, tl: Tile, aj: Vec<Tile>) {}
+pub fn solid_physics(aj: Vec<Rc<Unit>>)
+                     -> Option<HashMap<(i32, i32), Unit>> {
+    None
+}
+pub fn liquid_physics(aj: Vec<Rc<Unit>>)
+                      -> Option<HashMap<(i32, i32), Unit>> {
+    None
+}

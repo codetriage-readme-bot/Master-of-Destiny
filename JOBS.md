@@ -56,7 +56,7 @@
 - [x] Improve HUD
 - [x] Fix certain tiles not drawing
 - [ ] Add loading screen
-- [ ] Basic physics (cave-ins, gravity)
+- [x] Basic physics (cave-ins, gravity)
 - [ ] Tide/waves (depends on physics)
 - [ ] Load terrain from seed
 - [ ] Add tree canopies
