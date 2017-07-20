@@ -14,6 +14,8 @@ _________ __
 
 ## A Survival City Building Roguelike
 
+![Main Screenshot](https://github.com/christopherdumas/Skyspace/tree/master/assets/screenshots/mainshot.png)
+
 In *Skyspace* you are the first settler on a hostile planet in a
 far-removed star system. You are all alone, but if you succed in
 showing your homeworld that this new frontier is habitable and

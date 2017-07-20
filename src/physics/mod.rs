@@ -1,3 +1,4 @@
+use std::cell::Ref;
 use std::cell::RefCell;
 use std::rc::Rc;
 use worldgen::{Unit, WorldState, weak_adjacent};
@@ -7,35 +8,29 @@ pub mod liquid;
 pub mod stone;
 
 pub fn run(ws: &mut WorldState, dt: usize) {
-    if dt > 600 {
+    if dt >= 0 {
         if let Some(ref map) = ws.map {
-            println!("Map available.");
             for y in 0..(ws.map_size.1) {
-                let mut my = map[y].borrow_mut();
                 for x in 0..(ws.map_size.0) {
                     let noheight_adj = weak_adjacent((x, y))
                         .iter()
-                        .map(|pnt| {
-                            println!("Scanning {:?}", pnt);
-                            map[pnt.1].borrow()[pnt.0].clone()
-                        })
-                        .collect::<Vec<_>>();
+                        .map(|pnt| map[pnt.1].borrow()[pnt.0].clone())
+                        .collect::<Vec<Rc<_>>>();
+                    let mut my = map[y].borrow_mut();
                     for height in 0..ws.highest_level {
-                        println!("Height: {}", height);
                         let adj =
                             noheight_adj.iter()
-                                        .map(
+                            .map(
                                 |unit| unit.tiles[height],
                             )
-                                        .filter(|x| *x != Tile::Empty)
-                                        .collect::<Vec<_>>();
+                            .filter(|x| *x != Tile::Empty)
+                            .collect::<Vec<_>>();
                         // Basic physics.
-                        let mut u = Rc::get_mut(&mut my[x]).unwrap();
+                        let mut u = &mut my[x];
                         if adj.len() < 2 &&
                             u.tiles[height - 1] == Tile::Empty &&
                             u.tiles[height + 1] == Tile::Empty
                         {
-                            println!("Located insufficiently supported tile, effecting gravity.");
                             u.tiles[height - 1] = u.tiles[height];
                             u.tiles[height] = Tile::Empty;
                         }
@@ -63,7 +58,6 @@ pub fn run(ws: &mut WorldState, dt: usize) {
                             _ => None,
                         }
                     {
-
                         // update map
                         for (i, pnt) in weak_adjacent((x, y))
                             .iter()
