@@ -1,13 +1,13 @@
-use std::collections::HashMap;
 use std::rc::Rc;
 use worldgen::Unit;
-use worldgen::terrain::*;
 
-pub fn solid_physics(aj: Vec<Rc<Unit>>)
-                     -> Option<HashMap<(i32, i32), Unit>> {
+pub fn solid_physics(pnt: (usize, usize),
+                     aj: Vec<Rc<Unit>>)
+                     -> Option<Vec<Unit>> {
     None
 }
-pub fn liquid_physics(aj: Vec<Rc<Unit>>)
-                      -> Option<HashMap<(i32, i32), Unit>> {
+pub fn liquid_physics(pnt: (usize, usize),
+                      aj: Vec<Rc<Unit>>)
+                      -> Option<Vec<Unit>> {
     None
 }

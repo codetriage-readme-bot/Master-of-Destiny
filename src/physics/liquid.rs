@@ -1,6 +1,5 @@
-use std::collections::HashMap;
 use std::rc::Rc;
-use worldgen::Unit;
+use worldgen::{Unit, weak_adjacent};
 use worldgen::terrain::*;
 
 pub struct Container<L: Liquid<L>> {
@@ -45,11 +44,41 @@ pub trait Liquid<L: Liquid<L>> {
     fn new(&self, quantity: i32) -> L;
 }
 
-pub fn solid_physics(aj: Vec<Rc<Unit>>)
-                     -> Option<HashMap<(i32, i32), Unit>> {
+pub fn solid_physics(pnt: (usize, usize),
+                     aj: Vec<Rc<Unit>>)
+                     -> Option<Vec<Unit>> {
     None
 }
-pub fn liquid_physics(aj: Vec<Rc<Unit>>)
-                      -> Option<HashMap<(i32, i32), Unit>> {
-    None
+pub fn liquid_physics(pnt: (usize, usize),
+                      aj: Vec<Rc<Unit>>)
+                      -> Option<Vec<Unit>> {
+    Some(
+        aj.iter()
+            .map(|u| {
+                let len = u.tiles.len();
+                let new_height = len % 23;
+                if new_height <= len {
+                    Unit {
+                        biomes: u.biomes.clone(),
+                        tiles: u.tiles
+                            .iter()
+                            .take(new_height)
+                            .map(|x| *x)
+                            .collect(),
+                    }
+                } else {
+                    let mut tiles = u.tiles.clone();
+                    for x in 0..(new_height - len) {
+                        tiles.push(Tile::Water(LiquidPurity::Clean,
+                                               State::Liquid,
+                                               (len + x) as i32));
+                    }
+                    Unit {
+                        biomes: u.biomes.clone(),
+                        tiles: tiles,
+                    }
+                }
+            })
+            .collect(),
+    )
 }

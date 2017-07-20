@@ -55,8 +55,8 @@
 - [x] Regular day time
 - [x] Improve HUD
 - [x] Fix certain tiles not drawing
-- [ ] Add loading screen
 - [x] Basic physics (cave-ins, gravity)
+- [ ] Get physics to actually run.
 - [ ] Tide/waves (depends on physics)
 - [ ] Load terrain from seed
 - [ ] Add tree canopies
@@ -68,6 +68,7 @@
 - [ ] Group types of plants
 - [ ] Terrain collision detection
 - [ ] Animals
+- [ ] Add loading screen
 - [ ] Use Lua to write AI and properties
 - [ ] Generate animals by ecosystem
 - [ ] Animal predators/prey
