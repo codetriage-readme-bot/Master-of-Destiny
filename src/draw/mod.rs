@@ -39,7 +39,8 @@ pub fn draw_map(root: &mut RootConsole,
                 for (mx, x) in (screen_start_x..screen_end_x)
                     .zip(0..wid)
                 {
-                    let tiles = &world_map[my].borrow()[mx].tiles;
+                    let wmap = &world_map[my].borrow()[mx];
+                    let tiles = wmap.tiles.borrow();
                     let len = tiles.len().checked_sub(1).unwrap_or(0);
 
                     match tiles.get(world.level as usize) {
@@ -107,7 +108,8 @@ pub fn draw_map(root: &mut RootConsole,
                 {
                     let (cx, cy) = (world.cursor.0 as usize,
                                     world.cursor.1 as usize);
-                    let tiles = &world_map[cy].borrow()[cx].tiles;
+                    let wmap = &world_map[cy].borrow()[cx];
+                    let tiles = wmap.tiles.borrow();
                     let len = tiles.len().checked_sub(1).unwrap_or(0);
                     hud_info[6] = if len < world.level as usize {
                                       tiles.get(len as usize)

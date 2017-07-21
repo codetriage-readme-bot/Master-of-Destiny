@@ -75,7 +75,7 @@ pub fn weak_adjacent(p: (usize, usize)) -> Vec<(usize, usize)> {
 #[derive(Clone)]
 pub struct Unit {
     pub biomes: Vec<Biome>,
-    pub tiles: Vec<Tile>,
+    pub tiles: RefCell<Vec<Tile>>,
 }
 
 // World contains the current state of the PHYSICAL world
@@ -285,11 +285,12 @@ impl World {
                                 Tile::Empty
                             } else {
                                 if height as usize >=
-                                    list[x].tiles.len()
+                                    list[x].tiles.borrow().len()
                                 {
                                     Tile::Empty
                                 } else {
-                                    list[x].tiles[height as usize]
+                                    list[x].tiles.borrow()[height as
+                                                               usize]
                                 }
                             }
                         })
@@ -350,7 +351,7 @@ impl World {
                     }
                 }
                 line.push(Rc::new(Unit {
-                                      tiles: tiles,
+                                      tiles: RefCell::new(tiles),
                                       biomes: biomes,
                                   }));
             }
@@ -576,39 +577,17 @@ impl WorldState {
         physics::run(self, dt);
     }
     pub fn add_map(&mut self, world: World) {
-        let f = |vec: &RefCell<Vec<Rc<Unit>>>| -> Option<usize> {
-            vec.clone()
-               .into_inner()
-               .iter()
-               .map(|x| x.clone())
-               .fold(None, |max, unit: Rc<Unit>| match max {
-                None => Some(unit.tiles.len()),
-                q @ Some(_) => {
-                    if q.unwrap() < unit.tiles.len() {
-                        Some(unit.tiles.len())
-                    } else {
-                        q
-                    }
-                }
-            })
-        };
-
-        // find the highest height in this list of rows. Same as above.
-        let toplevel = world.map
-                            .iter()
-                            .fold(None, |max, vec| match max {
-            None => f(vec),
-            q @ Some(_) => {
-                match f(vec) {
-                    None => q,
-                    z @ Some(_) => {
-                        if q.unwrap() < z.unwrap() { z } else { q }
-                    }
-                }
-            }
-        });
+        let max = world.map
+                       .iter()
+                       .flat_map(|r| {
+            let r = r.borrow();
+            r.iter()
+             .map(|unit| unit.tiles.borrow().len())
+             .max()
+        })
+                       .max();
         self.map = Some(world);
-        self.highest_level = toplevel.unwrap();
+        self.highest_level = max.unwrap_or(30);
     }
     pub fn new(s: (usize, usize)) -> WorldState {
         let clock = Clock { time: (12, 30) };

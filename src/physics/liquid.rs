@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 use worldgen::{Unit, weak_adjacent};
 use worldgen::terrain::*;
@@ -55,19 +56,19 @@ pub fn liquid_physics(pnt: (usize, usize),
     Some(
         aj.iter()
             .map(|u| {
-                let len = u.tiles.len();
+                let ut = u.tiles.borrow();
+                let len = ut.len();
                 let new_height = len % 23;
                 if new_height <= len {
                     Unit {
                         biomes: u.biomes.clone(),
-                        tiles: u.tiles
-                            .iter()
-                            .take(new_height)
-                            .map(|x| *x)
-                            .collect(),
+                        tiles: RefCell::new(ut.iter()
+                                            .take(new_height)
+                                            .map(|x| *x)
+                                            .collect()),
                     }
                 } else {
-                    let mut tiles = u.tiles.clone();
+                    let mut tiles = u.tiles.borrow_mut();
                     for x in 0..(new_height - len) {
                         tiles.push(Tile::Water(LiquidPurity::Clean,
                                                State::Liquid,
@@ -75,7 +76,7 @@ pub fn liquid_physics(pnt: (usize, usize),
                     }
                     Unit {
                         biomes: u.biomes.clone(),
-                        tiles: tiles,
+                        tiles: RefCell::new(tiles.to_vec()),
                     }
                 }
             })
