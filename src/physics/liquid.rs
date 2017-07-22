@@ -56,19 +56,19 @@ pub fn liquid_physics(pnt: (usize, usize),
     Some(
         aj.iter()
             .map(|u| {
-                let ut = u.tiles.borrow();
-                let len = ut.len();
+                let len = u.tiles.len();
                 let new_height = len % 23;
                 if new_height <= len {
                     Unit {
                         biomes: u.biomes.clone(),
-                        tiles: RefCell::new(ut.iter()
-                                            .take(new_height)
-                                            .map(|x| *x)
-                                            .collect()),
+                        tiles: u.tiles
+                            .iter()
+                            .take(new_height)
+                            .map(|x| *x)
+                            .collect(),
                     }
                 } else {
-                    let mut tiles = u.tiles.borrow_mut();
+                    let mut tiles = u.tiles.clone();
                     for x in 0..(new_height - len) {
                         tiles.push(Tile::Water(LiquidPurity::Clean,
                                                State::Liquid,
@@ -76,7 +76,7 @@ pub fn liquid_physics(pnt: (usize, usize),
                     }
                     Unit {
                         biomes: u.biomes.clone(),
-                        tiles: RefCell::new(tiles.to_vec()),
+                        tiles: tiles.to_vec(),
                     }
                 }
             })

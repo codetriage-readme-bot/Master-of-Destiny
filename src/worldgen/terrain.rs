@@ -3,6 +3,7 @@ extern crate tcod;
 use std;
 
 use draw::{Describe, DrawChar};
+use physics::PhysicsActor;
 use tcod::colors::Color;
 
 use tcod::RootConsole;
@@ -777,6 +778,24 @@ pub enum Tile {
     Stone(StoneTypes, State),
     Vegitation(VegTypes, Height, State),
     Fire,
+}
+
+impl PhysicsActor for Tile {
+    fn solid(&self) -> bool {
+        match self {
+            &Tile::Stone(..) => true,
+            &Tile::Ramp(..) => true,
+            _ => false,
+        }
+    }
+
+    fn heavy(&self) -> bool {
+        match self {
+            &Tile::Stone(..) => true,
+            &Tile::Moveable(..) => true,
+            _ => false,
+        }
+    }
 }
 
 impl Describe for Tile {

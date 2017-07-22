@@ -39,15 +39,18 @@ pub fn draw_map(root: &mut RootConsole,
                 for (mx, x) in (screen_start_x..screen_end_x)
                     .zip(0..wid)
                 {
-                    let wmap = &world_map[my].borrow()[mx];
-                    let tiles = wmap.tiles.borrow();
-                    let len = tiles.len().checked_sub(1).unwrap_or(0);
+                    let wmap = &world_map[my][mx];
+                    let len = wmap.tiles
+                                  .len()
+                                  .checked_sub(1)
+                                  .unwrap_or(0);
 
-                    match tiles.get(world.level as usize) {
+                    match wmap.tiles.get(world.level as usize) {
                         None => {
-                            tiles.get(len)
-                                 .unwrap_or(&Tile::Empty)
-                                 .draw_char(root, (x, y));
+                            wmap.tiles
+                                .get(len)
+                                .unwrap_or(&Tile::Empty)
+                                .draw_char(root, (x, y));
                             if TILES {
                                 let raw_c = (256 as usize)
                                     .checked_sub((world.level as
@@ -101,20 +104,22 @@ pub fn draw_map(root: &mut RootConsole,
                      String::new(),
                      String::new()];
                 if (world.cursor.0 >= 0 &&
-                        world.cursor.0 <
-                            world_map[0].borrow().len() as i32) &&
+                        world.cursor.0 < world_map[0].len() as i32) &&
                     (world.cursor.1 >= 0 &&
                          world.cursor.1 < world_map.len() as i32)
                 {
                     let (cx, cy) = (world.cursor.0 as usize,
                                     world.cursor.1 as usize);
-                    let wmap = &world_map[cy].borrow()[cx];
-                    let tiles = wmap.tiles.borrow();
-                    let len = tiles.len().checked_sub(1).unwrap_or(0);
+                    let wmap = &world_map[cy][cx];
+                    let len = wmap.tiles
+                                  .len()
+                                  .checked_sub(1)
+                                  .unwrap_or(0);
                     hud_info[6] = if len < world.level as usize {
-                                      tiles.get(len as usize)
+                                      wmap.tiles.get(len as usize)
                                   } else {
-                                      tiles.get(world.level as usize)
+                                      wmap.tiles
+                                          .get(world.level as usize)
                                   }
                                   .unwrap_or(&Tile::Empty)
                                   .describe();

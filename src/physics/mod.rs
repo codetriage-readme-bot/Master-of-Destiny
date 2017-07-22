@@ -1,73 +1,54 @@
 use std::cell::Ref;
 use std::cell::RefCell;
+use std::cell::RefMut;
 use std::rc::Rc;
-use worldgen::{Unit, WorldState, weak_adjacent};
+use worldgen::{Unit, WorldState, strict_adjacent};
 use worldgen::terrain::{State, Tile};
 
 pub mod liquid;
 pub mod stone;
 
+pub trait PhysicsActor {
+    fn solid(&self) -> bool;
+    fn heavy(&self) -> bool;
+}
+
+fn unsupported(tile: Tile,
+               adj: Vec<Tile>,
+               above: Tile,
+               below: Tile)
+               -> bool {
+    let solid_cnt = adj.iter()
+        .take_while(|x| x.solid())
+        .count();
+    !below.solid() && (!above.solid() || !tile.heavy()) &&
+        solid_cnt < 2
+}
 pub fn run(ws: &mut WorldState, dt: usize) {
-    if let Some(ref map) = ws.map {
+    if let Some(ref world) = ws.map {
+        let map = &world.map;
         for y in 0..(ws.map_size.1) {
             for x in 0..(ws.map_size.0) {
-                let noheight_adj = weak_adjacent((x, y))
-                    .iter()
-                    .map(|pnt| map[pnt.1].borrow()[pnt.0].clone())
-                    .collect::<Vec<Rc<_>>>();
-                let my = map[y].borrow();
-                for height in 0..ws.highest_level {
-                    let adj =
-                        noheight_adj.iter()
-                        .map(
-                            |unit| unit.tiles.borrow()[height],
-                        )
-                        .filter(|x| *x != Tile::Empty)
+                let unit = &map[y][x];
+                for h in 0..unit.tiles.len() {
+                    let tile = unit.tiles[h];
+                    let adj = strict_adjacent((x, y))
+                        .iter()
+                        .map(|pnt| map[pnt.1][pnt.0].tiles[h])
                         .collect::<Vec<_>>();
-                    // Basic physics.
-                    let u = &my[x];
-                    let mut ut = u.tiles.borrow_mut();
-                    if adj.len() < 2 &&
-                        ut[height - 1] == Tile::Empty &&
-                        *ut.get(height + 1)
-                        .unwrap_or(&Tile::Empty) ==
-                        Tile::Empty
+                    if unsupported(tile,
+                                   adj,
+                                   *unit.tiles
+                                   .get(h + 1)
+                                   .unwrap_or(&Tile::Empty),
+                                   *unit.tiles
+                                   .get(h - 1)
+                                   .unwrap_or(&Tile::Empty))
                     {
-                        ut[height - 1] = ut[height];
-                        ut[height] = Tile::Empty;
+                        println!("Found unsupported tile at {:?}",
+                                 (x, y));
                     }
                 }
-                // More in-depth physics (water-flow, melting)
-                if let Some(ref changes) =
-                    match my[x].tiles.borrow()[0] {
-                        Tile::Stone(_, State::Solid) => {
-                            stone::solid_physics((x, y), noheight_adj)
-                        }
-                        Tile::Stone(_, State::Liquid) => {
-                            stone::liquid_physics((x, y),
-                                                  noheight_adj)
-                        }
-
-                        Tile::Water(_, State::Solid, _) => {
-                            liquid::solid_physics((x, y),
-                                                  noheight_adj)
-                        }
-                        Tile::Water(_, State::Liquid, _) => {
-                            liquid::liquid_physics((x, y),
-                                                   noheight_adj)
-                        }
-                        _ => None,
-                    }
-                {
-                    // update map
-                    for (i, pnt) in weak_adjacent((x, y))
-                        .iter()
-                        .enumerate()
-                    {
-                        map[pnt.1].borrow_mut()[pnt.0] =
-                            Rc::new(changes[i].clone());
-                    }
-                };
             }
         }
     }

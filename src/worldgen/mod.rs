@@ -75,26 +75,26 @@ pub fn weak_adjacent(p: (usize, usize)) -> Vec<(usize, usize)> {
 #[derive(Clone)]
 pub struct Unit {
     pub biomes: Vec<Biome>,
-    pub tiles: RefCell<Vec<Tile>>,
+    pub tiles: Vec<Tile>,
 }
 
 // World contains the current state of the PHYSICAL world
 pub struct World {
-    pub map: Vec<RefCell<Vec<Rc<Unit>>>>,
+    pub map: Vec<Vec<Rc<Unit>>>,
     heightmap: *mut tcod_sys::TCOD_heightmap_t,
     vegetation_noise: Noise,
     stone_vein_noise: Noise,
 }
 
 impl Index<usize> for World {
-    type Output = RefCell<Vec<Rc<Unit>>>;
+    type Output = Vec<Rc<Unit>>;
     fn index(&self, location: usize) -> &Self::Output {
         &self.map[location]
     }
 }
 
 impl Index<Range<usize>> for World {
-    type Output = [RefCell<Vec<Rc<Unit>>>];
+    type Output = [Vec<Rc<Unit>>];
     fn index(&self, location: Range<usize>) -> &Self::Output {
         &self.map[location]
     }
@@ -272,25 +272,23 @@ impl World {
                     let adj = strict_adjacent((x, y))
                         .iter()
                         .map(|&(x, y)| {
-                            let ref_list = if y > world.len() {
-                                RefCell::new(vec![])
+                            let list = if y > world.len() {
+                                vec![]
                             } else if y == world.len() {
-                                RefCell::new(line.clone())
+                                line.clone()
                             } else {
                                 world[y].clone()
                             };
 
-                            let list = ref_list.borrow();
                             if x >= list.len() {
                                 Tile::Empty
                             } else {
                                 if height as usize >=
-                                    list[x].tiles.borrow().len()
+                                    list[x].tiles.len()
                                 {
                                     Tile::Empty
                                 } else {
-                                    list[x].tiles.borrow()[height as
-                                                               usize]
+                                    list[x].tiles[height as usize]
                                 }
                             }
                         })
@@ -351,7 +349,7 @@ impl World {
                     }
                 }
                 line.push(Rc::new(Unit {
-                                      tiles: RefCell::new(tiles),
+                                      tiles: tiles,
                                       biomes: biomes,
                                   }));
             }
@@ -400,9 +398,7 @@ impl World {
 
     pub fn push(&mut self, value: Vec<Rc<Unit>>) {
         match *self {
-            World { ref mut map, .. } => {
-                map.push(RefCell::new(value))
-            }
+            World { ref mut map, .. } => map.push(value),
         }
     }
 
@@ -580,9 +576,8 @@ impl WorldState {
         let max = world.map
                        .iter()
                        .flat_map(|r| {
-            let r = r.borrow();
             r.iter()
-             .map(|unit| unit.tiles.borrow().len())
+             .map(|unit| unit.tiles.len())
              .max()
         })
                        .max();
