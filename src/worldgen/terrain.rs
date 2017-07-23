@@ -2,9 +2,10 @@ extern crate tcod;
 
 use std;
 
-use draw::{Describe, DrawChar};
+use draw::{Describe, DrawChar, FramedDraw};
 use physics::PhysicsActor;
 use tcod::colors::Color;
+use worldgen::{FrameAssoc, Frames};
 
 use tcod::RootConsole;
 use tcod::chars;
@@ -966,7 +967,7 @@ impl DrawChar for Tile {
                                      Color::new(0, 105, 148)
                                  },
                                  Color::new(0, 159, 225));
-            }   
+            }
             &Tile::Water(_, State::Gas, _) => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_OBSIDIAN)
@@ -1009,6 +1010,36 @@ impl DrawChar for Tile {
                                  Color::new(150, 150, 150),
                                  Color::new(150, 150, 150));
             }
+        }
+    }
+}
+
+impl FramedDraw for Tile {
+    fn draw_framed_char(&self,
+                        root: &mut RootConsole,
+                        pos: (usize, usize),
+                        frames_hash: &Frames) {
+        match self {
+            &Tile::Water(_, State::Liquid, _) => {
+                let mut frames = frames_hash["Water"].borrow_mut();
+                let chr = if TILES {
+                    std::char::from_u32(BASE + frames.current as u32)
+                        .unwrap()
+                } else {
+                    '\u{f7}'
+                };
+                root.put_char_ex(pos.0 as i32,
+                                 pos.1 as i32,
+                                 chr,
+                                 if TILES {
+                                     Color::new(255, 255, 255)
+                                 } else {
+                                     Color::new(0, 105, 148)
+                                 },
+                                 Color::new(0, 159, 225));
+                frames.current += 1;
+            }
+            _ => self.draw_char(root, pos),
         }
     }
 }

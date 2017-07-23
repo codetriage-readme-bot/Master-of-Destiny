@@ -27,14 +27,19 @@ fn unsupported(tile: Tile,
 pub fn run(ws: &mut WorldState, dt: usize) {
     if let Some(ref world) = ws.map {
         let map = &world.map;
-        for y in 0..(ws.map_size.1) {
-            for x in 0..(ws.map_size.0) {
+        for y in 0..(world.map_size.1) {
+            for x in 0..(world.map_size.0) {
                 let unit = &map[y][x];
                 for h in 0..unit.tiles.len() {
                     let tile = unit.tiles[h];
                     let adj = strict_adjacent((x, y))
                         .iter()
-                        .map(|pnt| map[pnt.1][pnt.0].tiles[h])
+                        .map(|pnt| {
+                            *map[pnt.1][pnt.0]
+                                .tiles
+                                .get(h)
+                                .unwrap_or(&Tile::Empty)
+                        })
                         .collect::<Vec<_>>();
                     if unsupported(tile,
                                    adj,
@@ -42,7 +47,8 @@ pub fn run(ws: &mut WorldState, dt: usize) {
                                    .get(h + 1)
                                    .unwrap_or(&Tile::Empty),
                                    *unit.tiles
-                                   .get(h - 1)
+                                   .get((h.checked_sub(1)
+                                         .unwrap_or(0)))
                                    .unwrap_or(&Tile::Empty))
                     {
                         println!("Found unsupported tile at {:?}",

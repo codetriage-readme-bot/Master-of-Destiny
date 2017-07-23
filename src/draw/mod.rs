@@ -5,11 +5,18 @@ use tcod::console;
 use tcod::console::{BackgroundFlag, Console};
 
 use time;
-use worldgen::{CYCLE_LENGTH, WorldState};
+use worldgen::{CYCLE_LENGTH, Frames, WorldState};
 use worldgen::terrain::{TILES, Tile};
 
 pub trait DrawChar {
     fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize));
+}
+
+pub trait FramedDraw {
+    fn draw_framed_char(&self,
+                        root: &mut RootConsole,
+                        pos: (usize, usize),
+                        frames_hash: &Frames);
 }
 
 pub trait Describe {
@@ -50,7 +57,9 @@ pub fn draw_map(root: &mut RootConsole,
                             wmap.tiles
                                 .get(len)
                                 .unwrap_or(&Tile::Empty)
-                                .draw_char(root, (x, y));
+                                .draw_framed_char(root,
+                                                  (x, y),
+                                                  &world_map.frames);
                             if TILES {
                                 let raw_c = (256 as usize)
                                     .checked_sub((world.level as
@@ -96,11 +105,13 @@ pub fn draw_map(root: &mut RootConsole,
                              world.screen.0,
                              world.screen.1),
                      format!("ToD: {}",
-                             world.time_of_day.describe()),
-                     format!("Date: {}", world.calendar.describe()),
-                     format!("Clock: {}", world.clock.describe()),
+                             world.time.time_of_day.describe()),
+                     format!("Date: {}",
+                             world.time.calendar.describe()),
+                     format!("Clock: {}",
+                             world.time.clock.describe()),
                      format!("Weather: {:?}",
-                             world.calendar.weather),
+                             world.time.calendar.weather),
                      String::new(),
                      String::new()];
                 if (world.cursor.0 >= 0 &&

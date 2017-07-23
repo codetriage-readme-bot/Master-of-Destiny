@@ -6,6 +6,7 @@ use life;
 use self::rand::Rng;
 use std::cell::RefCell;
 use std::cmp;
+use std::collections::HashMap;
 use std::ops::{Index, Range};
 use std::rc::Rc;
 
@@ -79,11 +80,20 @@ pub struct Unit {
 }
 
 // World contains the current state of the PHYSICAL world
+#[derive(Clone)]
+pub struct FrameAssoc {
+    pub current: usize,
+    pub all: Vec<usize>,
+}
+pub type Frames = HashMap<String, RefCell<FrameAssoc>>;
 pub struct World {
-    pub map: Vec<Vec<Rc<Unit>>>,
     heightmap: *mut tcod_sys::TCOD_heightmap_t,
     vegetation_noise: Noise,
     stone_vein_noise: Noise,
+    tcod_map: map::Map,
+    pub map_size: (usize, usize),
+    pub frames: Frames,
+    pub map: Vec<Vec<Rc<Unit>>>,
 }
 
 impl Index<usize> for World {
@@ -239,6 +249,7 @@ impl World {
         // </low-level>
 
         let mut world: World = World {
+            map_size: (sx, sy),
             map: vec![],
             heightmap: heightmap,
             vegetation_noise: vnoise,
@@ -249,6 +260,16 @@ impl World {
                 .random(random::Rng::new_with_seed(random::Algo::MT,
                                                    seed))
                 .init(),
+            frames: [("Water".to_string(),
+                      FrameAssoc {
+                          current: 0,
+                          all: vec![16, 32, 33, 34, 35, 36],
+                      })]
+                    .iter()
+                    .cloned()
+                    .map(|(x, y)| (x, RefCell::new(y)))
+                    .collect(),
+            tcod_map: map::Map::new(sx as i32, sy as i32),
         };
         for y in 0..sy {
             let mut line = vec![];
@@ -544,31 +565,35 @@ impl World {
     }
 }
 
+pub struct TimeHandler {
+    pub calendar: Calendar,
+    pub time_of_day: Time,
+    pub clock: Clock,
+    pub days: usize,
+}
+
 pub struct WorldState {
-    days: usize,
-    pub map_size: (usize, usize),
     pub screen: (i32, i32),
     pub cursor: (i32, i32),
     pub level: i32,
     pub life: Vec<Box<life::Living>>,
     pub map: Option<World>,
     pub highest_level: usize,
-    pub time_of_day: Time,
-    pub tcod_map: map::Map,
-    pub calendar: Calendar,
-    pub clock: Clock,
+    pub time: TimeHandler,
 }
 
 pub const CYCLE_LENGTH: usize = 100;
 impl WorldState {
     pub fn update(&mut self, time: usize, dt: usize) {
-        self.clock.update_deltatime(dt);
-        self.time_of_day = Time::from_clock_time(&self.clock);
-        if self.time_of_day == Time::Midnight {
-            self.clock.time = (0, 0);
-            self.days += 1;
-            self.calendar
-                .update_to_day(self.days, &self.clock);
+        self.time.clock.update_deltatime(dt);
+        self.time.time_of_day = Time::from_clock_time(&self.time
+                                                           .clock);
+        if self.time.time_of_day == Time::Midnight {
+            self.time.clock.time = (0, 0);
+            self.time.days += 1;
+            self.time
+                .calendar
+                .update_to_day(self.time.days, &self.time.clock);
         }
         physics::run(self, dt);
     }
@@ -591,14 +616,14 @@ impl WorldState {
             level: 31,
             highest_level: 0,
             cursor: (0, 0),
-            calendar: Calendar::new(12, 6, 100, &clock),
-            days: 36512,
-            time_of_day: Time::Morning,
+            time: TimeHandler {
+                days: 36512,
+                calendar: Calendar::new(12, 6, 100, &clock),
+                time_of_day: Time::Morning,
+                clock: clock,
+            },
             life: vec![],
             map: None,
-            clock: clock,
-            map_size: s,
-            tcod_map: map::Map::new(s.0 as i32, s.1 as i32),
         }
     }
 }
