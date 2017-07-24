@@ -2,7 +2,7 @@ use std::cell::Ref;
 use std::cell::RefCell;
 use std::cell::RefMut;
 use std::rc::Rc;
-use worldgen::{Unit, WorldState, strict_adjacent};
+use worldgen::{Unit, World, WorldState, strict_adjacent};
 use worldgen::terrain::{State, Tile};
 
 pub mod liquid;
@@ -31,28 +31,34 @@ pub fn run(ws: &mut WorldState, dt: usize) {
             for x in 0..(world.map_size.0) {
                 let unit = &map[y][x];
                 for h in 0..unit.tiles.len() {
-                    let tile = unit.tiles[h];
-                    let adj = strict_adjacent((x, y))
-                        .iter()
-                        .map(|pnt| {
-                            *map[pnt.1][pnt.0]
-                                .tiles
-                                .get(h)
-                                .unwrap_or(&Tile::Empty)
-                        })
-                        .collect::<Vec<_>>();
-                    if unsupported(tile,
-                                   adj,
-                                   *unit.tiles
-                                   .get(h + 1)
-                                   .unwrap_or(&Tile::Empty),
-                                   *unit.tiles
-                                   .get((h.checked_sub(1)
-                                         .unwrap_or(0)))
-                                   .unwrap_or(&Tile::Empty))
-                    {
-                        println!("Found unsupported tile at {:?}",
-                                 (x, y));
+                    let tile = unit.tiles.get(h);
+                    if let Some(tile) = tile {
+                        let adj = strict_adjacent((x, y))
+                            .iter()
+                            .map(|pnt| if World::located_in(
+                                *pnt,
+                                world.map_size,
+                            )
+                                 {
+                                     *map[pnt.1][pnt.0]
+                                         .tiles
+                                         .get(h)
+                                         .unwrap_or(&Tile::Empty)
+                                 } else {
+                                     Tile::Empty
+                                 })
+                            .collect::<Vec<_>>();
+                        if unsupported(*tile,
+                                       adj,
+                                       *unit.tiles
+                                       .get(h + 1)
+                                       .unwrap_or(&Tile::Empty),
+                                       *unit.tiles
+                                       .get((h.checked_sub(1)
+                                             .unwrap_or(0)))
+                                       .unwrap_or(&Tile::Empty))
+                        {
+                        }
                     }
                 }
             }

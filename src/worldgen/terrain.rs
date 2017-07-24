@@ -1038,6 +1038,7 @@ impl FramedDraw for Tile {
                                  },
                                  Color::new(0, 159, 225));
                 frames.current += 1;
+                frames.current %= frames.all.len();
             }
             _ => self.draw_char(root, pos),
         }

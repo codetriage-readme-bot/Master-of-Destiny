@@ -381,6 +381,13 @@ impl World {
         world
     }
 
+    pub fn located_in(pos: (usize, usize),
+                      size: (usize, usize))
+        -> bool {
+        return pos.0 >= 0 && pos.0 < size.0 && pos.1 >= 0 &&
+            pos.1 < size.1;
+    }
+
     pub unsafe fn delete_heightmap(&self) {
         tcod_sys::TCOD_heightmap_delete(self.heightmap);
     }

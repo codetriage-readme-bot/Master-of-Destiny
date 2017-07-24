@@ -56,8 +56,10 @@
 - [x] Improve HUD
 - [x] Fix certain tiles not drawing
 - [x] Basic physics (cave-ins, gravity)
+- [ ] Physics engine scaffolding (mutation)
 - [ ] Get physics to actually run.
 - [ ] Tide/waves (depends on physics)
+- [ ] Water animation and animation framework.
 - [ ] Load terrain from seed
 - [ ] Add tree canopies
 - [x] Update game loop to be more reliable
