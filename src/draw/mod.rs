@@ -47,19 +47,16 @@ pub fn draw_map(root: &mut RootConsole,
                     .zip(0..wid)
                 {
                     let wmap = &world_map[my][mx];
-                    let len = wmap.tiles
-                                  .len()
-                                  .checked_sub(1)
-                                  .unwrap_or(0);
+                    let wmapt = wmap.tiles.borrow();
+                    let len = wmapt.len().checked_sub(1).unwrap_or(0);
 
-                    match wmap.tiles.get(world.level as usize) {
+                    match wmapt.get(world.level as usize) {
                         None => {
-                            wmap.tiles
-                                .get(len)
-                                .unwrap_or(&Tile::Empty)
-                                .draw_framed_char(root,
-                                                  (x, y),
-                                                  &world_map.frames);
+                            wmapt.get(len)
+                                 .unwrap_or(&Tile::Empty)
+                                 .draw_framed_char(root,
+                                                   (x, y),
+                                                   &world_map.frames);
                             if TILES {
                                 let raw_c = (256 as usize)
                                     .checked_sub((world.level as
@@ -122,15 +119,12 @@ pub fn draw_map(root: &mut RootConsole,
                     let (cx, cy) = (world.cursor.0 as usize,
                                     world.cursor.1 as usize);
                     let wmap = &world_map[cy][cx];
-                    let len = wmap.tiles
-                                  .len()
-                                  .checked_sub(1)
-                                  .unwrap_or(0);
+                    let wmapt = wmap.tiles.borrow();
+                    let len = wmapt.len().checked_sub(1).unwrap_or(0);
                     hud_info[6] = if len < world.level as usize {
-                                      wmap.tiles.get(len as usize)
+                                      wmapt.get(len as usize)
                                   } else {
-                                      wmap.tiles
-                                          .get(world.level as usize)
+                                      wmapt.get(world.level as usize)
                                   }
                                   .unwrap_or(&Tile::Empty)
                                   .describe();

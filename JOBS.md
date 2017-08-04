@@ -56,10 +56,21 @@
 - [x] Improve HUD
 - [x] Fix certain tiles not drawing
 - [x] Basic physics (cave-ins, gravity)
-- [ ] Physics engine scaffolding (mutation)
-- [ ] Get physics to actually run.
-- [ ] Tide/waves (depends on physics)
-- [ ] Water animation and animation framework.
+- [x] Physics engine scaffolding (mutation)
+- [x] Get physics to actually run.
+- [x] Tide/waves (depends on physics)
+- [x] Water animation and animation framework.
+- [ ] Animals
+- [ ] Add loading screen
+- [ ] Use Guile to write AI and properties
+- [ ] Generate animals by ecosystem
+- [ ] Animal predators/prey
+- [ ] Special animal behaviour
+- [ ] Render text using SDL?
+
+## Postponed indefinately until basic gameplay is finished
+- [ ] Speed up physics engine
+- [ ] Water shifted.
 - [ ] Load terrain from seed
 - [ ] Add tree canopies
 - [x] Update game loop to be more reliable
@@ -69,10 +80,3 @@
 - [ ] Generate loam under plants
 - [ ] Group types of plants
 - [ ] Terrain collision detection
-- [ ] Animals
-- [ ] Add loading screen
-- [ ] Use Lua to write AI and properties
-- [ ] Generate animals by ecosystem
-- [ ] Animal predators/prey
-- [ ] Special animal behaviour
-- [ ] Render text using SDL?

@@ -22,6 +22,7 @@ pub enum Mood {
 }
 
 // Player assigned missions (orders)
+#[derive(PartialEq, PartialOrd, Eq, Ord)]
 pub enum Order {
     Mine((i32, i32), (i32, i32)),
     GatherPlants((i32, i32), (i32, i32)),
@@ -44,23 +45,39 @@ pub trait Drinkable {
 }
 
 // Basic missions that animals can assign to themselves
+#[derive(PartialEq, PartialOrd, Eq, Ord)]
 pub enum Mission {
     Eat(Priority),
     Drink(Priority),
-    Attack(Priority, Box<Living>),
-    GoToMeetingplace(Priority),
-    FullFillOrder(Priority, Order),
+    AttackEnemy(Priority),
+    GoToArea(Priority),
+    Obey(Priority, Order),
+}
+impl Mission {
+    fn tag_equals(&self, tag: &Mission) -> bool {
+        use self::Mission::*;
+        return match (self, tag) {
+            (&Eat(..), &Eat(..)) => true,
+            (&Drink(..), &Drink(..)) => true,
+            (&AttackEnemy(..), &AttackEnemy(..)) => true,
+            (&GoToArea(..), &GoToArea(..)) => true,
+            (&Obey(..), &Obey(..)) => true,
+        };
+    }
 }
 
 pub trait Living {
     // Adds mission to list of goals
     fn add_goal(&mut self, mission: Mission);
     // Removes mission from list of goals
-    fn remove_goal(&mut self, mission: Mission) -> Mission;
-    // Removes n least important missions from goals. Returns removed
-    // missions.
+    fn remove_goal(&mut self, mission: &Mission) -> Mission;
+    // Removes n least important missions from goals.
+    // Returns removed missions.
     fn prioritize(&mut self, number: usize) -> Vec<Mission>;
-    // Chooses highest priority mission, excecutes it, and returns it
-    // when done.
-    fn execute_mission(&self) -> Mission;
+    // Chooses highest priority mission, excecutes one step of it, and
+    // returns it if done, otherwise returns None.
+    fn execute_mission(&self) -> Option<Mission>;
+    // Adds a mission when none is provided. Used all the time for
+    // animals. If there is already a mission going, returns None.
+    fn auto_add_mission(&self) -> Option<Mission>;
 }

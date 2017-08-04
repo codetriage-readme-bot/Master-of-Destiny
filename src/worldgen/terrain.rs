@@ -1028,6 +1028,7 @@ impl FramedDraw for Tile {
                 } else {
                     '\u{f7}'
                 };
+                println!("{}", BASE + frames.current as u32);
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,

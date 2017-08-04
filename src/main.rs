@@ -1,4 +1,4 @@
-#![feature(box_syntax, box_patterns)]
+#![feature(box_syntax, box_patterns, vec_remove_item)]
 extern crate tcod;
 extern crate tcod_sys;
 

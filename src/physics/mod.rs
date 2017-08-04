@@ -1,9 +1,5 @@
-use std::cell::Ref;
-use std::cell::RefCell;
-use std::cell::RefMut;
-use std::rc::Rc;
-use worldgen::{Unit, World, WorldState, strict_adjacent};
-use worldgen::terrain::{State, Tile};
+use worldgen::{World, WorldState, strict_adjacent};
+use worldgen::terrain::Tile;
 
 pub mod liquid;
 pub mod stone;
@@ -24,44 +20,47 @@ fn unsupported(tile: Tile,
     !below.solid() && (!above.solid() || !tile.heavy()) &&
         solid_cnt < 2
 }
+
+macro_rules! get(
+    ($e:expr) => (match $e { Some(e) => e, None => return None })
+);
+
 pub fn run(ws: &mut WorldState, dt: usize) {
+    /*
     if let Some(ref world) = ws.map {
-        let map = &world.map;
-        for y in 0..(world.map_size.1) {
-            for x in 0..(world.map_size.0) {
-                let unit = &map[y][x];
-                for h in 0..unit.tiles.len() {
-                    let tile = unit.tiles.get(h);
-                    if let Some(tile) = tile {
-                        let adj = strict_adjacent((x, y))
-                            .iter()
-                            .map(|pnt| if World::located_in(
-                                *pnt,
-                                world.map_size,
-                            )
-                                 {
-                                     *map[pnt.1][pnt.0]
-                                         .tiles
-                                         .get(h)
-                                         .unwrap_or(&Tile::Empty)
-                                 } else {
-                                     Tile::Empty
-                                 })
-                            .collect::<Vec<_>>();
-                        if unsupported(*tile,
-                                       adj,
-                                       *unit.tiles
-                                       .get(h + 1)
-                                       .unwrap_or(&Tile::Empty),
-                                       *unit.tiles
-                                       .get((h.checked_sub(1)
-                                             .unwrap_or(0)))
-                                       .unwrap_or(&Tile::Empty))
-                        {
-                        }
-                    }
-                }
-            }
-        }
-    }
+    let map = &world.map;
+    for y in 0..(world.map_size.1) {
+    for x in 0..(world.map_size.0) {
+    let unit = &map[y][x];
+    let mut ut = unit.tiles.borrow_mut();
+    for h in 0..ut.len() {
+    let tile = ut[h];
+
+    let adj = strict_adjacent((x, y))
+    .iter()
+    .map(|pnt| {
+    let unit = get!(world.get(*pnt));
+    let tiles = unit.tiles.borrow();
+    Some(tiles[h])
+})
+    .filter(|x| x.is_some())
+    .map(|x| x.unwrap())
+    .collect::<Vec<_>>();
+    if unsupported(tile,
+    adj,
+     *ut.get(h + 1)
+    .unwrap_or(&Tile::Empty),
+     *ut.get((h.checked_sub(1)
+    .unwrap_or(0)))
+    .unwrap_or(&Tile::Empty))
+    {
+    let tmp = ut[h];
+    ut[h] = Tile::Empty;
+    ut[h - 1] = tmp;
+}
+}
+}
+}
+}
+     */
 }

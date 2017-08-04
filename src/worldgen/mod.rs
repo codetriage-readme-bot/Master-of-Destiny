@@ -34,7 +34,6 @@ macro_rules! matches {
     )
 }
 
-
 fn restricted_from_tile(tile: Tile) -> RestrictedTile {
     match tile {
         Tile::Stone(a, b) => RestrictedTile::Stone(a, b),
@@ -70,13 +69,13 @@ pub fn weak_adjacent(p: (usize, usize)) -> Vec<(usize, usize)> {
     v
 }
 
-// A unit is a 1x1 cross section of the layered world, including a ref
-// to the biome its part of.
-// Each tile is 1 foot tall.
+// A unit is a 1x1 cross section of the layered world,
+// including a ref
+// to the biome its part of.  Each tile is 1 foot tall.
 #[derive(Clone)]
 pub struct Unit {
     pub biomes: Vec<Biome>,
-    pub tiles: Vec<Tile>,
+    pub tiles: RefCell<Vec<Tile>>,
 }
 
 // World contains the current state of the PHYSICAL world
@@ -90,7 +89,6 @@ pub struct World {
     heightmap: *mut tcod_sys::TCOD_heightmap_t,
     vegetation_noise: Noise,
     stone_vein_noise: Noise,
-    tcod_map: map::Map,
     pub map_size: (usize, usize),
     pub frames: Frames,
     pub map: Vec<Vec<Rc<Unit>>>,
@@ -118,8 +116,7 @@ fn random_hill_operation<F>(heightmap: *mut tcod_sys::TCOD_heightmap_t,
                             height: f32,
                             rndn: tcod_sys::TCOD_random_t,
                             operation: &F)
-where
-    F: Fn(*mut tcod_sys::TCOD_heightmap_t,
+where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
        f32,
        f32,
        f32,
@@ -304,12 +301,11 @@ impl World {
                             if x >= list.len() {
                                 Tile::Empty
                             } else {
-                                if height as usize >=
-                                    list[x].tiles.len()
-                                {
+                                let lt = list[x].tiles.borrow();
+                                if height as usize >= lt.len() {
                                     Tile::Empty
                                 } else {
-                                    list[x].tiles[height as usize]
+                                    lt[height as usize]
                                 }
                             }
                         })
@@ -370,7 +366,7 @@ impl World {
                     }
                 }
                 line.push(Rc::new(Unit {
-                                      tiles: tiles,
+                                      tiles: RefCell::new(tiles),
                                       biomes: biomes,
                                   }));
             }
@@ -381,11 +377,17 @@ impl World {
         world
     }
 
-    pub fn located_in(pos: (usize, usize),
-                      size: (usize, usize))
-        -> bool {
-        return pos.0 >= 0 && pos.0 < size.0 && pos.1 >= 0 &&
-            pos.1 < size.1;
+    pub fn get(&self, pos: (usize, usize)) -> Option<Rc<Unit>> {
+        if self.located_inside(pos) {
+            Some(self.map[pos.1][pos.0])
+        } else {
+            None
+        }
+    }
+
+    pub fn located_inside(&self, pos: (usize, usize)) -> bool {
+        return pos.0 >= 0 && pos.0 < self.map_size.0 &&
+            pos.1 >= 0 && pos.1 < self.map_size.1;
     }
 
     pub unsafe fn delete_heightmap(&self) {
@@ -609,7 +611,7 @@ impl WorldState {
                        .iter()
                        .flat_map(|r| {
             r.iter()
-             .map(|unit| unit.tiles.len())
+             .map(|unit| unit.tiles.borrow().len())
              .max()
         })
                        .max();
