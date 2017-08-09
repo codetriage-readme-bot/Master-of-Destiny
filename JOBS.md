@@ -61,12 +61,13 @@
 - [x] Tide/waves (depends on physics)
 - [x] Water animation and animation framework.
 - [ ] Animals
+- [ ] Items
+- [ ] Animal predators/prey
 - [ ] Add loading screen
 - [ ] Use Guile to write AI and properties
-- [ ] Generate animals by ecosystem
-- [ ] Animal predators/prey
+- [ ] Generate animals by ecosystems
 - [ ] Special animal behaviour
-- [ ] Render text using SDL?
+- [ ] Minions
 
 ## Postponed indefinately until basic gameplay is finished
 - [ ] Speed up physics engine

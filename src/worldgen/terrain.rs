@@ -3,8 +3,11 @@ extern crate tcod;
 use std;
 
 use draw::{Describe, DrawChar, FramedDraw};
+use life::animal::Species;
 use physics::PhysicsActor;
 use tcod::colors::Color;
+use time::Calendar;
+use utils::{Point2D, Point3D};
 use worldgen::{FrameAssoc, Frames};
 
 use tcod::RootConsole;
@@ -64,7 +67,7 @@ impl Describe for IgneousRocks {
 }
 
 impl DrawChar for IgneousRocks {
-    fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
+    fn draw_char(&self, root: &mut RootConsole, pos: Point2D) {
         match self {
             &IgneousRocks::Obsidian => {
                 let chr = if TILES {
@@ -125,7 +128,7 @@ impl Describe for MetamorphicRocks {
 }
 
 impl DrawChar for MetamorphicRocks {
-    fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
+    fn draw_char(&self, root: &mut RootConsole, pos: Point2D) {
         match self {
             &MetamorphicRocks::Gneiss => {
                 let chr = if TILES {
@@ -186,7 +189,7 @@ impl Describe for SedimentaryRocks {
 }
 
 impl DrawChar for SedimentaryRocks {
-    fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
+    fn draw_char(&self, root: &mut RootConsole, pos: Point2D) {
         match self {
             &SedimentaryRocks::Limestone => {
                 let chr = if TILES {
@@ -249,7 +252,7 @@ impl Describe for SoilTypes {
 }
 
 impl DrawChar for SoilTypes {
-    fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
+    fn draw_char(&self, root: &mut RootConsole, pos: Point2D) {
         match self {
             &SoilTypes::Clay => {
                 let chr = if TILES {
@@ -360,7 +363,7 @@ impl Describe for StoneTypes {
 }
 
 impl DrawChar for StoneTypes {
-    fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
+    fn draw_char(&self, root: &mut RootConsole, pos: Point2D) {
         match self {
             &StoneTypes::Sedimentary(ref s) => s.draw_char(root, pos),
             &StoneTypes::Metamorphic(ref s) => s.draw_char(root, pos),
@@ -433,7 +436,7 @@ impl Describe for VegTypes {
 }
 
 impl DrawChar for VegTypes {
-    fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
+    fn draw_char(&self, root: &mut RootConsole, pos: Point2D) {
         match self {
             &VegTypes::Bluegrass => {
                 let chr = if TILES {
@@ -685,6 +688,7 @@ pub struct Biome {
 
 /////// GENERAL
 // State: the 3 physical forms + fire because it's convenient.
+/// Physical state of an object, based on chemistry.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum State {
     Liquid,
@@ -692,11 +696,11 @@ pub enum State {
     Gas,
 }
 
-// Descriptive alias (hey, I'm a haskell programmer).
+/// Descriptive alias (hey, I'm a haskell programmer).
 pub type Height = i32;
 pub type Depth = i32;
 
-// North is up, South is down, East is left, West is right.
+/// North is up, South is down, East is left, West is right.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Compass {
     North,
@@ -705,6 +709,8 @@ pub enum Compass {
     West,
 }
 
+/// The slope of a ramp. If it is none, the ramp is actually a floor
+/// tile (a tile that does not fill the entirity of its space.).
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Slope {
     Up,
@@ -712,6 +718,7 @@ pub enum Slope {
     None,
 }
 
+/// Tile types that can be defined to be moveable or as ramps.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum RestrictedTile {
     Stone(StoneTypes, State),
@@ -729,7 +736,7 @@ impl Describe for RestrictedTile {
                     &State::Liquid => {
                         format!("Molten {}", s.describe())
                     }
-                    _ => panic!("Panic! In the Code"),
+                    _ => unreachable!(),
                 }
             }
             &RestrictedTile::Vegitation(veg, ..) => veg.describe(),
@@ -738,7 +745,7 @@ impl Describe for RestrictedTile {
 }
 
 impl DrawChar for RestrictedTile {
-    fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
+    fn draw_char(&self, root: &mut RootConsole, pos: Point2D) {
         match self {
             &RestrictedTile::Stone(ref s, State::Solid) => {
                 s.draw_char(root, pos)
@@ -759,22 +766,104 @@ impl DrawChar for RestrictedTile {
                                  },
                                  Color::new(255, 0, 0));
             }   
-            &RestrictedTile::Stone(_, State::Gas) => {
-                panic!("Stones can't be a gas!")
-            }
+            &RestrictedTile::Stone(_, State::Gas) => unreachable!(),
             &RestrictedTile::Vegitation(ref v, ..) => {
                 v.draw_char(root, pos)
             }
         }
     }
 }
-// General types of tiles (very broad) and their current state.
-// FIXME: use restricted tile instead of duplicating functionality. Composition over inheritence!
+
+/// The
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum ToolKind {
+    // Weapons
+    Sword,
+    Spear,
+
+    // Armor
+    Sheild,
+    Breastplate,
+    Leggings,
+    Helmet,
+    Boots,
+    Shoes,
+
+    // Tools
+    Hammer,
+    Pickaxe,
+    Net,
+    FishingPole,
+    Fork,
+    Knife,
+    Spoon,
+    Bowl,
+    Goblet,
+    Cup,
+    Plate,
+    Wheel,
+}
+
+type Quantity = u8;
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum Food {
+    Meat(Species),
+    Herb(VegTypes),
+    Water(Quantity),
+}
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum Material {
+    Wood(VegTypes),
+    Stone(StoneTypes),
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Magic {
+    potency: u8,
+    cursed: bool,
+    dates: Option<Calendar>,
+}
+
+type Weight = u8;
+type Length = u8;
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum Item {
+    Tool(ToolKind, Weight, Length, Option<Magic>),
+    Food(Food),
+    Material(Material),
+}
+
+impl DrawChar for Item {
+    fn draw_char(&self, root: &mut RootConsole, pos: Point2D) {}
+}
+
+impl Describe for Item {
+    fn describe(&self) -> String {
+        match self {
+            &Item::Tool(tk, w, l, m) => {
+                if m.is_some() {
+                    format!("an enchanted length {} {:?}", l, tk)
+                } else {
+                    format!("a normal length {} {:?}", l, tk)
+                }
+            }
+            &Item::Food(f) => format!("a {:?}", f),
+            &Item::Material(m) => {
+                format!("some loose, piled {:?}", m)
+            }
+        }
+    }
+}
+
+/// General types of tiles (very broad) and their current state.
+///
+/// FIXME: use restricted tile instead of duplication
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Tile {
     Empty,
     Ramp(RestrictedTile, Slope),
     Moveable(RestrictedTile),
+    Item(Item),
     Water(LiquidPurity, State, Depth),
     Stone(StoneTypes, State),
     Vegitation(VegTypes, Height, State),
@@ -844,17 +933,18 @@ impl Describe for Tile {
                     &State::Liquid => {
                         format!("Molten {}", s.describe())
                     }
-                    _ => panic!("Panic! In the Code"),
+                    _ => unreachable!(),
                 }
             }
             &Tile::Fire => "Flames".to_string(),
             &Tile::Vegitation(veg, ..) => veg.describe(),
+            &Tile::Item(i) => i.describe(),
         }
     }
 }
 
 impl DrawChar for Tile {
-    fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
+    fn draw_char(&self, root: &mut RootConsole, pos: Point2D) {
         match self {
             &Tile::Ramp(ref undertile, ref s) => {
                 match s {
@@ -910,7 +1000,7 @@ impl DrawChar for Tile {
                             f => f.draw_char(root, pos),
                         }
                     }
-                    _ => panic!("Shouldn't be moveable!"),
+                    _ => unreachable!(),
                 }
             }
             &Tile::Stone(ref s, State::Solid) => {
@@ -932,9 +1022,7 @@ impl DrawChar for Tile {
                                  },
                                  Color::new(255, 0, 0));
             }
-            &Tile::Stone(_, State::Gas) => {
-                panic!("Stones can't be a gas!")
-            }
+            &Tile::Stone(_, State::Gas) => unreachable!(),
             &Tile::Water(_, State::Solid, _) => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_ICE).unwrap()
@@ -1010,6 +1098,7 @@ impl DrawChar for Tile {
                                  Color::new(150, 150, 150),
                                  Color::new(150, 150, 150));
             }
+            &Tile::Item(i) => i.draw_char(root, pos),
         }
     }
 }
@@ -1017,7 +1106,7 @@ impl DrawChar for Tile {
 impl FramedDraw for Tile {
     fn draw_framed_char(&self,
                         root: &mut RootConsole,
-                        pos: (usize, usize),
+                        pos: Point2D,
                         frames_hash: &Frames) {
         match self {
             &Tile::Water(_, State::Liquid, _) => {

@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use worldgen::{Unit, weak_adjacent};
+use utils::weak_adjacent;
+use worldgen::Unit;
 use worldgen::terrain::*;
 
 pub struct Container<L: Liquid<L>> {

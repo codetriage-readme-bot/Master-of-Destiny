@@ -44,7 +44,7 @@ impl Describe for Time {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Season {
     Autumn,
     Winter,
@@ -66,7 +66,7 @@ impl Season {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Weather {
     Raining,
     Snowing,
@@ -107,6 +107,7 @@ impl Weather {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Calendar {
     pub dmy: (usize, usize, usize),
     pub season: Season,

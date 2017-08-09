@@ -1,5 +1,6 @@
 use physics::liquid::Container;
 use std::option::Option;
+use utils::{Point2D, Point3D, Rect2D};
 use worldgen::{World, WorldState};
 
 pub mod animal;
@@ -11,7 +12,8 @@ pub type Priority = usize;
 
 pub type HealthLevel = usize;
 
-#[derive(Debug)]
+/// The mental mood of a living actor.
+#[derive(Debug, Copy, Clone)]
 pub enum Mood {
     Joyful,
     Happy,
@@ -21,63 +23,87 @@ pub enum Mood {
     Depressed,
 }
 
-// Player assigned missions (orders)
-#[derive(PartialEq, PartialOrd, Eq, Ord)]
+/// Player assigned missions (orders)
+#[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Clone)]
 pub enum Order {
-    Mine((i32, i32), (i32, i32)),
-    GatherPlants((i32, i32), (i32, i32)),
-    FellTrees((i32, i32), (i32, i32)),
-    CartGoods((i32, i32), (i32, i32), (i32, i32)),
-    BuildWall(Vec<(i32, i32)>),
-    BuildRoof(Vec<(i32, i32)>),
-    Go(i32, i32, i32),
+    Mine(Point2D, Point2D),
+    GatherPlants(Point2D, Point2D),
+    FellTrees((i32, i32), Point2D),
+    CartGoods(Point2D, Point2D, Point2D),
+    BuildWall(Vec<Point2D>),
+    BuildRoof(Vec<Point2D>),
+    Go(Point3D),
 }
 
+/// Actions that can be performed on an eatable object.
 pub trait Eatable {
     fn cook(self) -> Self;
     fn neutrition(self) -> Self;
 }
 
+/// Actions that can be performed on a drinkable object.
 pub trait Drinkable {
     fn filter(self) -> Self;
     fn boild(self) -> Self;
     fn satisfaction(self) -> Self;
 }
 
-// Basic missions that animals can assign to themselves
-#[derive(PartialEq, PartialOrd, Eq, Ord)]
+/// Basic missions that animals can assign to themselves
+#[derive(Debug, Eq, PartialOrd, Clone)]
 pub enum Mission {
     Eat(Priority),
     Drink(Priority),
     AttackEnemy(Priority),
-    GoToArea(Priority),
+    GoToArea(((usize, usize), (usize, usize), usize), Priority),
     Obey(Priority, Order),
 }
-impl Mission {
-    fn tag_equals(&self, tag: &Mission) -> bool {
+
+use std::cmp::*;
+impl Ord for Mission {
+    fn cmp(&self, other: &Self) -> Ordering {
         use self::Mission::*;
-        return match (self, tag) {
+        let priority_a = match self {
+            &Eat(p) | &Drink(p) | &AttackEnemy(p) |
+            &GoToArea(_, p) | &Obey(p, _) => p,
+        };
+
+        let priority_b = match other {
+            &Eat(p) | &Drink(p) | &AttackEnemy(p) |
+            &GoToArea(_, p) | &Obey(p, _) => p,
+        };
+
+        return priority_a.cmp(&priority_b);
+    }
+}
+
+impl PartialEq for Mission {
+    fn eq(&self, other: &Mission) -> bool {
+        use self::Mission::*;
+        return match (self, other) {
             (&Eat(..), &Eat(..)) => true,
             (&Drink(..), &Drink(..)) => true,
             (&AttackEnemy(..), &AttackEnemy(..)) => true,
             (&GoToArea(..), &GoToArea(..)) => true,
             (&Obey(..), &Obey(..)) => true,
+            _ => false,
         };
     }
 }
 
 pub trait Living {
-    // Adds mission to list of goals
+    /// Adds mission to list of goals
     fn add_goal(&mut self, mission: Mission);
-    // Removes mission from list of goals
-    fn remove_goal(&mut self, mission: &Mission) -> Mission;
-    // Removes n least important missions from goals.
-    // Returns removed missions.
+    /// Removes mission from list of goals
+    fn remove_goal(&mut self, tag: &Mission) -> Option<Mission>;
+    /// Removes n least important missions from goals.
+    /// Returns removed missions.
     fn prioritize(&mut self, number: usize) -> Vec<Mission>;
-    // Chooses highest priority mission, excecutes one step of it, and
-    // returns it if done, otherwise returns None.
-    fn execute_mission(&self) -> Option<Mission>;
-    // Adds a mission when none is provided. Used all the time for
-    // animals. If there is already a mission going, returns None.
-    fn auto_add_mission(&self) -> Option<Mission>;
+    /// Chooses highest priority mission, excecutes one step of it, and
+    /// returns it if done, otherwise returns None.
+    fn execute_mission(&mut self, ws: &WorldState);
+    /// Adds a mission when none is provided. Used all the time for
+    /// animals. If there is already a mission going, returns None.
+    fn auto_add_mission(&self, ws: &WorldState) -> Option<Mission>;
+
+    fn current_pos(&self) -> (usize, usize, usize);
 }

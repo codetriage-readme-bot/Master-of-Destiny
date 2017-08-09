@@ -1,4 +1,4 @@
-#![feature(box_syntax, box_patterns, vec_remove_item)]
+#![feature(box_syntax, box_patterns, vec_remove_item, conservative_impl_trait)]
 extern crate tcod;
 extern crate tcod_sys;
 
@@ -7,6 +7,7 @@ use tcod::console::{BackgroundFlag, Console, TextAlignment};
 use tcod::input;
 use tcod::input::KeyCode;
 
+mod utils;
 mod life;
 mod draw;
 mod physics;
@@ -18,7 +19,8 @@ use ui::{Button, DrawUI, Layout, MouseUI};
         
 use draw::draw_map;
 
-use worldgen::{World, WorldState, clamp};
+use utils::clamp;
+use worldgen::{World, WorldState};
 use worldgen::terrain::{BASE, TILES};
 
 const SHOW_FONT: &'static str = "assets/master16x16_ro.png";

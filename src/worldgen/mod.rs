@@ -1,9 +1,6 @@
 extern crate rand;
 extern crate tcod_sys;
 
-use life;
-
-use self::rand::Rng;
 use std::cell::RefCell;
 use std::cmp;
 use std::collections::HashMap;
@@ -15,15 +12,13 @@ use tcod::noise::{Noise, NoiseType};
 use tcod::random;
 
 pub mod terrain;
+use self::rand::Rng;
 use self::terrain::*;
 
+use life;
 use physics;
-
 use time::{Calendar, Clock, Time};
-
-pub fn clamp<T: Ord>(value: T, max: T, min: T) -> T {
-    cmp::min(max, cmp::max(min, value))
-}
+use utils::{Point2D, Point3D, clamp, strict_adjacent, weak_adjacent};
 
 macro_rules! matches {
     ($e:expr, $p:pat) => (
@@ -34,62 +29,47 @@ macro_rules! matches {
     )
 }
 
-fn restricted_from_tile(tile: Tile) -> RestrictedTile {
+/// Returns the Some() of the restricted version of a Tile if it can be restricted, if not, returns None.
+fn restricted_from_tile(tile: Tile) -> Option<RestrictedTile> {
     match tile {
-        Tile::Stone(a, b) => RestrictedTile::Stone(a, b),
+        Tile::Stone(a, b) => Some(RestrictedTile::Stone(a, b)),
         Tile::Vegitation(a, b, c) => {
-            RestrictedTile::Vegitation(a, b, c)
+            Some(RestrictedTile::Vegitation(a, b, c))
         }
-        _ => {
-            panic!("Type error. Cannot allow restricted type of kind {:?}",
-                   tile)
-        }
+        _ => None,
     }
 }
 
-fn can_be_restricted(tile: Tile) -> bool {
-    match tile {
-        Tile::Stone(..) => true,
-        Tile::Vegitation(..) => true,
-        _ => false,
-    }
-}
-
-pub fn strict_adjacent((x, y): (usize, usize))
-    -> Vec<(usize, usize)> {
-    vec![(x + 1, y),
-         (x.checked_sub(1).unwrap_or(0), y),
-         (x, y.checked_sub(1).unwrap_or(0)),
-         (x, y + 1)]
-}
-
-pub fn weak_adjacent(p: (usize, usize)) -> Vec<(usize, usize)> {
-    let mut v = strict_adjacent(p);
-    v.push(p);
-    v
-}
-
-// A unit is a 1x1 cross section of the layered world,
-// including a ref
-// to the biome its part of.  Each tile is 1 foot tall.
+/// A 1x1 cross section of the layered world, including a ref to the
+/// biomes each layer is part of.
 #[derive(Clone)]
 pub struct Unit {
     pub biomes: Vec<Biome>,
     pub tiles: RefCell<Vec<Tile>>,
 }
 
-// World contains the current state of the PHYSICAL world
+/// Keeps track of the current animation frame and all the rest of the
+/// animation frames. These frames are stored relative to the
+/// beginning of the tiles in the tileset.
 #[derive(Clone)]
 pub struct FrameAssoc {
     pub current: usize,
     pub all: Vec<usize>,
 }
+/// A mapping of a unique string (based on the type of thing animated)
+/// to its FrameAssoc.
 pub type Frames = HashMap<String, RefCell<FrameAssoc>>;
+
+/// Keeps track of the state of they physical world, including:
+/// * the heightmap
+/// * the vegitation and stone noise
+/// * the animation state
+/// * the map size and unit map
 pub struct World {
     heightmap: *mut tcod_sys::TCOD_heightmap_t,
     vegetation_noise: Noise,
     stone_vein_noise: Noise,
-    pub map_size: (usize, usize),
+    pub map_size: Point2D,
     pub frames: Frames,
     pub map: Vec<Vec<Rc<Unit>>>,
 }
@@ -108,83 +88,21 @@ impl Index<Range<usize>> for World {
     }
 }
 
-fn random_hill_operation<F>(heightmap: *mut tcod_sys::TCOD_heightmap_t,
-                            (hmw, hmh): (usize, usize),
-                            num_hills: i32,
-                            base_radius: f32,
-                            radius: f32,
-                            height: f32,
-                            rndn: tcod_sys::TCOD_random_t,
-                            operation: &F)
-where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
-       f32,
-       f32,
-       f32,
-       f32),
-{
-    unsafe {
-        for _ in 0..num_hills {
-            let radius =
-                tcod_sys::TCOD_random_get_float(rndn,
-                                                base_radius *
-                                                    (1.0 - radius),
-                                                base_radius *
-                                                    (1.0 + radius));
-            let xh = tcod_sys::TCOD_random_get_int(rndn,
-                                                   0,
-                                                   hmw as i32 - 1);
-            let yh = tcod_sys::TCOD_random_get_int(rndn,
-                                                   0,
-                                                   hmh as i32 - 1);
-            operation(heightmap,
-                      xh as f32,
-                      yh as f32,
-                      radius,
-                      height);
-        }
-    }
-}
-
-fn add_random_hills(hm: *mut tcod_sys::TCOD_heightmap_t,
-                    sz: (usize, usize),
-                    nh: i32,
-                    br: f32,
-                    r: f32,
-                    h: f32,
-                    n: tcod_sys::TCOD_random_t) {
-    random_hill_operation(hm,
-                          sz,
-                          nh,
-                          br,
-                          r,
-                          h,
-                          n,
-                          &|a, b, c, d, e| unsafe { tcod_sys::TCOD_heightmap_add_hill(a, b, c, d, e) });
-}
-
-fn dig_random_hills(hm: *mut tcod_sys::TCOD_heightmap_t,
-                    sz: (usize, usize),
-                    nh: i32,
-                    br: f32,
-                    r: f32,
-                    h: f32,
-                    n: tcod_sys::TCOD_random_t) {
-    random_hill_operation(hm,
-                          sz,
-                          nh,
-                          br,
-                          r,
-                          h,
-                          n,
-                          &|a, b, c, d, e| unsafe { tcod_sys::TCOD_heightmap_dig_hill(a, b, c, d, e) });
-}
-
 const THRESHOLD: f32 = 0.5;
 const SEA_LEVEL: f32 = 12.0;
 const VEG_THRESHOLD: f32 = 200.0;
 const RAMP_THRESHOLD: f32 = 0.015;
 impl World {
-    pub fn new(size: (usize, usize), seed: u32) -> World {
+    /// Generates a new hightmap-based world map of the specified
+    /// size. The generation order goes roughly thus:
+    /// * generate noise for vegitation
+    /// * create a heightmap
+    /// * generate low-level noise for the heightmap
+    /// * add the noise (through FBM) to the heightmap
+    /// * run erosion simulation on heightmap
+    /// * add randomly sized hills
+    /// * dig randomly sized hills
+    pub fn new(size: Point2D, seed: u32) -> World {
         println!("Generating seed from {}", seed);
 
         // Vegitation
@@ -196,59 +114,10 @@ impl World {
                                                seed))
             .init();
 
-        let (sx, sy) = size;
-
-        // And here we see a small C hiding in the maw of a Rust. <low-level>
-        let heightmap = unsafe {
-            tcod_sys::TCOD_heightmap_new(sx as i32, sy as i32)
-        };
-        unsafe {
-            let rndn =
-                tcod_sys::TCOD_random_new_from_seed(tcod_sys::TCOD_RNG_MT,
-                                                    seed);
-            let noise = tcod_sys::TCOD_noise_new(2, 0.7, 0.1, rndn);
-            tcod_sys::TCOD_noise_set_type(noise,
-                                          tcod_sys::TCOD_NOISE_PERLIN);
-            tcod_sys::TCOD_heightmap_add_fbm(heightmap,
-                                             noise,
-                                             2.20 * (sx as f32) /
-                                                 400.0,
-                                             2.20 * (sx as f32) /
-                                                 400.0,
-                                             0.0,
-                                             0.0,
-                                             10.0,
-                                             1.0,
-                                             2.05);
-            add_random_hills(heightmap,
-                             size,
-                             600,
-                             16.0 * sx as f32 / 200.0,
-                             0.7,
-                             0.3,
-                             rndn);
-            dig_random_hills(heightmap,
-                             size,
-                             300,
-                             16.0 * sx as f32 / 200.0,
-                             0.6,
-                             0.3,
-                             rndn);
-            tcod_sys::TCOD_heightmap_normalize(heightmap, 0.0, 100.0);
-            tcod_sys::TCOD_heightmap_rain_erosion(heightmap,
-                                                  (sx * sy + 100) as
-                                                      i32,
-                                                  0.06,
-                                                  0.02,
-                                                  rndn);
-        }
-
-        // </low-level>
-
         let mut world: World = World {
-            map_size: (sx, sy),
+            map_size: size,
+            heightmap: Self::generate_heightmap(size, seed),
             map: vec![],
-            heightmap: heightmap,
             vegetation_noise: vnoise,
             stone_vein_noise: Noise::init_with_dimensions(3)
                 .lacunarity(0.43)
@@ -266,14 +135,20 @@ impl World {
                     .cloned()
                     .map(|(x, y)| (x, RefCell::new(y)))
                     .collect(),
-            tcod_map: map::Map::new(sx as i32, sy as i32),
         };
+        world.map = Self::map_from(size, &world);
+        world
+    }
+
+    /// Generates a new unit map for World from the given (incomplete) World.
+    fn map_from((sx, sy): Point2D, ws: &World) -> Vec<Vec<Rc<Unit>>> {
+        let mut world: Vec<Vec<Rc<Unit>>> = vec![];
         for y in 0..sy {
             let mut line = vec![];
             for x in 0..sx {
-                let height = unsafe { world.get_height(x, y) };
+                let height = unsafe { ws.get_height(x, y) };
                 let slope = unsafe {
-                    tcod_sys::TCOD_heightmap_get_slope(heightmap,
+                    tcod_sys::TCOD_heightmap_get_slope(ws.heightmap,
                                                        x as i32,
                                                        y as i32)
                 };
@@ -319,30 +194,28 @@ impl World {
                            .is_some();
 
                     for z in 0..(height as isize - 1) {
-                        biomes.push(world.biome_from_height(z));
-                        tiles.push(world.rock_type(adj.clone(),
-                                                   (x, y),
-                                                   z));
+                        biomes.push(ws.biome_from_height(z));
+                        tiles.push(ws.rock_type(adj.clone(),
+                                                (x, y),
+                                                z));
                     }
                     if height <= VEG_THRESHOLD && !water_adjacent {
-                        match world.get_vegetation((x, y)) {
+                        match ws.get_vegetation((x, y)) {
                             Tile::Vegitation(a, height, b) => {
                                 for z in 0..height {
-                                    if z >= height / 3 {
-                                        tiles.push(Tile::Vegitation(a,
-                                                                    height -
-                                                                        z,
-                                                                    b));
+                                    tiles.push(if z >= height / 3 {
+                                        Tile::Vegitation(a,
+                                                         height - z,
+                                                         b)
                                     } else {
-                                        tiles.push(Tile::Vegitation(VegTypes::Treetrunk,
-                                                                    1,
-                                                                    State::Solid));
-                                    }
+                                        Tile::Vegitation(
+                                            VegTypes::Treetrunk,
+                                            1,
+                                            State::Solid)
+                                    });
                                 }
                             }
-                            _ => {
-                                panic!("Don't panic? Now is the perfect time to panic!")
-                            }
+                            _ => {}
                         }
                     }
                     let tile = match tiles.len() {
@@ -352,9 +225,9 @@ impl World {
                     if tile.is_some() {
                         let tile = tile.unwrap();
                         let last = (tiles.len() - 1) as usize;
-                        if can_be_restricted(tile) {
-                            let r =
-                                restricted_from_tile(tile.clone());
+                        if let Some(r) =
+                            restricted_from_tile(tile.clone())
+                        {
                             tiles[last] = if slope < -RAMP_THRESHOLD {
                                 Tile::Ramp(r, Slope::Down)
                             } else if slope > RAMP_THRESHOLD {
@@ -372,28 +245,158 @@ impl World {
             }
             world.push(line);
         }
-
-        println!("Done world generation!");
         world
     }
 
-    pub fn get(&self, pos: (usize, usize)) -> Option<Rc<Unit>> {
+    /// A general method for dealing with generating random hills of a limited size, position, and height.
+    fn random_hill_operation<F>(heightmap: *mut tcod_sys::TCOD_heightmap_t,
+                            (hmw, hmh): Point2D,
+                            num_hills: i32,
+                            base_radius: f32,
+                            radius: f32,
+                            height: f32,
+                            rndn: tcod_sys::TCOD_random_t,
+                            operation: &F)
+where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
+       f32,
+       f32,
+       f32,
+       f32),
+{
+        unsafe {
+            for _ in 0..num_hills {
+                let radius =
+                    tcod_sys::TCOD_random_get_float(rndn,
+                                                    base_radius *
+                                                        (1.0 -
+                                                             radius),
+                                                    base_radius *
+                                                        (1.0 +
+                                                             radius));
+                let xh = tcod_sys::TCOD_random_get_int(rndn,
+                                                       0,
+                                                       hmw as i32 -
+                                                           1);
+                let yh = tcod_sys::TCOD_random_get_int(rndn,
+                                                       0,
+                                                       hmh as i32 -
+                                                           1);
+                operation(heightmap,
+                          xh as f32,
+                          yh as f32,
+                          radius,
+                          height);
+            }
+        }
+    }
+
+    /// Extrudes random hills.
+    fn add_random_hills(hm: *mut tcod_sys::TCOD_heightmap_t,
+                        sz: Point2D,
+                        nh: i32,
+                        br: f32,
+                        r: f32,
+                        h: f32,
+                        n: tcod_sys::TCOD_random_t) {
+        Self::random_hill_operation(hm,
+                                    sz,
+                                    nh,
+                                    br,
+                                    r,
+                                    h,
+                                    n,
+                                    &|a, b, c, d, e| unsafe { tcod_sys::TCOD_heightmap_add_hill(a, b, c, d, e) });
+    }
+
+    /// Digs random hills.
+    fn dig_random_hills(hm: *mut tcod_sys::TCOD_heightmap_t,
+                        sz: Point2D,
+                        nh: i32,
+                        br: f32,
+                        r: f32,
+                        h: f32,
+                        n: tcod_sys::TCOD_random_t) {
+        Self::random_hill_operation(hm,
+                                    sz,
+                                    nh,
+                                    br,
+                                    r,
+                                    h,
+                                    n,
+                                    &|a, b, c, d, e| unsafe { tcod_sys::TCOD_heightmap_dig_hill(a, b, c, d, e) });
+    }
+
+    /// Generates a new heightmap: this is all unsafe code, and uses the low-level FFI to libtcod 5.1.
+    fn generate_heightmap((sx, sy): Point2D,
+                          seed: u32)
+        -> *mut tcod_sys::TCOD_heightmap_t {
+        let heightmap = unsafe {
+            tcod_sys::TCOD_heightmap_new(sx as i32, sy as i32)
+        };
+        unsafe {
+            let rndn =
+                tcod_sys::TCOD_random_new_from_seed(tcod_sys::TCOD_RNG_MT,
+                                                    seed);
+            let noise = tcod_sys::TCOD_noise_new(2, 0.7, 0.1, rndn);
+            tcod_sys::TCOD_noise_set_type(noise,
+                                          tcod_sys::TCOD_NOISE_PERLIN);
+            tcod_sys::TCOD_heightmap_add_fbm(heightmap,
+                                             noise,
+                                             2.20 * (sx as f32) /
+                                                 400.0,
+                                             2.20 * (sx as f32) /
+                                                 400.0,
+                                             0.0,
+                                             0.0,
+                                             10.0,
+                                             1.0,
+                                             2.05);
+            Self::add_random_hills(heightmap,
+                                   (sx, sy),
+                                   600,
+                                   16.0 * sx as f32 / 200.0,
+                                   0.7,
+                                   0.3,
+                                   rndn);
+            Self::dig_random_hills(heightmap,
+                                   (sx, sy),
+                                   300,
+                                   16.0 * sx as f32 / 200.0,
+                                   0.6,
+                                   0.3,
+                                   rndn);
+            tcod_sys::TCOD_heightmap_normalize(heightmap, 0.0, 100.0);
+            tcod_sys::TCOD_heightmap_rain_erosion(heightmap,
+                                                  (sx * sy + 100) as
+                                                      i32,
+                                                  0.06,
+                                                  0.02,
+                                                  rndn);
+        };
+        heightmap
+    }
+
+    /// Get the unit at the specified position. Returns an optional type.
+    pub fn get(&self, pos: Point2D) -> Option<Rc<Unit>> {
         if self.located_inside(pos) {
-            Some(self.map[pos.1][pos.0])
+            Some(self.map[pos.1][pos.0].clone())
         } else {
             None
         }
     }
 
-    pub fn located_inside(&self, pos: (usize, usize)) -> bool {
+    /// Test if the given point is on the World plane.
+    pub fn located_inside(&self, pos: Point2D) -> bool {
         return pos.0 >= 0 && pos.0 < self.map_size.0 &&
             pos.1 >= 0 && pos.1 < self.map_size.1;
     }
 
+    /// For memory cleanup.
     pub unsafe fn delete_heightmap(&self) {
         tcod_sys::TCOD_heightmap_delete(self.heightmap);
     }
 
+    /// Gets the height of the map at the current point.
     unsafe fn get_height(&self, x: usize, y: usize) -> f32 {
         tcod_sys::TCOD_heightmap_get_value(self.heightmap,
                                            x as i32,
@@ -401,6 +404,10 @@ impl World {
             THRESHOLD
     }
 
+    /// Gets the liquid purity.
+    ///
+    /// TODO: Make this based on proximity to dirt and plants, instead
+    /// of being random.
     pub fn purity() -> LiquidPurity {
         *rand::thread_rng()
             .choose(&[LiquidPurity::Clean,
@@ -432,6 +439,9 @@ impl World {
         }
     }
 
+    /// Gets the biome at a certain height.
+    ///
+    /// TODO: Make this actually do something.
     pub fn biome_from_height(&self, height: isize) -> Biome {
         Biome {
             biome_type: BiomeType::Pasture,
@@ -449,6 +459,7 @@ impl World {
         }
     }
 
+    /// Chooses a type of soil based on adjacency to certain features.
     fn soil_choice(adj: Vec<Tile>) -> SoilTypes {
         let (water_adjacent, sand_adjacent, veg_adjacent, sedimentary_adjacent) = adj.iter()
                                 .fold((false, false, false, false),
@@ -484,9 +495,10 @@ impl World {
         }
     }
 
+    /// Chooses a type of rock based on the World's stone_noise FBM and height.
     pub fn rock_type(&self,
                      adj: Vec<Tile>,
-                     (x, y): (usize, usize),
+                     (x, y): Point2D,
                      height: isize)
         -> Tile {
         let rn = self.stone_vein_noise
@@ -530,7 +542,8 @@ impl World {
                     })
     }
 
-    pub fn get_vegetation(&self, (x, y): (usize, usize)) -> Tile {
+    /// Gets the correct vegitation based on the heightmap's height and random selection.
+    pub fn get_vegetation(&self, (x, y): Point2D) -> Tile {
         let vn = self.vegetation_noise
                      .get_fbm(&mut [x as f32, y as f32], 1) *
             100.0;
@@ -574,6 +587,11 @@ impl World {
     }
 }
 
+/// Handles general time:
+/// * calendar date
+/// * time of day (fuzzy)
+/// * absolute time (clock)
+/// * days since universe start
 pub struct TimeHandler {
     pub calendar: Calendar,
     pub time_of_day: Time,
@@ -581,11 +599,21 @@ pub struct TimeHandler {
     pub days: usize,
 }
 
+/// Handles overall world state:
+///
+/// * the 3D screen location and cursor position
+/// * the organisms
+/// * meta info about the map and the map itself
+/// * and time, including dates and clock time.
+///
+/// WorldState also handles generating a new map, which, for
+/// performance reasons, is not requred on the creation of the struct,
+/// instead relying on after-the-fact linking.
 pub struct WorldState {
     pub screen: (i32, i32),
     pub cursor: (i32, i32),
     pub level: i32,
-    pub life: Vec<Box<life::Living>>,
+    pub life: Vec<Rc<life::Living>>,
     pub map: Option<World>,
     pub highest_level: usize,
     pub time: TimeHandler,
@@ -593,6 +621,7 @@ pub struct WorldState {
 
 pub const CYCLE_LENGTH: usize = 100;
 impl WorldState {
+    /// Updates world time and then deligates to the physics engine.
     pub fn update(&mut self, time: usize, dt: usize) {
         self.time.clock.update_deltatime(dt);
         self.time.time_of_day = Time::from_clock_time(&self.time
@@ -606,6 +635,7 @@ impl WorldState {
         }
         physics::run(self, dt);
     }
+    /// Add a world map and update its meta layer.
     pub fn add_map(&mut self, world: World) {
         let max = world.map
                        .iter()
@@ -618,7 +648,9 @@ impl WorldState {
         self.map = Some(world);
         self.highest_level = max.unwrap_or(30);
     }
-    pub fn new(s: (usize, usize)) -> WorldState {
+
+    /// Create a new WorldState, loaded with sensable defaults.
+    pub fn new(s: Point2D) -> WorldState {
         let clock = Clock { time: (12, 30) };
         WorldState {
             screen: (0, 0),
@@ -633,6 +665,30 @@ impl WorldState {
             },
             life: vec![],
             map: None,
+        }
+    }
+
+    pub fn can_move<'a>(
+        &self,
+        actor: &life::animal::Animal<'a>)
+        -> impl FnMut((i32, i32), (i32, i32)) -> f32 {
+        move |from: (i32, i32), to: (i32, i32)| -> f32 { 1.0 }
+    }
+
+    pub fn location_z(&self, pos: Point2D) -> usize {
+        if let Some(ref map) = self.map {
+            let loc = map.get(pos);
+            loc.map(|u| {
+                let t = u.tiles.borrow();
+                t.iter()
+                 .enumerate()
+                 .find(|&t| *t.1 == Tile::Empty)
+                 .map(|(i, _)| i)
+                 .unwrap_or(t.len())
+            })
+               .unwrap_or(0)
+        } else {
+            0
         }
     }
 }

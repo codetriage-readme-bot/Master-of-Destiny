@@ -1,4 +1,5 @@
-use worldgen::{World, WorldState, strict_adjacent};
+use utils::strict_adjacent;
+use worldgen::{World, WorldState};
 use worldgen::terrain::Tile;
 
 pub mod liquid;
@@ -21,9 +22,9 @@ fn unsupported(tile: Tile,
         solid_cnt < 2
 }
 
-macro_rules! get(
-    ($e:expr) => (match $e { Some(e) => e, None => return None })
-);
+/*macro_rules! get(
+($e:expr) => (match $e { Some(e) => e, None => return None })
+);*/
 
 pub fn run(ws: &mut WorldState, dt: usize) {
     /*
