@@ -56,3 +56,10 @@ pub fn nearest_perimeter_point(((x1, y1), (x2, y2), _): Rect2D3D,
         (x2, y, z)
     }
 }
+
+pub fn distance3D((x1, y1, z1): Point3D,
+                  (x2, y2, z2): Point3D)
+    -> f32 {
+    (((x2 - x1).pow(2) + (y2 - y1).pow(2) + (z2 - z1).pow(2)) as f32)
+        .cbrt()
+}

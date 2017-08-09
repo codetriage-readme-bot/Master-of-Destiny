@@ -48,6 +48,12 @@ pub trait Drinkable {
     fn satisfaction(self) -> Self;
 }
 
+#[derive(Debug, Clone)]
+pub enum MissionResult {
+    NoResult,
+    Kill(usize),
+}
+
 /// Basic missions that animals can assign to themselves
 #[derive(Debug, Eq, PartialOrd, Clone)]
 pub enum Mission {
@@ -56,6 +62,7 @@ pub enum Mission {
     AttackEnemy(Priority),
     GoToArea(((usize, usize), (usize, usize), usize), Priority),
     Obey(Priority, Order),
+    Die,
 }
 
 use std::cmp::*;
@@ -65,11 +72,13 @@ impl Ord for Mission {
         let priority_a = match self {
             &Eat(p) | &Drink(p) | &AttackEnemy(p) |
             &GoToArea(_, p) | &Obey(p, _) => p,
+            &Die => 1000,
         };
 
         let priority_b = match other {
             &Eat(p) | &Drink(p) | &AttackEnemy(p) |
             &GoToArea(_, p) | &Obey(p, _) => p,
+            &Die => 1000,
         };
 
         return priority_a.cmp(&priority_b);
@@ -100,10 +109,12 @@ pub trait Living {
     fn prioritize(&mut self, number: usize) -> Vec<Mission>;
     /// Chooses highest priority mission, excecutes one step of it, and
     /// returns it if done, otherwise returns None.
-    fn execute_mission(&mut self, ws: &WorldState);
+    fn execute_mission(&mut self, ws: &WorldState) -> MissionResult;
     /// Adds a mission when none is provided. Used all the time for
     /// animals. If there is already a mission going, returns None.
-    fn auto_add_mission(&self, ws: &WorldState) -> Option<Mission>;
+    fn auto_add_mission(&mut self,
+                        ws: &WorldState)
+        -> Option<Mission>;
 
     fn current_pos(&self) -> (usize, usize, usize);
 }

@@ -60,7 +60,8 @@
 - [x] Get physics to actually run.
 - [x] Tide/waves (depends on physics)
 - [x] Water animation and animation framework.
-- [ ] Animals
+- [x] Animals
+- [ ] Animal manager & placeholder placement
 - [ ] Items
 - [ ] Animal predators/prey
 - [ ] Add loading screen

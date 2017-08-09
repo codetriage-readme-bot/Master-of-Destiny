@@ -2,12 +2,10 @@ extern crate rand;
 extern crate tcod_sys;
 
 use std::cell::RefCell;
-use std::cmp;
 use std::collections::HashMap;
 use std::ops::{Index, Range};
 use std::rc::Rc;
 
-use tcod::map;
 use tcod::noise::{Noise, NoiseType};
 use tcod::random;
 
@@ -16,9 +14,10 @@ use self::rand::Rng;
 use self::terrain::*;
 
 use life;
+use life::{Living, Mission, MissionResult};
 use physics;
 use time::{Calendar, Clock, Time};
-use utils::{Point2D, Point3D, clamp, strict_adjacent, weak_adjacent};
+use utils::{Point2D, strict_adjacent};
 
 macro_rules! matches {
     ($e:expr, $p:pat) => (
@@ -613,7 +612,7 @@ pub struct WorldState {
     pub screen: (i32, i32),
     pub cursor: (i32, i32),
     pub level: i32,
-    pub life: Vec<Rc<life::Living>>,
+    pub life: Vec<RefCell<Box<Living>>>,
     pub map: Option<World>,
     pub highest_level: usize,
     pub time: TimeHandler,
@@ -623,15 +622,31 @@ pub const CYCLE_LENGTH: usize = 100;
 impl WorldState {
     /// Updates world time and then deligates to the physics engine.
     pub fn update(&mut self, time: usize, dt: usize) {
-        self.time.clock.update_deltatime(dt);
-        self.time.time_of_day = Time::from_clock_time(&self.time
-                                                           .clock);
-        if self.time.time_of_day == Time::Midnight {
-            self.time.clock.time = (0, 0);
-            self.time.days += 1;
-            self.time
-                .calendar
-                .update_to_day(self.time.days, &self.time.clock);
+        {
+            self.time.clock.update_deltatime(dt);
+            self.time.time_of_day =
+                Time::from_clock_time(&self.time.clock);
+            if self.time.time_of_day == Time::Midnight {
+                self.time.clock.time = (0, 0);
+                self.time.days += 1;
+                self.time
+                    .calendar
+                    .update_to_day(self.time.days, &self.time.clock);
+            }
+        }
+        {
+            let kills: Vec<_> = (0..self.life.len())
+                .filter_map(|i| {
+                    let mut actor = self.life[i].borrow_mut();
+                    match actor.execute_mission(self) {
+                        MissionResult::Kill(i) => Some(i),
+                        _ => None,
+                    }
+                })
+                .collect();
+            for k in kills {
+                self.life.remove(k);
+            }
         }
         physics::run(self, dt);
     }
