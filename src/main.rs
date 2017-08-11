@@ -1,4 +1,4 @@
-#![feature(box_syntax, box_patterns, vec_remove_item, conservative_impl_trait)]
+#![feature(box_syntax, box_patterns, vec_remove_item, conservative_impl_trait, exclusive_range_pattern)]
 extern crate tcod;
 extern crate tcod_sys;
 
@@ -16,7 +16,7 @@ mod worldgen;
 mod time;
 
 use ui::{Button, DrawUI, Layout, MouseUI};
-        
+
 use draw::draw_map;
 
 use utils::clamp;
@@ -371,7 +371,7 @@ fn main() {
         }
     }
 
-    tcod::system::set_fps(20);
+    tcod::system::set_fps(35);
     root.set_keyboard_repeat(0, 0);
 
     while !root.window_closed() {

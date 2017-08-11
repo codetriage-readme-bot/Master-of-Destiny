@@ -2,6 +2,7 @@ use physics::liquid::Container;
 use std::option::Option;
 use utils::{Point2D, Point3D, Rect2D};
 use worldgen::{World, WorldState};
+use worldgen::terrain::Item;
 
 pub mod animal;
 pub mod bird;
@@ -52,6 +53,8 @@ pub trait Drinkable {
 pub enum MissionResult {
     NoResult,
     Kill(usize),
+    ReplaceItem(Point3D, Item),
+    RemoveItem(Point3D),
 }
 
 /// Basic missions that animals can assign to themselves

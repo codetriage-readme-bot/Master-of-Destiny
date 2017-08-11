@@ -668,8 +668,8 @@ impl DrawChar for VegTypes {
 
 /////// BIOME
 
-type Ferenheight = i32;
-type Percent = usize;
+type Ferenheight = f32;
+type Percent = f32;
 #[derive(Copy, Clone, PartialEq)]
 pub enum BiomeType {
     Swamp,
@@ -1111,12 +1111,13 @@ impl FramedDraw for Tile {
         match self {
             &Tile::Water(_, State::Liquid, _) => {
                 let mut frames = frames_hash["Water"].borrow_mut();
-                let chr = if TILES {
-                    std::char::from_u32(BASE + frames.current as u32)
+                let chr =
+                    if TILES {
+                        std::char::from_u32(BASE + frames.all[frames.current] as u32)
                         .unwrap()
-                } else {
-                    '\u{f7}'
-                };
+                    } else {
+                        '\u{f7}'
+                    };
                 println!("{}", BASE + frames.current as u32);
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,

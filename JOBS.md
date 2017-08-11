@@ -7,11 +7,11 @@
 - [x] Work tileset bushes
 - [x] Work tileset stone
 - [x] Work tileset dirt
-- [ ] Improve trees (banyon)
-- [ ] Add reduced-noise grass to background of treese
-- [ ] Reduce noise/make tiles easier to see
+- [x] Improve trees (banyon)
+- [x] Add reduced-noise grass to background of treese
+- [x] Reduce noise/make tiles easier to see
 - [ ] Make rubble tile for each type of dirt, make wood log tile
-- [ ] Make 4-frame water animation
+- [x] Make 4-frame water animation
 - [x] Snow, ice other weather tiles.
 - [ ] Upscale tiles?
 - [ ] Make logo?
@@ -61,24 +61,25 @@
 - [x] Tide/waves (depends on physics)
 - [x] Water animation and animation framework.
 - [x] Animals
-- [ ] Animal manager & placeholder placement
-- [ ] Items
-- [ ] Animal predators/prey
-- [ ] Add loading screen
-- [ ] Use Guile to write AI and properties
-- [ ] Generate animals by ecosystems
-- [ ] Special animal behaviour
-- [ ] Minions
-
-## Postponed indefinately until basic gameplay is finished
-- [ ] Speed up physics engine
-- [ ] Water shifted.
-- [ ] Load terrain from seed
-- [ ] Add tree canopies
-- [x] Update game loop to be more reliable
-- [ ] Generate biomes by height
-- [ ] Generate biomes by season
+- [x] Animal manager
+- [ ] Generate biomes
 - [ ] Generate vegitation by biome
 - [ ] Generate loam under plants
 - [ ] Group types of plants
 - [ ] Terrain collision detection
+- [ ] Place animals by biome
+- [ ] Items
+- [ ] Raytracing sun
+- [ ] Move sun by time of day
+- [x] Animal predators/prey
+- [ ] Use Guile to write AI and properties
+- [ ] Special animal behaviour
+- [ ] Minions
+
+## Postponed indefinately until basic gameplay is finished
+- [ ] Add loading screen
+- [ ] Speed up physics engine
+- [x] Water shifted.
+- [ ] Load terrain from seed
+- [ ] Add tree canopies
+- [x] Update game loop to be more reliable

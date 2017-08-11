@@ -62,7 +62,7 @@ pub fn liquid_physics(pnt: (usize, usize),
                 let new_height = len % 23;
                 if new_height <= len {
                     Unit {
-                        biomes: u.biomes.clone(),
+                        biome: u.biome.clone(),
                         tiles: RefCell::new(ut.iter()
                                             .take(new_height)
                                             .map(|x| *x)
@@ -76,7 +76,7 @@ pub fn liquid_physics(pnt: (usize, usize),
                                                (len + x) as i32));
                     }
                     Unit {
-                        biomes: u.biomes.clone(),
+                        biome: u.biome.clone(),
                         tiles: RefCell::new(tiles.to_vec()),
                     }
                 }

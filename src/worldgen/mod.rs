@@ -40,10 +40,10 @@ fn restricted_from_tile(tile: Tile) -> Option<RestrictedTile> {
 }
 
 /// A 1x1 cross section of the layered world, including a ref to the
-/// biomes each layer is part of.
+/// biome it is part of.
 #[derive(Clone)]
 pub struct Unit {
-    pub biomes: Vec<Biome>,
+    pub biome: Option<Biome>,
     pub tiles: RefCell<Vec<Tile>>,
 }
 
@@ -139,6 +139,11 @@ impl World {
         world
     }
 
+    /// Creates a vector of animals based on biome and height.
+    pub fn generate_life(&self) -> Vec<RefCell<Box<Living>>> {
+        vec![]
+    }
+
     /// Generates a new unit map for World from the given (incomplete) World.
     fn map_from((sx, sy): Point2D, ws: &World) -> Vec<Vec<Rc<Unit>>> {
         let mut world: Vec<Vec<Rc<Unit>>> = vec![];
@@ -152,7 +157,6 @@ impl World {
                                                        y as i32)
                 };
                 let mut tiles: Vec<Tile> = vec![];
-                let mut biomes: Vec<Biome> = vec![];
                 if height <= SEA_LEVEL {
                     let dist = height as isize + 7;
                     for z in 0..dist {
@@ -193,7 +197,6 @@ impl World {
                            .is_some();
 
                     for z in 0..(height as isize - 1) {
-                        biomes.push(ws.biome_from_height(z));
                         tiles.push(ws.rock_type(adj.clone(),
                                                 (x, y),
                                                 z));
@@ -239,7 +242,7 @@ impl World {
                 }
                 line.push(Rc::new(Unit {
                                       tiles: RefCell::new(tiles),
-                                      biomes: biomes,
+                                      biome: None,
                                   }));
             }
             world.push(line);
@@ -438,15 +441,26 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
         }
     }
 
+    fn biome_type_from_noise(point_val: f32) -> BiomeType {
+        use self::BiomeType::*;
+        match point_val as i32 * 100 {
+            0..10 => Beach,
+            10..25 => Jungle,
+            25..55 => Forest,
+            55..100 => Pasture,
+            _ => Forest,
+        }
+    }
+
     /// Gets the biome at a certain height.
-    ///
-    /// TODO: Make this actually do something.
-    pub fn biome_from_height(&self, height: isize) -> Biome {
+    pub fn biome_from_noise(point_val: f32,
+                            avg_height: f32)
+        -> Biome {
         Biome {
-            biome_type: BiomeType::Pasture,
-            temperature_day_f: 75,
-            temperature_night_f: 52,
-            percipitation_chance: 70,
+            biome_type: World::biome_type_from_noise(point_val),
+            temperature_day_f: 100f32 - (avg_height * 100f32),
+            temperature_night_f: 80f32 - (avg_height * 100f32),
+            percipitation_chance: point_val,
         }
     }
 
@@ -618,37 +632,43 @@ pub struct WorldState {
     pub time: TimeHandler,
 }
 
-pub const CYCLE_LENGTH: usize = 100;
 impl WorldState {
     /// Updates world time and then deligates to the physics engine.
     pub fn update(&mut self, time: usize, dt: usize) {
-        {
-            self.time.clock.update_deltatime(dt);
-            self.time.time_of_day =
-                Time::from_clock_time(&self.time.clock);
-            if self.time.time_of_day == Time::Midnight {
-                self.time.clock.time = (0, 0);
-                self.time.days += 1;
-                self.time
-                    .calendar
-                    .update_to_day(self.time.days, &self.time.clock);
-            }
+        self.time.clock.update_deltatime(dt);
+        self.time.time_of_day = Time::from_clock_time(&self.time
+                                                           .clock);
+        if self.time.time_of_day == Time::Midnight {
+            self.time.clock.time = (0, 0);
+            self.time.days += 1;
+            self.time
+                .calendar
+                .update_to_day(self.time.days, &self.time.clock);
         }
-        {
-            let kills: Vec<_> = (0..self.life.len())
-                .filter_map(|i| {
-                    let mut actor = self.life[i].borrow_mut();
-                    match actor.execute_mission(self) {
-                        MissionResult::Kill(i) => Some(i),
-                        _ => None,
+        if let Some(ref world) = self.map {
+            let map = &world.map;
+            let mut kills = vec![];
+            for i in 0..self.life.len() {
+                let mut actor = self.life[i].borrow_mut();
+                match actor.execute_mission(self) {
+                    MissionResult::Kill(i) => {
+                        kills.push(i);
                     }
-                })
-                .collect();
-            for k in kills {
-                self.life.remove(k);
+                    MissionResult::RemoveItem(pnt) => {
+                        let unit = &map[pnt.1][pnt.0];
+                        let mut tiles = unit.tiles.borrow_mut();
+                        tiles[pnt.2] = Tile::Empty;
+                    }
+                    MissionResult::ReplaceItem(pnt, item) => {
+                        let unit = &map[pnt.1][pnt.0];
+                        let mut tiles = unit.tiles.borrow_mut();
+                        tiles[pnt.2] = Tile::Item(item);
+                    }
+                    _ => {}
+                }
             }
         }
-        physics::run(self, dt);
+        //physics::run(self, dt);
     }
     /// Add a world map and update its meta layer.
     pub fn add_map(&mut self, world: World) {
@@ -662,6 +682,9 @@ impl WorldState {
                        .max();
         self.map = Some(world);
         self.highest_level = max.unwrap_or(30);
+        if let Some(ref map) = self.map {
+            self.life = map.generate_life();
+        }
     }
 
     /// Create a new WorldState, loaded with sensable defaults.

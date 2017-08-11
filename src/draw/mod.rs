@@ -5,7 +5,7 @@ use tcod::console;
 use tcod::console::{BackgroundFlag, Console};
 
 use time;
-use worldgen::{CYCLE_LENGTH, Frames, WorldState};
+use worldgen::{Frames, WorldState};
 use worldgen::terrain::{TILES, Tile};
 
 pub trait DrawChar {

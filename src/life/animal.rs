@@ -189,21 +189,70 @@ impl<'a> Animal<'a> {
                          adj: Vec<(Tile, Point3D)>)
         -> MissionResult {
         let result = match self.current_goal {
-            Some(Mission::AttackEnemy(p)) => {
-                for (i, enemy) in ws.life.iter().enumerate() {
-                    let pos = enemy.borrow().current_pos();
-                    if distance3D(pos, self.pos) <= 2f32 &&
-                        self.path
-                            .as_mut()
-                            .unwrap()
-                            .find((self.pos.0 as i32,
-                                   self.pos.1 as i32),
-                                  (pos.0 as i32, pos.1 as i32))
-                    {
-                        return MissionResult::Kill(i);
-                    }
+            Some(Mission::AttackEnemy(_)) => {
+                let enemy = ws.life
+                              .iter()
+                              .enumerate()
+                              .find(|&(i, e)| {
+                    adj.iter()
+                       .find(|&&(_, p)| e.borrow().current_pos() == p)
+                       .is_some()
+                });
+                if let Some((i, _)) = enemy {
+                    MissionResult::Kill(i)
+                } else {
+                    MissionResult::NoResult
                 }
-                MissionResult::NoResult
+            }
+            Some(Mission::Drink(p)) => {
+                if let Some(&(Tile::Item(Item::Food(Food::Water(q))), pnt)) =
+                    adj.iter().find(|&&(t, _)| {
+                        matches!(t, Tile::Item(Item::Food(..)))
+                    }) {
+                        self.thirst /= 4;
+                        MissionResult::ReplaceItem(pnt, Item::Food(Food::Water(q / 4)))
+                    } else {
+                        MissionResult::NoResult
+                    }
+            }
+            Some(Mission::Eat(p)) => {
+                if let Some(&(Tile::Item(Item::Food(food)), pnt)) =
+                    adj.iter().find(|&&(t, _)| {
+                        matches!(t, Tile::Item(Item::Food(..)))
+                    })
+                {
+                    match self.species {
+                        Species::Herbivore(_) => {
+                            if let Food::Herb(_) = food {
+                                self.hunger /= 2;
+                                MissionResult::RemoveItem(pnt)
+                            } else {
+                                self.failed_goal =
+                                    Some(Mission::Eat(p));
+                                MissionResult::NoResult
+                            }
+                        }
+                        Species::Carnivore(_) => {
+                            if let Food::Meat(species) = food {
+                                if species != self.species {
+                                    self.hunger = 0;
+                                    MissionResult::RemoveItem(pnt)
+                                } else {
+                                    self.failed_goal =
+                                        Some(Mission::Eat(p));
+                                    MissionResult::NoResult
+                                }
+                            } else {
+                                self.failed_goal =
+                                    Some(Mission::Eat(p));
+                                MissionResult::NoResult
+                            }
+                        }
+                    }
+                } else {
+                    self.failed_goal = Some(Mission::Eat(p));
+                    MissionResult::NoResult
+                }
             }
             _ => MissionResult::NoResult,
         };
@@ -282,7 +331,11 @@ impl<'a> Living for Animal<'a> {
             } else if let Some(g) = self.failed_goal.clone() {
                 match g {
                     Mission::Eat(p) => {
-                        self.add_goal(Mission::AttackEnemy(p));
+                        if matches!(self.species,
+                                    Species::Carnivore(..))
+                        {
+                            self.add_goal(Mission::AttackEnemy(p));
+                        }
                     }
                     _ => {
                         self.current_goal = self.goals.pop();
