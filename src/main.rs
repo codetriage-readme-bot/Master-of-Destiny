@@ -2,6 +2,16 @@
 extern crate tcod;
 extern crate tcod_sys;
 
+#[macro_export]
+macro_rules! matches {
+    ($e:expr, $p:pat) => (
+        match $e {
+            $p => true,
+            _ => false
+        }
+    )
+}
+
 use tcod::{FontLayout, FontType, Renderer, RootConsole};
 use tcod::console::{BackgroundFlag, Console, TextAlignment};
 use tcod::input;

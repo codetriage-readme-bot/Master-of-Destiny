@@ -31,6 +31,7 @@ pub fn run(ws: &mut WorldState, dt: usize) {
         let map = &world.map;
         for y in 0..(world.map_size.1) {
             for x in 0..(world.map_size.0) {
+                // TODO: Add or remove snow based on temperature.
                 let unit = &map[y][x];
                 let mut ut = unit.tiles.borrow_mut();
                 for h in 0..ut.len() {

@@ -62,10 +62,9 @@
 - [x] Water animation and animation framework.
 - [x] Animals
 - [x] Animal manager
-- [ ] Generate biomes
-- [ ] Generate vegitation by biome
-- [ ] Generate loam under plants
-- [ ] Group types of plants
+- [x] Generate biomes
+- [x] Generate vegitation by biome
+- [x] Generate world in steps
 - [ ] Terrain collision detection
 - [ ] Place animals by biome
 - [ ] Items
