@@ -1,6 +1,10 @@
 #![feature(box_syntax, box_patterns, vec_remove_item, conservative_impl_trait, exclusive_range_pattern)]
+#![allow(dead_code)]
+
 extern crate tcod;
 extern crate tcod_sys;
+#[macro_use]
+extern crate pipeline;
 
 #[macro_export]
 macro_rules! matches {
@@ -11,6 +15,11 @@ macro_rules! matches {
         }
     )
 }
+
+#[macro_export]
+macro_rules! get(
+    ($e:expr) => (match $e { Some(e) => e, None => return None })
+);
 
 use tcod::{FontLayout, FontType, Renderer, RootConsole};
 use tcod::console::{BackgroundFlag, Console, TextAlignment};

@@ -677,6 +677,7 @@ pub enum BiomeType {
     Forest,
     Pasture,
     Beach,
+    Water,
 }
 #[derive(Copy, Clone, PartialEq)]
 pub struct Biome {
@@ -685,6 +686,13 @@ pub struct Biome {
     pub temperature_day_f: Ferenheight,
     pub percipitation_chance: Percent,
 }
+
+pub const WATER_BIOME: Biome = Biome {
+    biome_type: BiomeType::Water,
+    temperature_night_f: -5.0,
+    temperature_day_f: 70.0,
+    percipitation_chance: 80.0,
+};
 
 impl Biome {
     pub fn survives(&self, veg: VegType) -> bool {
@@ -700,10 +708,10 @@ impl Biome {
                     self.biome_type == BiomeType::Pasture
             }
             Ryegrass => self.biome_type == BiomeType::Pasture,
-            Dandelion => !self.biome_type == BiomeType::Swamp,
+            Dandelion => self.biome_type != BiomeType::Swamp,
             Chickweed => {
-                !self.biome_type == BiomeType::Swamp &&
-                    !self.biome_type == BiomeType::Jungle
+                self.biome_type != BiomeType::Swamp &&
+                    self.biome_type != BiomeType::Jungle
             }
             BroomShrub => {
                 self.biome_type == BiomeType::Forest ||
@@ -714,6 +722,7 @@ impl Biome {
                     self.biome_type == BiomeType::Beach ||
                     self.biome_type == BiomeType::Pasture
             }
+            Rhododendron => self.biome_type == BiomeType::Jungle,
             Redbud => self.biome_type == BiomeType::Pasture,
             Pine => {
                 self.biome_type == BiomeType::Forest ||
@@ -721,6 +730,7 @@ impl Biome {
             }
             Redwood => self.biome_type == BiomeType::Forest,
             Banyon => self.biome_type == BiomeType::Jungle,
+            _ => false,
         }
     }
 }

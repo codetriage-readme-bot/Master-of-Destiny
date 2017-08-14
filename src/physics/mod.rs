@@ -22,10 +22,6 @@ fn unsupported(tile: Tile,
         solid_cnt < 2
 }
 
-macro_rules! get(
-    ($e:expr) => (match $e { Some(e) => e, None => return None })
-);
-
 pub fn run(ws: &mut WorldState, dt: usize) {
     if let Some(ref world) = ws.map {
         let map = &world.map;

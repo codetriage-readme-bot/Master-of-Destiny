@@ -1,7 +1,6 @@
-use physics::liquid::Container;
 use std::option::Option;
-use utils::{Point2D, Point3D, Rect2D};
-use worldgen::{World, WorldState};
+use utils::{Point2D, Point3D};
+use worldgen::WorldState;
 use worldgen::terrain::Item;
 
 pub mod animal;
@@ -115,9 +114,7 @@ pub trait Living {
     fn execute_mission(&mut self, ws: &WorldState) -> MissionResult;
     /// Adds a mission when none is provided. Used all the time for
     /// animals. If there is already a mission going, returns None.
-    fn auto_add_mission(&mut self,
-                        ws: &WorldState)
-        -> Option<Mission>;
+    fn auto_add_mission(&mut self) -> Option<Mission>;
 
     fn current_pos(&self) -> (usize, usize, usize);
 }

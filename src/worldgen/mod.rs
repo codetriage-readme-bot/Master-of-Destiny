@@ -4,7 +4,6 @@ extern crate tcod_sys;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ops::{Index, Range};
-use std::rc::Rc;
 
 use tcod::noise::{Noise, NoiseType};
 use tcod::random;
@@ -51,7 +50,7 @@ pub struct FrameAssoc {
 pub type Frames = HashMap<String, RefCell<FrameAssoc>>;
 
 /// A type alias for the world's map.
-pub type WorldMap = Vec<Vec<Rc<Unit>>>;
+pub type WorldMap = Vec<Vec<Unit>>;
 
 /// Keeps track of the state of they physical world, including:
 /// * the heightmap
@@ -60,7 +59,6 @@ pub type WorldMap = Vec<Vec<Rc<Unit>>>;
 /// * the map size and unit map
 pub struct World {
     heightmap: *mut tcod_sys::TCOD_heightmap_t,
-    vegetation_noise: Noise,
     stone_vein_noise: Noise,
     pub map_size: Point2D,
     pub frames: Frames,
@@ -68,14 +66,14 @@ pub struct World {
 }
 
 impl Index<usize> for World {
-    type Output = Vec<Rc<Unit>>;
+    type Output = Vec<Unit>;
     fn index(&self, location: usize) -> &Self::Output {
         &self.map[location]
     }
 }
 
 impl Index<Range<usize>> for World {
-    type Output = [Vec<Rc<Unit>>];
+    type Output = [Vec<Unit>];
     fn index(&self, location: Range<usize>) -> &Self::Output {
         &self.map[location]
     }
@@ -99,19 +97,10 @@ impl World {
         println!("Generating seed from {}", seed);
 
         // Vegitation
-        let vnoise = Noise::init_with_dimensions(2)
-            .lacunarity(0.3)
-            .hurst(-0.9)
-            .noise_type(NoiseType::Simplex)
-            .random(random::Rng::new_with_seed(random::Algo::MT,
-                                               seed))
-            .init();
-
         let mut world: World = World {
             map_size: size,
             heightmap: Self::generate_heightmap(size, seed),
             map: vec![],
-            vegetation_noise: vnoise,
             stone_vein_noise: Noise::init_with_dimensions(3)
                 .lacunarity(0.43)
                 .hurst(-0.9)
@@ -156,7 +145,7 @@ impl World {
                     .map(|x| {
                         let height = unsafe { ws.get_height(x, y) } as
                             usize;
-                        Rc::new(Unit {
+                        Unit {
                             biome: None,
                             tiles: RefCell::new(
                                 (0..height)
@@ -166,13 +155,74 @@ impl World {
                                     })
                                     .collect(),
                             ),
-                        })
+                        }
                     })
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>()
     }
+
     /// Step 2 of map generation:
+    /// Replace low rock with water of a similar depth.
+    /// The sea level is raised when inland to allow for rivers and pools.
+    fn water_from_low(world: WorldMap) -> WorldMap {
+        world.iter()
+             .enumerate()
+             .map(|(y, row)| {
+            row.iter()
+               .enumerate()
+               .map(|(x, unit)| {
+                let landlocked =
+                    !strict_adjacent((x, y))
+                        .iter()
+                        .map(|&(x, y)| {
+                            let row = get!(world.get(y));
+                            let unit = get!(row.get(x));
+                            Some(unit.tiles.borrow().len() <
+                                     SEA_LEVEL as usize)
+                        })
+                        .any(
+                            |thing| thing.is_some() && thing.unwrap(),
+                        );
+                let d = unit.tiles.borrow().len();
+                if d < SEA_LEVEL as usize {
+                    Unit {
+                        biome: Some(WATER_BIOME),
+                        tiles: RefCell::new(
+                            (0..d)
+                                .map(|depth| {
+                                    Tile::Water(World::purity(),
+                                                State::Liquid,
+                                                d as i32 -
+                                                    depth as i32)
+                                })
+                                .collect(),
+                        ),
+                    }
+                } else if landlocked && d < SEA_LEVEL as usize + 5 {
+                    Unit {
+                        biome: Some(WATER_BIOME),
+                        tiles: RefCell::new(
+                            (0..(d - 5))
+                                .map(|depth| {
+                                    Tile::Water(World::purity(),
+                                                State::Liquid,
+                                                d as i32 -
+                                                    depth as i32)
+                                })
+                                .collect(),
+                        ),
+                    }
+                } else {
+                    unit.clone()
+                }
+            })
+               .collect::<Vec<_>>()
+        })
+             .collect::<Vec<_>>()
+    }
+
+    /// Step 3 of map generation:
     /// Generate biomes (temp, percipitation) from altitude and a noise
     fn biomes_from_height_and_noise(world: WorldMap) -> WorldMap {
         let bnoise = Noise::init_with_dimensions(2)
@@ -181,44 +231,32 @@ impl World {
             .noise_type(NoiseType::Perlin)
             .random(random::Rng::new(random::Algo::MT))
             .init();
-        world.iter().enumerate()
-             .map(|(y, row)| {
-            row.iter().enumerate()
-                     .map(|(x, unit)| {
-                         let (sh, n) = strict_adjacent((x, y))
-                             .iter()
-                             .map(|p| world[p.1][p.0].tiles.borrow().len())
-                             .fold((0, 0), |(s, n), x| (s+x, n+1));
-                Rc::new(Unit {
-                    biome: Some(World::biome_from_noise(unit.tiles.borrow()
-                                                            .len() as
-                                                            i32,
-                                                        sh as f32 / n as f32)),
-                    ..**unit
-                })
-            })
-               .collect::<Vec<_>>()
-        })
-             .collect::<Vec<_>>()
-    }
-
-    /// Step 3 of map generation:
-    /// Generate vegitation based on what survives where in the biomes, and height.
-    fn vegitation_from_biomes(ws: &World,
-                              world: WorldMap)
-        -> WorldMap {
         world.iter()
              .enumerate()
              .map(|(y, row)| {
             row.iter()
                .enumerate()
                .map(|(x, unit)| {
-                let new = unit.clone();
-                new.tiles
-                   .borrow_mut()
-                   .push(ws.get_vegetation((x, y),
-                                           unit.biome.unwrap()));
-                new
+                let (sh, n) =
+                    strict_adjacent((x, y))
+                        .iter()
+                        .map(|&(x, y)| {
+                            let row = get!(world.get(y));
+                            let unit = get!(row.get(x));
+                            Some(unit.tiles.borrow().len())
+                        })
+                        .filter_map(|x| x)
+                        .fold((0, 0), |(s, n), x| (s + x, n + 1));
+                let noise = (bnoise.get_fbm([x as f32, y as f32], 6) *
+                                 100f32) as
+                    i32;
+                Unit {
+                    tiles: unit.tiles.clone(),
+                    biome: Some(World::biome_from_noise(noise,
+                                                        (sh as i32 /
+                                                             n) as
+                                                            f32)),
+                }
             })
                .collect::<Vec<_>>()
         })
@@ -226,21 +264,85 @@ impl World {
     }
 
     /// Step 4 of map generation:
+    /// Generate vegitation based on what survives where in the biomes, and height.
+    fn vegitation_from_biomes(world: WorldMap) -> WorldMap {
+        let vnoise = Noise::init_with_dimensions(2)
+            .lacunarity(0.3)
+            .hurst(-0.9)
+            .noise_type(NoiseType::Simplex)
+            .random(random::Rng::new(random::Algo::MT))
+            .init();
+        world.iter()
+             .enumerate()
+             .map(|(y, row)| {
+            row.iter()
+               .enumerate()
+               .map(|(x, unit)| if let Some(biome) = unit.biome {
+                        let mut tiles =
+                            unit.tiles.clone().into_inner();
+                        tiles.push(World::get_vegetation(&vnoise,
+                                                         (x, y),
+                                                         biome));
+                        Unit {
+                            biome: unit.biome,
+                            tiles: RefCell::new(tiles),
+                        }
+                    } else {
+                        unreachable!()
+                    })
+               .collect::<Vec<_>>()
+        })
+             .collect::<Vec<_>>()
+    }
+
+    /// Step 5 of map generation:
     /// Generate the soil (and snow) based on plant and biome.
-    fn add_soil(ws: &World, world: WorldMap) -> WorldMap {
+    fn add_soil(world: WorldMap) -> WorldMap {
+        fn get_op<'a>(p: Point2D,
+                      world: &'a WorldMap)
+            -> Option<&'a Unit> {
+            let row = get!(world.get(p.1));
+            let unit = get!(row.get(p.0));
+            Some(unit)
+        }
+
         world.iter()
              .enumerate()
              .map(|(y, row)| {
             row.iter()
                .enumerate()
                .map(|(x, unit)| {
-                let new = unit.clone();
-                let t = new.tiles.borrow_mut();
-                   for h in (SEA_LEVEL as i32)..(SEA_LEVEL as i32 + 4) {
-                       let adj = strict_adjacent((x, y)).iter().map(|p| world[p.1][p.0].tiles.borrow()[h as usize]).collect::<Vec<_>>();
-                    t[h as usize] = Tile::Stone(StoneTypes::Soil(World::soil_choice(adj)), State::Solid);
+                let mut t = unit.tiles.clone().into_inner();
+                for h in (SEA_LEVEL as i32)..(SEA_LEVEL as i32 + 4) {
+                    let adj =
+                        strict_adjacent((x, y))
+                            .iter()
+                            .map(|p| if let Some(unit) = get_op(
+                                *p,
+                                &world,
+                            )
+                            {
+                                unit.tiles
+                                    .borrow()
+                                    .get(h as usize)
+                                    .unwrap_or(&Tile::Empty)
+                                    .clone()
+                            } else {
+                                Tile::Empty
+                            })
+                            .collect::<Vec<_>>();
+                    if (h as usize) < t.len() {
+                        t[h as usize] = Tile::Stone(
+                           StoneTypes::Soil(World::soil_choice(adj)),
+                           State::Solid);
+                    } else {
+                        break;
+                    }
                 }
-                new
+                Unit {
+                    biome: unit.biome,
+                    tiles: RefCell::new(t),
+                }
             })
                .collect::<Vec<_>>()
         })
@@ -250,17 +352,25 @@ impl World {
     /// Generates a new unit map for World from the given (incomplete) World.
     /// The steps go as follows:
     /// * Generate bedrock and mountains/hills from terrain info
+    /// * Replace low rock with water (for sea, pools)
     /// * Generate biomes (temp, percipitation) from altitude and a noise
     /// * Generate vegitation based on what survives where in the biomes
     /// * Generate the soil (and snow) based on plant and biome.
     fn map_from(size: Point2D, ws: &World) -> WorldMap {
-        // Remember, read this from the inside out!
-        World::add_soil(
-            ws,
-            World::vegitation_from_biomes(
-                ws,
-                World::biomes_from_height_and_noise(
-                    World::rock_from_terrain(ws, size, vec![]))))
+        let rock_from_terrain = World::rock_from_terrain;
+        let water_from_low = World::water_from_low;
+        let biomes_from_height_and_noise =
+            World::biomes_from_height_and_noise;
+        let vegitation_from_biomes = World::vegitation_from_biomes;
+        let add_soil = World::add_soil;
+        pipe!(
+            vec![]
+                => {|i| rock_from_terrain(ws, size, i)}
+                => water_from_low
+                => biomes_from_height_and_noise
+                => vegitation_from_biomes
+                => add_soil
+        )
     }
 
     /// A general method for dealing with generating random hills of a limited size, position, and height.
@@ -392,7 +502,7 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
     }
 
     /// Get the unit at the specified position. Returns an optional type.
-    pub fn get(&self, pos: Point2D) -> Option<Rc<Unit>> {
+    pub fn get(&self, pos: Point2D) -> Option<Unit> {
         if self.located_inside(pos) {
             Some(self.map[pos.1][pos.0].clone())
         } else {
@@ -402,8 +512,7 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
 
     /// Test if the given point is on the World plane.
     pub fn located_inside(&self, pos: Point2D) -> bool {
-        return pos.0 >= 0 && pos.0 < self.map_size.0 &&
-            pos.1 >= 0 && pos.1 < self.map_size.1;
+        return pos.0 < self.map_size.0 && pos.1 < self.map_size.1;
     }
 
     /// For memory cleanup.
@@ -448,7 +557,7 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
         }
     }
 
-    pub fn push(&mut self, value: Vec<Rc<Unit>>) {
+    pub fn push(&mut self, value: Vec<Unit>) {
         match *self {
             World { ref mut map, .. } => map.push(value),
         }
@@ -487,6 +596,7 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
 
     /// Chooses a type of soil based on adjacency to certain features.
     fn soil_choice(adj: Vec<Tile>) -> SoilTypes {
+        let mut trng = rand::thread_rng();
         let (water_adjacent, sand_adjacent, veg_adjacent, sedimentary_adjacent) = adj.iter()
                                 .fold((false, false, false, false),
                                       |(w, s, v, sd), x|
@@ -496,28 +606,27 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
                                            v || matches!(*x, Tile::Vegitation(..)),
                                            sd || matches!(*x, Tile::Stone(..)))
                                       });
-        if water_adjacent || sand_adjacent {
+        if water_adjacent ||
+            (sand_adjacent && trng.gen_range(0, 100) <= 55)
+        {
             SoilTypes::Sandy
         } else if veg_adjacent && water_adjacent ||
                    (water_adjacent && !sand_adjacent)
         {
             SoilTypes::Peaty
         } else if veg_adjacent {
-            *rand::thread_rng()
-                .choose(&[SoilTypes::Loamy, SoilTypes::Peaty])
-                .unwrap()
+            *trng.choose(&[SoilTypes::Loamy, SoilTypes::Peaty])
+                 .unwrap()
         } else if sedimentary_adjacent {
-            *rand::thread_rng()
-                .choose(&[SoilTypes::Clay, SoilTypes::Silty])
-                .unwrap()
+            *trng.choose(&[SoilTypes::Clay, SoilTypes::Silty])
+                 .unwrap()
         } else if water_adjacent &&
                    (sand_adjacent || sedimentary_adjacent)
         {
             SoilTypes::Clay
         } else {
-            *rand::thread_rng()
-                .choose(&[SoilTypes::Clay, SoilTypes::Loamy])
-                .unwrap()
+            *trng.choose(&[SoilTypes::Clay, SoilTypes::Loamy])
+                 .unwrap()
         }
     }
 
@@ -561,14 +670,16 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
     }
 
     /// Gets the correct vegitation based on the heightmap's height and random selection.
-    pub fn get_vegetation(&self,
+    pub fn get_vegetation(noise: &Noise,
                           (x, y): Point2D,
                           biome: Biome)
         -> Tile {
-        let vn = self.vegetation_noise
-                     .get_fbm(&mut [x as f32, y as f32], 1) *
-            100.0;
-        let veg_levels = vec![[VegType::Bluegrass,
+        if biome.biome_type == BiomeType::Water {
+            Tile::Empty
+        } else {
+            let vn = noise.get_fbm(&mut [x as f32, y as f32], 1) *
+                100.0;
+            let veg_levels = vec![[VegType::Bluegrass,
                                VegType::Bentgrass,
                                VegType::Ryegrass],
                               [VegType::Dandelion,
@@ -586,29 +697,34 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
                               [VegType::Redwood,
                                VegType::Pine,
                                VegType::Banyon]];
-        let mut trng = rand::thread_rng(); // I don't know why this should be mutable!
-        let (vopts, height) = if vn < 0.0 {
-            (&veg_levels[0], 1)
-        } else if vn < 2.0 {
-            (&veg_levels[1], trng.gen_range(1, 3))
-        } else if vn < 15.0 {
-            (&veg_levels[2], trng.gen_range(4, 6))
-        } else if vn < 20.0 {
-            (&veg_levels[3], trng.gen_range(6, 9))
-        } else if vn < 40.0 {
-            (&veg_levels[4], trng.gen_range(7, 10))
-        } else if vn < 100.0 {
-            (&veg_levels[5], trng.gen_range(10, 20))
-        } else {
-            (&veg_levels[5], vn as i32)
-        };
+            let mut trng = rand::thread_rng();
+            let (vopts, height) = if vn < 0.0 {
+                (&veg_levels[0], 1)
+            } else if vn < 2.0 {
+                (&veg_levels[1], trng.gen_range(1, 3))
+            } else if vn < 15.0 {
+                (&veg_levels[2], trng.gen_range(4, 6))
+            } else if vn < 20.0 {
+                (&veg_levels[3], trng.gen_range(6, 9))
+            } else if vn < 40.0 {
+                (&veg_levels[4], trng.gen_range(7, 10))
+            } else if vn < 100.0 {
+                (&veg_levels[5], trng.gen_range(10, 20))
+            } else {
+                (&veg_levels[5], vn as i32)
+            };
 
-        let v = *trng.choose(&vopts.iter()
-                                   .filter(|v| biome.survives(**v))
-                                   .collect::<Vec<_>>()
-                                 [0..])
-                     .unwrap();
-        Tile::Vegitation(v.clone(), height, State::Solid)
+            if let Some(v) =
+                trng.choose(&vopts.iter()
+                                  .filter(|v| biome.survives(**v))
+                                  .collect::<Vec<_>>()
+                                [0..])
+            {
+                Tile::Vegitation(*v.clone(), height, State::Solid)
+            } else {
+                Tile::Vegitation(VegType::Dandelion, 1, State::Solid)
+            }
+        }
     }
 }
 
@@ -700,7 +816,7 @@ impl WorldState {
     }
 
     /// Create a new WorldState, loaded with sensable defaults.
-    pub fn new(s: Point2D) -> WorldState {
+    pub fn new(_: Point2D) -> WorldState {
         let clock = Clock { time: (12, 30) };
         WorldState {
             screen: (0, 0),

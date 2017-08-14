@@ -1,11 +1,8 @@
 use std;
 
-use life::{Drinkable, Eatable, Living, Mission, MissionResult};
-use physics::liquid::Liquid;
-use std::rc::Rc;
+use life::{Living, Mission, MissionResult};
 use tcod::pathfinding::*;
-use utils::{Point2D, Point3D, clamp, distance, distance3D,
-            nearest_perimeter_point};
+use utils::{Point3D, distance, nearest_perimeter_point};
 use worldgen::WorldState;
 use worldgen::terrain::{Food, Item, Tile};
 
@@ -124,7 +121,7 @@ impl<'a> Animal<'a> {
                         }
                     }
                     AttackEnemy(_) => {
-                        for (i, l) in ws.life.iter().enumerate() {
+                        for l in ws.life.iter() {
                             let pos = l.borrow().current_pos();
                             let dist = distance((pos.0, pos.1),
                                                 (self.pos.0,
@@ -193,7 +190,7 @@ impl<'a> Animal<'a> {
                 let enemy = ws.life
                               .iter()
                               .enumerate()
-                              .find(|&(i, e)| {
+                              .find(|&(_i, e)| {
                     adj.iter()
                        .find(|&&(_, p)| e.borrow().current_pos() == p)
                        .is_some()
@@ -204,7 +201,7 @@ impl<'a> Animal<'a> {
                     MissionResult::NoResult
                 }
             }
-            Some(Mission::Drink(p)) => {
+            Some(Mission::Drink(_)) => {
                 if let Some(&(Tile::Item(Item::Food(Food::Water(q))), pnt)) =
                     adj.iter().find(|&&(t, _)| {
                         matches!(t, Tile::Item(Item::Food(..)))
@@ -302,15 +299,13 @@ impl<'a> Living for Animal<'a> {
             if m.is_some() {
                 self.current_goal = m;
             } else {
-                self.auto_add_mission(ws);
+                self.auto_add_mission();
             }
             MissionResult::NoResult
         }
     }
 
-    fn auto_add_mission(&mut self,
-                        ws: &WorldState)
-        -> Option<Mission> {
+    fn auto_add_mission(&mut self) -> Option<Mission> {
         if self.goals.len() == 0 {
             if self.thirst >= THIRST_THRESHOLD ||
                 self.hunger >= HUNGER_THRESHOLD

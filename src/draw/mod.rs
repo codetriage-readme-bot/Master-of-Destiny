@@ -4,7 +4,6 @@ use tcod::colors::Color;
 use tcod::console;
 use tcod::console::{BackgroundFlag, Console};
 
-use time;
 use worldgen::{Frames, WorldState};
 use worldgen::terrain::{TILES, Tile};
 
