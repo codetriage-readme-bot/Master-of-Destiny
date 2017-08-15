@@ -185,34 +185,22 @@ impl World {
                             |thing| thing.is_some() && thing.unwrap(),
                         );
                 let d = unit.tiles.borrow().len();
-                if d < SEA_LEVEL as usize {
-                    Unit {
-                        biome: Some(WATER_BIOME),
-                        tiles: RefCell::new(
-                            (0..d)
-                                .map(|depth| {
-                                    Tile::Water(World::purity(),
-                                                State::Liquid,
-                                                d as i32 -
-                                                    depth as i32)
-                                })
-                                .collect(),
-                        ),
-                    }
-                } else if landlocked && d < SEA_LEVEL as usize + 5 {
-                    Unit {
-                        biome: Some(WATER_BIOME),
-                        tiles: RefCell::new(
-                            (0..(d - 5))
-                                .map(|depth| {
-                                    Tile::Water(World::purity(),
-                                                State::Liquid,
-                                                d as i32 -
-                                                    depth as i32)
-                                })
-                                .collect(),
-                        ),
-                    }
+                let water_unit = Unit {
+                    biome: Some(WATER_BIOME),
+                    tiles: RefCell::new(
+                        (0..d)
+                            .map(|depth| {
+                                Tile::Water(World::purity(),
+                                            State::Liquid,
+                                            d as i32 - depth as i32)
+                            })
+                            .collect(),
+                    ),
+                };
+                if (d < SEA_LEVEL as usize) ||
+                    (landlocked && d < SEA_LEVEL as usize + 2)
+                {
+                    water_unit
                 } else {
                     unit.clone()
                 }
@@ -252,10 +240,10 @@ impl World {
                     i32;
                 Unit {
                     tiles: unit.tiles.clone(),
-                    biome: Some(World::biome_from_noise(noise,
+                    biome: Some(unit.biome.unwrap_or(World::biome_from_noise(noise,
                                                         (sh as i32 /
                                                              n) as
-                                                            f32)),
+                                                            f32))),
                 }
             })
                .collect::<Vec<_>>()
@@ -567,8 +555,8 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
         use self::BiomeType::*;
         match point_val {
             0..10 => Beach,
-            10..25 => Jungle,
-            25..55 => Forest,
+            10..30 => Jungle,
+            30..55 => Forest,
             55..100 => Pasture,
             _ => Forest,
         }
@@ -579,7 +567,11 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
                             avg_height: f32)
         -> Biome {
         Biome {
-            biome_type: World::biome_type_from_noise(point_val),
+            biome_type: if avg_height < SEA_LEVEL {
+                BiomeType::Beach
+            } else {
+                World::biome_type_from_noise(point_val)
+            },
             temperature_day_f: 100f32 - (avg_height * 100f32),
             temperature_night_f: 80f32 - (avg_height * 100f32),
             percipitation_chance: point_val as f32,

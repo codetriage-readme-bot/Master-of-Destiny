@@ -670,7 +670,7 @@ impl DrawChar for VegType {
 
 type Ferenheight = f32;
 type Percent = f32;
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum BiomeType {
     Swamp,
     Jungle,
@@ -1167,7 +1167,6 @@ impl FramedDraw for Tile {
                     } else {
                         '\u{f7}'
                     };
-                println!("{}", BASE + frames.current as u32);
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
