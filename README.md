@@ -15,6 +15,7 @@ _________ __
 ## A Survival City Building Roguelike
 
 ![Main Screenshot](assets/screenshots/mainshot.png?raw=true "A particularly interesting generated world.")
+![](assets/screenshots/new_terrain_generator_algorithm.png?raw=true)
 
 In *Skyspace* you are the first settler on a hostile planet in a
 far-removed star system. You are all alone, but if you succed in

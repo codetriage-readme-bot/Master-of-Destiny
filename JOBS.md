@@ -65,6 +65,7 @@
 - [x] Generate biomes
 - [x] Generate vegitation by biome
 - [x] Generate world in steps
+- [ ] Fix empty tile drawing.
 - [ ] Terrain collision detection
 - [ ] Place animals by biome
 - [ ] Items
