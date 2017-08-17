@@ -1,6 +1,25 @@
 #![feature(box_syntax, box_patterns, vec_remove_item, conservative_impl_trait, exclusive_range_pattern)]
+#![allow(dead_code)]
+
 extern crate tcod;
 extern crate tcod_sys;
+#[macro_use]
+extern crate pipeline;
+
+#[macro_export]
+macro_rules! matches {
+    ($e:expr, $p:pat) => (
+        match $e {
+            $p => true,
+            _ => false
+        }
+    )
+}
+
+#[macro_export]
+macro_rules! get(
+    ($e:expr) => (match $e { Some(e) => e, None => return None })
+);
 
 use tcod::{FontLayout, FontType, Renderer, RootConsole};
 use tcod::console::{BackgroundFlag, Console, TextAlignment};
@@ -102,7 +121,7 @@ impl Game {
                                     (screen_size.0 / 2, 4),
                                     (10, 0),
                                     10),
-            world_state: WorldState::new(MAP_SIZE),
+            world_state: WorldState::new(),
             seed: 0,
         }
     }

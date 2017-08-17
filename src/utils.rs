@@ -1,5 +1,8 @@
+use physics::PhysicsActor;
 use std;
 use std::cmp;
+use worldgen::WorldState;
+use worldgen::terrain::{Slope, Tile};
 
 pub type Point2D = (usize, usize);
 pub type Point3D = (usize, usize, usize);
@@ -57,9 +60,48 @@ pub fn nearest_perimeter_point(((x1, y1), (x2, y2), _): Rect2D3D,
     }
 }
 
-pub fn distance3D((x1, y1, z1): Point3D,
-                  (x2, y2, z2): Point3D)
+pub fn distance3_d((x1, y1, z1): Point3D,
+                   (x2, y2, z2): Point3D)
     -> f32 {
     (((x2 - x1).pow(2) + (y2 - y1).pow(2) + (z2 - z1).pow(2)) as f32)
         .cbrt()
+}
+
+pub fn can_move<'a>(ws: &'a WorldState)
+    -> impl FnMut((i32, i32), (i32, i32)) -> f32 {
+    move |from, to| {
+        let f = (from.0 as usize, from.1 as usize);
+        if let Some(ref map) = ws.map {
+            if let Some(unit_to) =
+                map.get((to.0 as usize, to.1 as usize))
+            {
+                let ut = unit_to.tiles.borrow();
+                let first_empty =
+                    ut.iter()
+                      .enumerate()
+                      .find(|&(_, tile)| !(*tile).solid());
+                if let Some((i, first)) = first_empty {
+                    if i == ws.location_z(f) {
+                        1.0
+                    } else if i == ws.location_z(f) + 1 {
+                        1.0
+                    } else if matches!(first, &Tile::Ramp(_, Slope::Up)) &&
+                               i <= ws.location_z(f) + 3
+                    {
+                        1.0
+                    } else if ws.location_z(f) - i >= 4 {
+                        1.0
+                    } else {
+                        0.0
+                    }
+                } else {
+                    0.0
+                }
+            } else {
+                0.0
+            }
+        } else {
+            0.0
+        }
+    }
 }

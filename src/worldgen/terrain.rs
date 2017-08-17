@@ -394,7 +394,7 @@ pub enum LiquidPurity {
 /////// VEGITATION
 // Vegiatation type, least to most rare, common to least common.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum VegTypes {
+pub enum VegType {
     // Small grasses (height 1)
     Bluegrass,
     Bentgrass,
@@ -415,30 +415,30 @@ pub enum VegTypes {
     Banyon,
 }
 
-impl Describe for VegTypes {
+impl Describe for VegType {
     fn describe(&self) -> String {
         match self {
-            &VegTypes::Bluegrass => "Bluegrass".to_string(),
-            &VegTypes::Bentgrass => "Bentgrass".to_string(),
-            &VegTypes::Ryegrass => "Ryegrass".to_string(),
-            &VegTypes::Dandelion => "Dandelion".to_string(),
-            &VegTypes::Chickweed => "Chickweed".to_string(),
-            &VegTypes::BroomShrub => "Broom Shrub".to_string(),
-            &VegTypes::Rhododendron => "Rhododendron".to_string(),
-            &VegTypes::Crabapple => "Crabapple".to_string(),
-            &VegTypes::Redbud => "Redbud".to_string(),
-            &VegTypes::Pine => "Pine".to_string(),
-            &VegTypes::Redwood => "Redwood".to_string(),
-            &VegTypes::Banyon => "Banyon".to_string(),
-            &VegTypes::Treetrunk => "Tree trunk".to_string(),
+            &VegType::Bluegrass => "Bluegrass".to_string(),
+            &VegType::Bentgrass => "Bentgrass".to_string(),
+            &VegType::Ryegrass => "Ryegrass".to_string(),
+            &VegType::Dandelion => "Dandelion".to_string(),
+            &VegType::Chickweed => "Chickweed".to_string(),
+            &VegType::BroomShrub => "Broom Shrub".to_string(),
+            &VegType::Rhododendron => "Rhododendron".to_string(),
+            &VegType::Crabapple => "Crabapple".to_string(),
+            &VegType::Redbud => "Redbud".to_string(),
+            &VegType::Pine => "Pine".to_string(),
+            &VegType::Redwood => "Redwood".to_string(),
+            &VegType::Banyon => "Banyon".to_string(),
+            &VegType::Treetrunk => "Tree trunk".to_string(),
         }
     }
 }
 
-impl DrawChar for VegTypes {
+impl DrawChar for VegType {
     fn draw_char(&self, root: &mut RootConsole, pos: Point2D) {
         match self {
-            &VegTypes::Bluegrass => {
+            &VegType::Bluegrass => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_PASTUREGRASS)
                         .unwrap()
@@ -455,7 +455,7 @@ impl DrawChar for VegTypes {
                                  },
                                  Color::new(50, 200, 50));
             }
-            &VegTypes::Treetrunk => {
+            &VegType::Treetrunk => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_TREETRUNK)
                         .unwrap()
@@ -472,7 +472,7 @@ impl DrawChar for VegTypes {
                                  },
                                  Color::new(50, 200, 50));
             }
-            &VegTypes::Bentgrass => {
+            &VegType::Bentgrass => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_BENTGRASS)
                         .unwrap()
@@ -489,7 +489,7 @@ impl DrawChar for VegTypes {
                                  },
                                  Color::new(50, 200, 50));
             }
-            &VegTypes::Ryegrass => {
+            &VegType::Ryegrass => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_RYEGRASS)
                         .unwrap()
@@ -507,7 +507,7 @@ impl DrawChar for VegTypes {
                                  Color::new(50, 200, 50));
             }
 
-            &VegTypes::Dandelion => {
+            &VegType::Dandelion => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_DANDELION)
                         .unwrap()
@@ -524,7 +524,7 @@ impl DrawChar for VegTypes {
                                  },
                                  Color::new(50, 200, 50));
             }
-            &VegTypes::Chickweed => {
+            &VegType::Chickweed => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_CHICKWEED)
                         .unwrap()
@@ -542,7 +542,7 @@ impl DrawChar for VegTypes {
                                  Color::new(30, 190, 30));
             }
 
-            &VegTypes::BroomShrub => {
+            &VegType::BroomShrub => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_BROOMSHRUB)
                         .unwrap()
@@ -559,7 +559,7 @@ impl DrawChar for VegTypes {
                                  },
                                  Color::new(227, 255, 0));
             }
-            &VegTypes::Rhododendron => {
+            &VegType::Rhododendron => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_RHODODENDRON)
                         .unwrap()
@@ -577,7 +577,7 @@ impl DrawChar for VegTypes {
                                  Color::new(227, 255, 0));
             }
 
-            &VegTypes::Crabapple => {
+            &VegType::Crabapple => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_CRABAPPLE)
                         .unwrap()
@@ -594,7 +594,7 @@ impl DrawChar for VegTypes {
                                  },
                                  Color::new(50, 200, 50));
             }
-            &VegTypes::Redbud => {
+            &VegType::Redbud => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_REDBUD)
                         .unwrap()
@@ -612,7 +612,7 @@ impl DrawChar for VegTypes {
                                  Color::new(50, 200, 50));
             }
 
-            &VegTypes::Pine => {
+            &VegType::Pine => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_PINE).unwrap()
                 } else {
@@ -628,7 +628,7 @@ impl DrawChar for VegTypes {
                                  },
                                  Color::new(50, 200, 50));
             }
-            &VegTypes::Redwood => {
+            &VegType::Redwood => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_REDWOOD)
                         .unwrap()
@@ -645,7 +645,7 @@ impl DrawChar for VegTypes {
                                  },
                                  Color::new(50, 200, 50));
             }
-            &VegTypes::Banyon => {
+            &VegType::Banyon => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_BANYON)
                         .unwrap()
@@ -670,13 +670,14 @@ impl DrawChar for VegTypes {
 
 type Ferenheight = f32;
 type Percent = f32;
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum BiomeType {
     Swamp,
     Jungle,
     Forest,
     Pasture,
     Beach,
+    Water,
 }
 #[derive(Copy, Clone, PartialEq)]
 pub struct Biome {
@@ -684,6 +685,54 @@ pub struct Biome {
     pub temperature_night_f: Ferenheight,
     pub temperature_day_f: Ferenheight,
     pub percipitation_chance: Percent,
+}
+
+pub const WATER_BIOME: Biome = Biome {
+    biome_type: BiomeType::Water,
+    temperature_night_f: -5.0,
+    temperature_day_f: 70.0,
+    percipitation_chance: 80.0,
+};
+
+impl Biome {
+    pub fn survives(&self, veg: VegType) -> bool {
+        use self::VegType::*;
+        match veg {
+            Bluegrass => {
+                self.biome_type == BiomeType::Forest ||
+                    self.biome_type == BiomeType::Pasture ||
+                    self.biome_type == BiomeType::Swamp
+            }
+            Bentgrass => {
+                self.biome_type == BiomeType::Forest ||
+                    self.biome_type == BiomeType::Pasture
+            }
+            Ryegrass => self.biome_type == BiomeType::Pasture,
+            Dandelion => self.biome_type != BiomeType::Swamp,
+            Chickweed => {
+                self.biome_type != BiomeType::Swamp &&
+                    self.biome_type != BiomeType::Jungle
+            }
+            BroomShrub => {
+                self.biome_type == BiomeType::Forest ||
+                    self.biome_type == BiomeType::Pasture
+            }
+            Crabapple => {
+                self.biome_type == BiomeType::Forest ||
+                    self.biome_type == BiomeType::Beach ||
+                    self.biome_type == BiomeType::Pasture
+            }
+            Rhododendron => self.biome_type == BiomeType::Jungle,
+            Redbud => self.biome_type == BiomeType::Pasture,
+            Pine => {
+                self.biome_type == BiomeType::Forest ||
+                    self.biome_type == BiomeType::Pasture
+            }
+            Redwood => self.biome_type == BiomeType::Forest,
+            Banyon => self.biome_type == BiomeType::Jungle,
+            _ => false,
+        }
+    }
 }
 
 /////// GENERAL
@@ -722,7 +771,7 @@ pub enum Slope {
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum RestrictedTile {
     Stone(StoneTypes, State),
-    Vegitation(VegTypes, Height, State),
+    Vegitation(VegType, Height, State),
 }
 
 impl Describe for RestrictedTile {
@@ -808,12 +857,12 @@ type Quantity = u8;
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Food {
     Meat(Species),
-    Herb(VegTypes),
+    Herb(VegType),
     Water(Quantity),
 }
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Material {
-    Wood(VegTypes),
+    Wood(VegType),
     Stone(StoneTypes),
 }
 
@@ -866,7 +915,7 @@ pub enum Tile {
     Item(Item),
     Water(LiquidPurity, State, Depth),
     Stone(StoneTypes, State),
-    Vegitation(VegTypes, Height, State),
+    Vegitation(VegType, Height, State),
     Fire,
 }
 
@@ -988,10 +1037,10 @@ impl DrawChar for Tile {
                     }
                     &RestrictedTile::Vegitation(ref v, ..) => {
                         match v {
-                            &VegTypes::Pine |
-                            &VegTypes::Banyon |
-                            &VegTypes::Redwood |
-                            &VegTypes::Redbud => {
+                            &VegType::Pine |
+                            &VegType::Banyon |
+                            &VegType::Redwood |
+                            &VegType::Redbud => {
                                 root.put_char(pos.0 as i32,
                                               pos.1 as i32,
                                               chars::RADIO_SET,
@@ -1118,7 +1167,6 @@ impl FramedDraw for Tile {
                     } else {
                         '\u{f7}'
                     };
-                println!("{}", BASE + frames.current as u32);
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,

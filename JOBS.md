@@ -62,18 +62,17 @@
 - [x] Water animation and animation framework.
 - [x] Animals
 - [x] Animal manager
-- [ ] Generate biomes
-- [ ] Generate vegitation by biome
-- [ ] Generate loam under plants
-- [ ] Group types of plants
-- [ ] Terrain collision detection
+- [x] Generate biomes
+- [x] Generate vegitation by biome
+- [x] Generate world in steps
+- [x] Fix empty tile drawing.
+- [x] Terrain collision detection
 - [ ] Place animals by biome
 - [ ] Items
-- [ ] Raytracing sun
 - [ ] Move sun by time of day
 - [x] Animal predators/prey
 - [ ] Use Guile to write AI and properties
-- [ ] Special animal behaviour
+- [x] Special animal behaviour
 - [ ] Minions
 
 ## Postponed indefinately until basic gameplay is finished

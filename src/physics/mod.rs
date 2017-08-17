@@ -22,15 +22,12 @@ fn unsupported(tile: Tile,
         solid_cnt < 2
 }
 
-macro_rules! get(
-    ($e:expr) => (match $e { Some(e) => e, None => return None })
-);
-
 pub fn run(ws: &mut WorldState, dt: usize) {
     if let Some(ref world) = ws.map {
         let map = &world.map;
         for y in 0..(world.map_size.1) {
             for x in 0..(world.map_size.0) {
+                // TODO: Add or remove snow based on temperature.
                 let unit = &map[y][x];
                 let mut ut = unit.tiles.borrow_mut();
                 for h in 0..ut.len() {

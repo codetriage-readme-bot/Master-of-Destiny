@@ -1,10 +1,13 @@
 use std;
+use std::cell::RefCell;
+
 use tcod::{OffscreenConsole, RootConsole};
 use tcod::colors::Color;
 use tcod::console;
 use tcod::console::{BackgroundFlag, Console};
 
-use time;
+use life::Living;
+
 use worldgen::{Frames, WorldState};
 use worldgen::terrain::{TILES, Tile};
 
@@ -160,5 +163,14 @@ pub fn draw_map(root: &mut RootConsole,
             }
         }
         None => {}
+    }
+    draw_life(root, &world.life);
+}
+
+fn draw_life(root: &mut RootConsole,
+             life: &Vec<RefCell<Box<Living>>>) {
+    for l in life {
+        let l = l.borrow();
+        l.draw_char(root, (l.current_pos().0, l.current_pos().1))
     }
 }
