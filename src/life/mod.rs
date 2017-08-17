@@ -1,4 +1,8 @@
+use draw::DrawChar;
 use std::option::Option;
+
+use tcod::RootConsole;
+
 use utils::{Point2D, Point3D};
 use worldgen::WorldState;
 use worldgen::terrain::Item;
@@ -15,6 +19,10 @@ pub type HealthLevel = usize;
 /// The mental mood of a living actor.
 #[derive(Debug, Copy, Clone)]
 pub enum Mood {
+    Angry,
+    Fearful,
+    Agressive,
+    Wary,
     Joyful,
     Happy,
     Contented,
@@ -117,4 +125,8 @@ pub trait Living {
     fn auto_add_mission(&mut self) -> Option<Mission>;
 
     fn current_pos(&self) -> (usize, usize, usize);
+}
+impl DrawChar for Living {
+    fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
+    }
 }

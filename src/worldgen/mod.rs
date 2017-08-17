@@ -14,9 +14,13 @@ use self::terrain::*;
 
 use life;
 use life::{Living, Mission, MissionResult};
+
 use physics;
+use physics::PhysicsActor;
+
 use time::{Calendar, Clock, Time};
-use utils::{Point2D, strict_adjacent};
+
+use utils::{Point2D, Point3D, strict_adjacent};
 
 /// Returns the Some() of the restricted version of a Tile if it can be restricted, if not, returns None.
 fn restricted_from_tile(tile: Tile) -> Option<RestrictedTile> {
@@ -83,6 +87,8 @@ const THRESHOLD: f32 = 0.5;
 const SEA_LEVEL: f32 = 12.0;
 const VEG_THRESHOLD: f32 = 200.0;
 const RAMP_THRESHOLD: f32 = 0.015;
+const ANIMAL_COUNT: usize = 34;
+
 impl World {
     /// Generates a new hightmap-based world map of the specified
     /// size. The generation order goes roughly thus:
@@ -122,9 +128,100 @@ impl World {
         world
     }
 
+    pub fn create_life_by_biome(pnt: Point3D,
+                                biome: Biome)
+        -> Option<Box<Living>> {
+        use life::animal::*;
+        let mut trng = rand::thread_rng();
+        let species =
+            match biome.biome_type {
+                BiomeType::Water => {
+                    if biome.temperature_night_f < 50.0 {
+                        Species::Carnivore(Carnivore::Whale)
+                    } else if biome.temperature_day_f > 80.0 {
+                        Species::Carnivore(Carnivore::Shark)
+                    } else {
+                        Species::Carnivore(Carnivore::Fish)
+                    }
+                }
+                BiomeType::Beach => {
+                    return None;
+                }
+                BiomeType::Forest => {
+                    *trng.choose(&[
+                        if biome.temperature_day_f > 70.0 {
+                            Species::Carnivore(Carnivore::Dog)
+                        } else if biome.temperature_day_f < 60.0 {
+                            Species::Carnivore(Carnivore::Wolf)
+                        } else {
+                            Species::Carnivore(Carnivore::Cat)
+                        },
+                        Species::Herbivore(Herbivore::Rabbit),
+                        Species::Carnivore(Carnivore::Wolf)]).unwrap()
+                }
+                BiomeType::Jungle => {
+                    *trng.choose(&[
+                        Species::Herbivore(Herbivore::Hippo),
+                        Species::Carnivore(Carnivore::Alligator),
+                        Species::Carnivore(Carnivore::Wolf),
+                        Species::Carnivore(Carnivore::Fish),
+                    ]).unwrap()
+                }
+                BiomeType::Pasture => {
+                    *trng.choose(&[
+                        Species::Herbivore(Herbivore::Sheep),
+                        Species::Herbivore(Herbivore::Cow),
+                        Species::Herbivore(Herbivore::Rabbit),
+                        Species::Herbivore(Herbivore::Armadillo),
+                        Species::Carnivore(Carnivore::Dog),
+                        Species::Carnivore(Carnivore::Cat),
+                    ]).unwrap()
+                }
+                BiomeType::Swamp => {
+                    *trng.choose(&[
+                        Species::Carnivore(Carnivore::Alligator),
+                        Species::Carnivore(Carnivore::Shark),
+                        Species::Carnivore(Carnivore::Fish),
+                        Species::Herbivore(Herbivore::Hippo),
+                        Species::Herbivore(Herbivore::Armadillo)
+                    ]).unwrap()
+                }
+            };
+
+        Some(Animal::new(pnt, species))
+    }
+
+    pub fn location_z(&self, pos: Point2D) -> usize {
+        let loc = self.get((pos.0, pos.1));
+        loc.map(|u| {
+            let t = u.tiles.borrow();
+            t.iter()
+             .enumerate()
+             .find(|&t| *t.1 == Tile::Empty)
+             .map(|(i, _)| i)
+             .unwrap_or(t.len())
+        })
+           .unwrap_or(0)
+    }
+
     /// Creates a vector of animals based on biome and height.
     pub fn generate_life(&self) -> Vec<RefCell<Box<Living>>> {
-        vec![]
+        let mut trng = rand::thread_rng();
+        (0..ANIMAL_COUNT)
+            .map(|_num| {
+                let x = trng.gen_range(0, self.map_size.0);
+                let y = trng.gen_range(0, self.map_size.1);
+                if let Some(unit) = self.get((x, y)) {
+                    if let Some(animal) = World::create_life_by_biome((x, y,
+                                                     self.location_z((x, y))),
+                                                                      unit.biome.unwrap()) {
+                        Some(RefCell::new(animal))} else {None}
+                } else {
+                    None
+                }
+            })
+            .filter_map(|x| x)
+            .collect()
     }
 
     unsafe fn get_slope(&self, x: usize, y: usize) -> f32 {
@@ -266,18 +363,21 @@ impl World {
             row.iter()
                .enumerate()
                .map(|(x, unit)| if let Some(biome) = unit.biome {
-                        let mut tiles =
-                            unit.tiles.clone().into_inner();
-                        tiles.push(World::get_vegetation(&vnoise,
-                                                         (x, y),
-                                                         biome));
-                        Unit {
-                            biome: unit.biome,
-                            tiles: RefCell::new(tiles),
-                        }
-                    } else {
-                        unreachable!()
-                    })
+                if biome.biome_type != BiomeType::Water {
+                    let mut tiles = unit.tiles.clone().into_inner();
+                    tiles.push(World::get_vegetation(&vnoise,
+                                                     (x, y),
+                                                     biome));
+                    Unit {
+                        biome: unit.biome,
+                        tiles: RefCell::new(tiles),
+                    }
+                } else {
+                    unit.clone()
+                }
+            } else {
+                unreachable!()
+            })
                .collect::<Vec<_>>()
         })
              .collect::<Vec<_>>()
@@ -666,12 +766,8 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
                           (x, y): Point2D,
                           biome: Biome)
         -> Tile {
-        if biome.biome_type == BiomeType::Water {
-            Tile::Empty
-        } else {
-            let vn = noise.get_fbm(&mut [x as f32, y as f32], 1) *
-                100.0;
-            let veg_levels = vec![[VegType::Bluegrass,
+        let vn = noise.get_fbm(&mut [x as f32, y as f32], 1) * 100.0;
+        let veg_levels = vec![[VegType::Bluegrass,
                                VegType::Bentgrass,
                                VegType::Ryegrass],
                               [VegType::Dandelion,
@@ -689,33 +785,33 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
                               [VegType::Redwood,
                                VegType::Pine,
                                VegType::Banyon]];
-            let mut trng = rand::thread_rng();
-            let (vopts, height) = if vn < 0.0 {
-                (&veg_levels[0], 1)
-            } else if vn < 2.0 {
-                (&veg_levels[1], trng.gen_range(1, 3))
-            } else if vn < 15.0 {
-                (&veg_levels[2], trng.gen_range(4, 6))
-            } else if vn < 20.0 {
-                (&veg_levels[3], trng.gen_range(6, 9))
-            } else if vn < 40.0 {
-                (&veg_levels[4], trng.gen_range(7, 10))
-            } else if vn < 100.0 {
-                (&veg_levels[5], trng.gen_range(10, 20))
-            } else {
-                (&veg_levels[5], vn as i32)
-            };
+        let mut trng = rand::thread_rng();
+        let (vopts, height) = if vn < 0.0 {
+            (&veg_levels[0], 1)
+        } else if vn < 2.0 {
+            (&veg_levels[1], trng.gen_range(1, 3))
+        } else if vn < 15.0 {
+            (&veg_levels[2], trng.gen_range(4, 6))
+        } else if vn < 20.0 {
+            (&veg_levels[3], trng.gen_range(6, 9))
+        } else if vn < 40.0 {
+            (&veg_levels[4], trng.gen_range(7, 10))
+        } else if vn < 100.0 {
+            (&veg_levels[5], trng.gen_range(10, 20))
+        } else {
+            (&veg_levels[5], vn as i32)
+        };
 
-            if let Some(v) =
-                trng.choose(&vopts.iter()
-                                  .filter(|v| biome.survives(**v))
-                                  .collect::<Vec<_>>()
-                                [0..])
-            {
-                Tile::Vegitation(*v.clone(), height, State::Solid)
-            } else {
-                Tile::Vegitation(VegType::Dandelion, 1, State::Solid)
-            }
+        if let Some(v) = trng.choose(
+            &vopts.iter()
+                  .filter(|v| biome.survives(**v))
+                  .collect::<Vec<_>>()
+                [0..],
+        )
+        {
+            Tile::Vegitation(*v.clone(), height, State::Solid)
+        } else {
+            Tile::Vegitation(VegType::Dandelion, 1, State::Solid)
         }
     }
 }
@@ -808,7 +904,7 @@ impl WorldState {
     }
 
     /// Create a new WorldState, loaded with sensable defaults.
-    pub fn new(_: Point2D) -> WorldState {
+    pub fn new() -> WorldState {
         let clock = Clock { time: (12, 30) };
         WorldState {
             screen: (0, 0),
@@ -825,14 +921,6 @@ impl WorldState {
             map: None,
         }
     }
-
-    pub fn can_move<'a>(
-        &self,
-        actor: &life::animal::Animal<'a>)
-        -> impl FnMut((i32, i32), (i32, i32)) -> f32 {
-        move |from: (i32, i32), to: (i32, i32)| -> f32 { 1.0 }
-    }
-
     pub fn location_z(&self, pos: Point2D) -> usize {
         if let Some(ref map) = self.map {
             let loc = map.get(pos);

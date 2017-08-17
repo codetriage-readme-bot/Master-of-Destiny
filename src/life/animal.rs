@@ -1,8 +1,11 @@
 use std;
 
+use draw::DrawChar;
 use life::{Living, Mission, MissionResult};
+use tcod::Console;
+use tcod::RootConsole;
 use tcod::pathfinding::*;
-use utils::{Point3D, distance, nearest_perimeter_point};
+use utils::{Point3D, can_move, distance, nearest_perimeter_point};
 use worldgen::WorldState;
 use worldgen::terrain::{Food, Item, Tile};
 
@@ -16,7 +19,7 @@ macro_rules! matches {
             _ => false
         }
     )
-}
+ }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Carnivore {
@@ -24,14 +27,18 @@ pub enum Carnivore {
     Cat,
     Wolf,
     Shark,
+    Alligator,
+    Fish,
+    Whale,
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Herbivore {
     Cow,
     Sheep,
-    Fish,
-    Whale,
+    Hippo,
+    Rabbit,
+    Armadillo,
 }
 
 /// Possible animal species.
@@ -41,36 +48,165 @@ pub enum Species {
     Herbivore(Herbivore),
 }
 
-/// Represents a limb of an animal.
-pub struct BodyPart {
-    health: super::HealthLevel,
-    name: &'static str,
-    missing: bool,
+pub struct SpeciesProperties {
+    pub health: i32,
+    pub chr: char,
+    pub sight: u8,
+    pub mood: super::Mood,
+    pub species: Species,
+}
+
+impl Species {
+    pub fn properties(&self) -> SpeciesProperties {
+        use self::Species::*;
+        use self::Carnivore::*;
+        use self::Herbivore::*;
+
+        match self {
+            &Carnivore(Dog) => {
+                SpeciesProperties {
+                    health: 200,
+                    chr: 'd',
+                    sight: 8,
+                    species: self.clone(),
+                    mood: super::Mood::Contented,
+                }
+            }
+            &Carnivore(Cat) => {
+                SpeciesProperties {
+                    health: 100,
+                    chr: 'c',
+                    species: self.clone(),
+                    sight: 9,
+                    mood: super::Mood::Discontented,
+                }
+            }
+            &Carnivore(Wolf) => {
+                SpeciesProperties {
+                    health: 400,
+                    chr: 'w',
+                    species: self.clone(),
+                    sight: 11,
+                    mood: super::Mood::Wary,
+                }
+            }
+            &Carnivore(Shark) => {
+                SpeciesProperties {
+                    health: 800,
+                    chr: 'S',
+                    species: self.clone(),
+                    sight: 20,
+                    mood: super::Mood::Agressive,
+                }
+            }
+            &Carnivore(Alligator) => {
+                SpeciesProperties {
+                    health: 800,
+                    chr: 'A',
+                    species: self.clone(),
+                    sight: 20,
+                    mood: super::Mood::Agressive,
+                }
+            }
+            &Carnivore(Fish) => {
+                SpeciesProperties {
+                    health: 10,
+                    species: self.clone(),
+                    chr: 'f',
+                    sight: 3,
+                    mood: super::Mood::Fearful,
+                }
+            }
+            &Carnivore(Whale) => {
+                SpeciesProperties {
+                    health: 10000,
+                    chr: 'W',
+                    species: self.clone(),
+                    sight: 15,
+                    mood: super::Mood::Contented,
+                }
+            }
+
+            &Herbivore(Cow) => {
+                SpeciesProperties {
+                    health: 300,
+                    chr: 'c',
+                    species: self.clone(),
+                    sight: 5,
+                    mood: super::Mood::Contented,
+                }
+            }
+            &Herbivore(Hippo) => {
+                SpeciesProperties {
+                    health: 300,
+                    chr: 'H',
+                    species: self.clone(),
+                    sight: 5,
+                    mood: super::Mood::Agressive,
+                }
+            }
+            &Herbivore(Sheep) => {
+                SpeciesProperties {
+                    health: 200,
+                    chr: 's',
+                    species: self.clone(),
+                    sight: 2,
+                    mood: super::Mood::Wary,
+                }
+            }
+            &Herbivore(Rabbit) => {
+                SpeciesProperties {
+                    health: 10,
+                    chr: 'r',
+                    species: self.clone(),
+                    sight: 3,
+                    mood: super::Mood::Fearful,
+                }
+            }
+            &Herbivore(Armadillo) => {
+                SpeciesProperties {
+                    health: 100,
+                    chr: 'a',
+                    species: self.clone(),
+                    sight: 5,
+                    mood: super::Mood::Wary,
+                }
+            }
+        }
+    }
 }
 
 /// The animal itself. It keeps track of all its mental and physical states, as well as its goals.
-pub struct Animal<'a> {
+pub struct Animal {
     thirst: i32,
     hunger: i32,
     goals: Vec<super::Mission>,
-    path: Option<AStar<'a>>,
-    health: i32,
+    path: Option<AStarIterator>,
     arrived: bool,
     failed_goal: Option<super::Mission>,
+    pub species: SpeciesProperties,
     pub pos: (usize, usize, usize),
-    pub chr: char,
-    pub body: [BodyPart; 4],
-    pub species: Species,
-    pub sight_range: u8,
-    pub mood: super::Mood,
     pub current_goal: Option<super::Mission>,
 }
 
-impl<'a> Animal<'a> {
+impl Animal {
+    pub fn new(pnt: Point3D, species: Species) -> Box<super::Living> {
+        Box::new(Animal {
+                     thirst: 0,
+                     hunger: 0,
+                     goals: vec![],
+                     path: None,
+                     arrived: false,
+                     failed_goal: None,
+                     pos: pnt,
+                     current_goal: None,
+                     species: species.properties(),
+                 })
+    }
     fn satisfy_current_goal(&mut self,
                             ws: &WorldState)
         -> MissionResult {
-        let r = self.sight_range as i32;
+        let r = self.species.sight as i32;
         let mut adj = vec![];
         let map = ws.map.as_ref().unwrap();
         for x in (-r)..r {
@@ -103,11 +239,12 @@ impl<'a> Animal<'a> {
         if self.path.is_none() && !self.arrived {
             for (tile, pnt) in adj {
                 let m = self.current_goal.clone().unwrap();
+                let s = self.species.species;
                 match m {
                     Eat(_) => {
-                        let carnivore_food = matches!(self.species, Species::Carnivore(..)) &&
+                        let carnivore_food = matches!(s, Species::Carnivore(..)) &&
                                           matches!(tile, Tile::Item(Item::Food(Food::Meat(..))));
-                        let herbivore_food = matches!(self.species, Species::Herbivore(..)) &&
+                        let herbivore_food = matches!(s, Species::Herbivore(..)) &&
                                           matches!(tile, Tile::Item(Item::Food(Food::Herb(..))));
                         if carnivore_food || herbivore_food {
                             self.create_path_to(ws, pnt);
@@ -127,7 +264,7 @@ impl<'a> Animal<'a> {
                                                 (self.pos.0,
                                                  self.pos.1));
                             if pos.2 == self.pos.2 &&
-                                dist <= self.sight_range as f32
+                                dist <= self.species.sight as f32
                             {
                                 self.create_path_to(ws, pos);
                                 return MissionResult::NoResult;
@@ -160,18 +297,18 @@ impl<'a> Animal<'a> {
         let (width, height) = m.map_size;
         let mut astar = AStar::new_from_callback(width as i32,
                                                  height as i32,
-                                                 ws.can_move(self),
+                                                 can_move(ws),
                                                  1.0);
         if astar.find((self.pos.0 as i32, self.pos.1 as i32),
                       (pnt.0 as i32, pnt.1 as i32))
         {
-            self.path = Some(astar);
+            self.path = Some(astar.walk());
         }
     }
 
     fn continue_movement(&mut self, ws: &WorldState) {
         let path = self.path.as_mut().unwrap();
-        if let Some(npos) = path.walk_one_step(true) {
+        if let Some(npos) = path.next() {
             self.pos = (npos.0 as usize,
                         npos.1 as usize,
                         ws.location_z((npos.0 as usize,
@@ -218,7 +355,7 @@ impl<'a> Animal<'a> {
                         matches!(t, Tile::Item(Item::Food(..)))
                     })
                 {
-                    match self.species {
+                    match self.species.species {
                         Species::Herbivore(_) => {
                             if let Food::Herb(_) = food {
                                 self.hunger /= 2;
@@ -231,7 +368,7 @@ impl<'a> Animal<'a> {
                         }
                         Species::Carnivore(_) => {
                             if let Food::Meat(species) = food {
-                                if species != self.species {
+                                if species != self.species.species {
                                     self.hunger = 0;
                                     MissionResult::RemoveItem(pnt)
                                 } else {
@@ -261,12 +398,12 @@ impl<'a> Animal<'a> {
     fn tolerance(&self) -> i32 { 800 }
 }
 
-impl<'a> Living for Animal<'a> {
+impl Living for Animal {
     fn add_goal(&mut self, mission: Mission) {
         if matches!(mission, Mission::Die) {
             self.failed_goal = None;
             self.current_goal = Some(Mission::Die);
-            self.health = 0;
+            self.species.health = 0;
             self.goals = vec![];
         } else {
             self.failed_goal = None;
@@ -326,7 +463,7 @@ impl<'a> Living for Animal<'a> {
             } else if let Some(g) = self.failed_goal.clone() {
                 match g {
                     Mission::Eat(p) => {
-                        if matches!(self.species,
+                        if matches!(self.species.species,
                                     Species::Carnivore(..))
                         {
                             self.add_goal(Mission::AttackEnemy(p));

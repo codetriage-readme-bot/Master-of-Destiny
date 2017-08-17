@@ -121,7 +121,7 @@ impl Game {
                                     (screen_size.0 / 2, 4),
                                     (10, 0),
                                     10),
-            world_state: WorldState::new(MAP_SIZE),
+            world_state: WorldState::new(),
             seed: 0,
         }
     }
