@@ -900,6 +900,7 @@ impl WorldState {
         self.highest_level = max.unwrap_or(30);
         if let Some(ref map) = self.map {
             self.life = map.generate_life();
+            println!("{}", self.life.len());
         }
     }
 

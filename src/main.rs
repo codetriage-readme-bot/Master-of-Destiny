@@ -372,13 +372,13 @@ fn main() {
         .title("Skyspace")
         .font_type(FontType::Default)
         .renderer(Renderer::OpenGL)
-        .font_dimensions(16, 19)
+        .font_dimensions(16, 20)
         .font(SHOW_FONT, FontLayout::AsciiInRow)
         .init();
 
     if TILES {
         unsafe {
-            load_custom_font(2);
+            load_custom_font(3);
         }
     }
 

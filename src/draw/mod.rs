@@ -164,13 +164,25 @@ pub fn draw_map(root: &mut RootConsole,
         }
         None => {}
     }
-    draw_life(root, &world.life);
+    draw_life(root, world, &world.life);
 }
 
 fn draw_life(root: &mut RootConsole,
+             ws: &WorldState,
              life: &Vec<RefCell<Box<Living>>>) {
+    let wid = root.width();
+    let hig = root.height();
+
     for l in life {
         let l = l.borrow();
-        l.draw_char(root, (l.current_pos().0, l.current_pos().1))
+        let pnt = (l.current_pos().0, l.current_pos().1);
+        let rel_pnt = (pnt.0 as i32 - ws.screen.0,
+                       pnt.1 as i32 - ws.screen.1);
+        if rel_pnt.0 < wid && rel_pnt.1 < hig && rel_pnt.0 >= 0 &&
+            rel_pnt.1 >= 0
+        {
+            l.draw_char(root,
+                        (rel_pnt.0 as usize, rel_pnt.1 as usize));
+        }
     }
 }

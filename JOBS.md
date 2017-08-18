@@ -46,7 +46,7 @@
 - [x] Better way to render depth
 - [x] Better way to render ramps
 - [x] Improve depth rendering for debugging, make more 3D
-- [ ] Increase beach size
+- [x] Increase beach size
 - [x] Night/day cycle
 - [x] Weather cycle
 - [x] Season cycle
@@ -67,7 +67,7 @@
 - [x] Generate world in steps
 - [x] Fix empty tile drawing.
 - [x] Terrain collision detection
-- [ ] Place animals by biome
+- [x] Place animals by biome
 - [ ] Items
 - [ ] Move sun by time of day
 - [x] Animal predators/prey

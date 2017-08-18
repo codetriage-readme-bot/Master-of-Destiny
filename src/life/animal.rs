@@ -483,4 +483,5 @@ impl Living for Animal {
     }
 
     fn current_pos(&self) -> Point3D { self.pos }
+    fn get_draw_char(&self) -> char { self.species.chr }
 }

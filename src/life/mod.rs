@@ -1,7 +1,7 @@
 use draw::DrawChar;
 use std::option::Option;
 
-use tcod::RootConsole;
+use tcod::{BackgroundFlag, Console, RootConsole};
 
 use utils::{Point2D, Point3D};
 use worldgen::WorldState;
@@ -125,8 +125,13 @@ pub trait Living {
     fn auto_add_mission(&mut self) -> Option<Mission>;
 
     fn current_pos(&self) -> (usize, usize, usize);
+    fn get_draw_char(&self) -> char;
 }
 impl DrawChar for Living {
     fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
+        root.put_char(pos.0 as i32,
+                      pos.1 as i32,
+                      self.get_draw_char(),
+                      BackgroundFlag::Set);
     }
 }
