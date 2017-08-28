@@ -1,8 +1,14 @@
-use physics::PhysicsActor;
+extern crate rand;
+
 use std;
 use std::cmp;
+
 use worldgen::WorldState;
 use worldgen::terrain::{Slope, Tile};
+
+use physics::PhysicsActor;
+
+use self::rand::Rng;
 
 pub type Point2D = (usize, usize);
 pub type Point3D = (usize, usize, usize);
@@ -89,7 +95,11 @@ pub fn can_move<'a>(ws: &'a WorldState)
                                i <= ws.location_z(f) + 3
                     {
                         1.0
-                    } else if ws.location_z(f) - i >= 4 {
+                    } else if ws.location_z(f)
+                                .checked_sub(i)
+                                .unwrap_or(0) >=
+                               4
+                    {
                         1.0
                     } else {
                         0.0
@@ -104,4 +114,13 @@ pub fn can_move<'a>(ws: &'a WorldState)
             0.0
         }
     }
+}
+
+pub fn random_point(min_x: usize,
+                    max_x: usize,
+                    min_y: usize,
+                    max_y: usize)
+    -> Point2D {
+    let mut trng = rand::thread_rng();
+    (trng.gen_range(min_x, max_x), trng.gen_range(min_y, max_y))
 }

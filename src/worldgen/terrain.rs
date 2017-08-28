@@ -670,7 +670,7 @@ impl DrawChar for VegType {
 
 type Ferenheight = f32;
 type Percent = f32;
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum BiomeType {
     Swamp,
     Jungle,

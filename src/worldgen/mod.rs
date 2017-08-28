@@ -866,7 +866,11 @@ impl WorldState {
             let mut kills = vec![];
             for i in 0..self.life.len() {
                 let mut actor = self.life[i].borrow_mut();
-                match actor.execute_mission(self) {
+                let res = actor.execute_mission(self);
+                if res != MissionResult::NoResult {
+                    println!("{:?}", res);
+                }
+                match res {
                     MissionResult::Kill(i) => {
                         kills.push(i);
                     }
@@ -882,6 +886,9 @@ impl WorldState {
                     }
                     _ => {}
                 }
+            }
+            for k in kills {
+                self.life.remove(k);
             }
         }
         //physics::run(self, dt);
@@ -900,7 +907,6 @@ impl WorldState {
         self.highest_level = max.unwrap_or(30);
         if let Some(ref map) = self.map {
             self.life = map.generate_life();
-            println!("{}", self.life.len());
         }
     }
 

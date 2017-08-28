@@ -3,7 +3,7 @@ use std::option::Option;
 
 use tcod::{BackgroundFlag, Console, RootConsole};
 
-use utils::{Point2D, Point3D};
+use utils::{Point2D, Point3D, Rect2D3D};
 use worldgen::WorldState;
 use worldgen::terrain::Item;
 
@@ -56,7 +56,7 @@ pub trait Drinkable {
     fn satisfaction(self) -> Self;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum MissionResult {
     NoResult,
     Kill(usize),
@@ -70,7 +70,8 @@ pub enum Mission {
     Eat(Priority),
     Drink(Priority),
     AttackEnemy(Priority),
-    GoToArea(((usize, usize), (usize, usize), usize), Priority),
+    GoToArea(Rect2D3D, Priority),
+    Go(Point2D, Priority),
     Obey(Priority, Order),
     Die,
 }
@@ -82,12 +83,14 @@ impl Ord for Mission {
         let priority_a = match self {
             &Eat(p) | &Drink(p) | &AttackEnemy(p) |
             &GoToArea(_, p) | &Obey(p, _) => p,
+            &Go(_, p) => p,
             &Die => 1000,
         };
 
         let priority_b = match other {
             &Eat(p) | &Drink(p) | &AttackEnemy(p) |
             &GoToArea(_, p) | &Obey(p, _) => p,
+            &Go(_, p) => p,
             &Die => 1000,
         };
 
@@ -122,7 +125,9 @@ pub trait Living {
     fn execute_mission(&mut self, ws: &WorldState) -> MissionResult;
     /// Adds a mission when none is provided. Used all the time for
     /// animals. If there is already a mission going, returns None.
-    fn auto_add_mission(&mut self) -> Option<Mission>;
+    fn auto_add_mission(&mut self,
+                        ws: &WorldState)
+        -> Option<Mission>;
 
     fn current_pos(&self) -> (usize, usize, usize);
     fn get_draw_char(&self) -> char;

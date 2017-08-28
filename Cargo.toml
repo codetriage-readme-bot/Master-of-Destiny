@@ -6,6 +6,7 @@ description = "A sci-fi citybuilding survival roguelike-like. Graphics and UI/UX
 homepage = "christopherdumas.github.io/Skyspace"
 authors = ["Christopher Dumas <christopherdumas@gmail.com>",
 "William Trovinger <william.trovinger@icloud.com"]
+build = "build.rs"
 
 [dependencies]
 pipeline = "0.5.0"

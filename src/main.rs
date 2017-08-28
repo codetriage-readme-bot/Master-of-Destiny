@@ -49,7 +49,6 @@ const MAP_SIZE: (usize, usize) = (160, 160);
 
 const MOVE_DIST: i32 = 5;
 
-const DEBUG: bool = false;
 const TITLE_CARD: [&'static str; 6] = ["   _________ __",
                                        "  /   _____/|  | __ ___.__.  ____________  _____     ____    ____",
                                        "  \\_____  \\ |  |/ /<   |  | /  ___/\\____ \\ \\__  \\  _/ ___\\ _/ __ \\",
@@ -383,14 +382,8 @@ fn main() {
     }
 
     let mut game = Game::new(screen_size);
-    if DEBUG {
-        game.screen = GameScreen::Loading;
-        for line in TITLE_CARD.iter() {
-            println!("{}", line);
-        }
-    }
 
-    tcod::system::set_fps(35);
+    tcod::system::set_fps(30);
     root.set_keyboard_repeat(0, 0);
 
     while !root.window_closed() {
@@ -404,5 +397,4 @@ fn main() {
             None => {}
         }
     }
-
 }
