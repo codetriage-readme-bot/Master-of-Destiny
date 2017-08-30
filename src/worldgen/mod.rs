@@ -26,8 +26,8 @@ use utils::{Point2D, Point3D, strict_adjacent};
 fn restricted_from_tile(tile: Tile) -> Option<RestrictedTile> {
     match tile {
         Tile::Stone(a, b) => Some(RestrictedTile::Stone(a, b)),
-        Tile::Vegitation(a, b, c) => {
-            Some(RestrictedTile::Vegitation(a, b, c))
+        Tile::Vegetation(a, b, c) => {
+            Some(RestrictedTile::Vegetation(a, b, c))
         }
         _ => None,
     }
@@ -67,6 +67,7 @@ pub struct World {
     pub map_size: Point2D,
     pub frames: Frames,
     pub map: WorldMap,
+    pub life: Vec<RefCell<Box<Living>>>,
 }
 
 impl Index<usize> for World {
@@ -102,7 +103,7 @@ impl World {
     pub fn new(size: Point2D, seed: u32) -> World {
         println!("Generating seed from {}", seed);
 
-        // Vegitation
+        // Vegetation
         let mut world: World = World {
             map_size: size,
             heightmap: Self::generate_heightmap(size, seed),
@@ -114,6 +115,7 @@ impl World {
                 .random(random::Rng::new_with_seed(random::Algo::MT,
                                                    seed))
                 .init(),
+            life: vec![],
             frames: [("Water".to_string(),
                       FrameAssoc {
                           current: 0,
@@ -191,23 +193,10 @@ impl World {
         Some(Animal::new(pnt, species))
     }
 
-    pub fn location_z(&self, pos: Point2D) -> usize {
-        let loc = self.get((pos.0, pos.1));
-        loc.map(|u| {
-            let t = u.tiles.borrow();
-            t.iter()
-             .enumerate()
-             .find(|&t| *t.1 == Tile::Empty)
-             .map(|(i, _)| i)
-             .unwrap_or(t.len())
-        })
-           .unwrap_or(0)
-    }
-
     /// Creates a vector of animals based on biome and height.
-    pub fn generate_life(&self) -> Vec<RefCell<Box<Living>>> {
+    pub fn generate_life(&mut self) {
         let mut trng = rand::thread_rng();
-        (0..ANIMAL_COUNT)
+        self.life = (0..ANIMAL_COUNT)
             .map(|_num| {
                 let x = trng.gen_range(0, self.map_size.0);
                 let y = trng.gen_range(0, self.map_size.1);
@@ -221,7 +210,7 @@ impl World {
                 }
             })
             .filter_map(|x| x)
-            .collect()
+            .collect();
     }
 
     unsafe fn get_slope(&self, x: usize, y: usize) -> f32 {
@@ -695,7 +684,7 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
                                       {
                                           (w || matches!(*x, Tile::Water(..)),
                                            s || matches!(*x, Tile::Stone(StoneTypes::Soil(SoilTypes::Sandy), _)),
-                                           v || matches!(*x, Tile::Vegitation(..)),
+                                           v || matches!(*x, Tile::Vegetation(..)),
                                            sd || matches!(*x, Tile::Stone(..)))
                                       });
         if water_adjacent ||
@@ -809,10 +798,23 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
                 [0..],
         )
         {
-            Tile::Vegitation(*v.clone(), height, State::Solid)
+            Tile::Vegetation(*v.clone(), height, State::Solid)
         } else {
-            Tile::Vegitation(VegType::Dandelion, 1, State::Solid)
+            Tile::Vegetation(VegType::Dandelion, 1, State::Solid)
         }
+    }
+
+    pub fn location_z(&self, pos: Point2D) -> usize {
+        let loc = self.get(pos);
+        loc.map(|u| {
+            let t = u.tiles.borrow();
+            t.iter()
+             .enumerate()
+             .find(|&t| *t.1 == Tile::Empty)
+             .map(|(i, _)| i)
+             .unwrap_or(t.len())
+        })
+           .unwrap_or(0)
     }
 }
 
@@ -842,7 +844,6 @@ pub struct WorldState {
     pub screen: (i32, i32),
     pub cursor: (i32, i32),
     pub level: i32,
-    pub life: Vec<RefCell<Box<Living>>>,
     pub map: Option<World>,
     pub highest_level: usize,
     pub time: TimeHandler,
@@ -851,6 +852,7 @@ pub struct WorldState {
 impl WorldState {
     /// Updates world time and then deligates to the physics engine.
     pub fn update(&mut self, time: usize, dt: usize) {
+        // Calendar/clock
         self.time.clock.update_deltatime(dt);
         self.time.time_of_day = Time::from_clock_time(&self.time
                                                            .clock);
@@ -861,34 +863,43 @@ impl WorldState {
                 .calendar
                 .update_to_day(self.time.days, &self.time.clock);
         }
-        if let Some(ref world) = self.map {
-            let map = &world.map;
+
+        // Update life
+        if let Some(ref mut world) = self.map {
             let mut kills = vec![];
-            for i in 0..self.life.len() {
-                let mut actor = self.life[i].borrow_mut();
-                let res = actor.execute_mission(self);
-                if res != MissionResult::NoResult {
-                    println!("{:?}", res);
-                }
-                match res {
-                    MissionResult::Kill(i) => {
-                        kills.push(i);
+            {
+                for i in 0..world.life.len() {
+                    let mut actor = world.life[i].borrow_mut();
+                    let res = actor.execute_mission(world);
+                    match res {
+                        MissionResult::Kill(i) => {
+                            kills.push(i);
+                        }
+                        MissionResult::RemoveItem(pnt) => {
+                            let unit = &world.map[pnt.1][pnt.0];
+                            let mut tiles = unit.tiles.borrow_mut();
+                            tiles[pnt.2] = Tile::Empty;
+                        }
+                        MissionResult::ReplaceItem(pnt, item) => {
+                            let unit = &world.map[pnt.1][pnt.0];
+                            let mut tiles = unit.tiles.borrow_mut();
+                            tiles[pnt.2] = Tile::Item(item);
+                        }
+                        _ => {}
                     }
-                    MissionResult::RemoveItem(pnt) => {
-                        let unit = &map[pnt.1][pnt.0];
-                        let mut tiles = unit.tiles.borrow_mut();
-                        tiles[pnt.2] = Tile::Empty;
-                    }
-                    MissionResult::ReplaceItem(pnt, item) => {
-                        let unit = &map[pnt.1][pnt.0];
-                        let mut tiles = unit.tiles.borrow_mut();
-                        tiles[pnt.2] = Tile::Item(item);
-                    }
-                    _ => {}
                 }
             }
+
+            // Kill things that should die
             for k in kills {
-                self.life.remove(k);
+                let l = world.life.remove(k).into_inner();
+                let pos = l.current_pos();
+                world.map[pos.0][pos.1]
+                    .tiles
+                    .borrow_mut()
+                    [pos.2] =
+                    Tile::Item(Item::Food(Food::Meat(l.species()
+                                                      .species)))
             }
         }
         //physics::run(self, dt);
@@ -905,9 +916,10 @@ impl WorldState {
                        .max();
         self.map = Some(world);
         self.highest_level = max.unwrap_or(30);
-        if let Some(ref map) = self.map {
-            self.life = map.generate_life();
-        }
+        self.map
+            .as_mut()
+            .unwrap()
+            .generate_life();
     }
 
     /// Create a new WorldState, loaded with sensable defaults.
@@ -924,24 +936,7 @@ impl WorldState {
                 time_of_day: Time::Morning,
                 clock: clock,
             },
-            life: vec![],
             map: None,
-        }
-    }
-    pub fn location_z(&self, pos: Point2D) -> usize {
-        if let Some(ref map) = self.map {
-            let loc = map.get(pos);
-            loc.map(|u| {
-                let t = u.tiles.borrow();
-                t.iter()
-                 .enumerate()
-                 .find(|&t| *t.1 == Tile::Empty)
-                 .map(|(i, _)| i)
-                 .unwrap_or(t.len())
-            })
-               .unwrap_or(0)
-        } else {
-            0
         }
     }
 }

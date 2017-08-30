@@ -164,7 +164,7 @@ pub fn draw_map(root: &mut RootConsole,
         }
         None => {}
     }
-    draw_life(root, world, &world.life);
+    draw_life(root, world, &world.map.as_ref().unwrap().life);
 }
 
 fn draw_life(root: &mut RootConsole,
@@ -179,7 +179,8 @@ fn draw_life(root: &mut RootConsole,
         let rel_pnt = (pnt.0 as i32 - ws.screen.0,
                        pnt.1 as i32 - ws.screen.1);
         if rel_pnt.0 < wid && rel_pnt.1 < hig && rel_pnt.0 >= 0 &&
-            rel_pnt.1 >= 0
+            rel_pnt.1 >= 0 &&
+            ws.level == l.current_pos().2 as i32
         {
             l.draw_char(root,
                         (rel_pnt.0 as usize, rel_pnt.1 as usize));

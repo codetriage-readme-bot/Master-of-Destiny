@@ -771,7 +771,7 @@ pub enum Slope {
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum RestrictedTile {
     Stone(StoneTypes, State),
-    Vegitation(VegType, Height, State),
+    Vegetation(VegType, Height, State),
 }
 
 impl Describe for RestrictedTile {
@@ -788,7 +788,7 @@ impl Describe for RestrictedTile {
                     _ => unreachable!(),
                 }
             }
-            &RestrictedTile::Vegitation(veg, ..) => veg.describe(),
+            &RestrictedTile::Vegetation(veg, ..) => veg.describe(),
         }
     }
 }
@@ -816,7 +816,7 @@ impl DrawChar for RestrictedTile {
                                  Color::new(255, 0, 0));
             }   
             &RestrictedTile::Stone(_, State::Gas) => unreachable!(),
-            &RestrictedTile::Vegitation(ref v, ..) => {
+            &RestrictedTile::Vegetation(ref v, ..) => {
                 v.draw_char(root, pos)
             }
         }
@@ -915,7 +915,7 @@ pub enum Tile {
     Item(Item),
     Water(LiquidPurity, State, Depth),
     Stone(StoneTypes, State),
-    Vegitation(VegType, Height, State),
+    Vegetation(VegType, Height, State),
     Fire,
 }
 
@@ -986,7 +986,7 @@ impl Describe for Tile {
                 }
             }
             &Tile::Fire => "Flames".to_string(),
-            &Tile::Vegitation(veg, ..) => veg.describe(),
+            &Tile::Vegetation(veg, ..) => veg.describe(),
             &Tile::Item(i) => i.describe(),
         }
     }
@@ -1035,7 +1035,7 @@ impl DrawChar for Tile {
                                       chars::BULLET,
                                       BackgroundFlag::Set);
                     }
-                    &RestrictedTile::Vegitation(ref v, ..) => {
+                    &RestrictedTile::Vegetation(ref v, ..) => {
                         match v {
                             &VegType::Pine |
                             &VegType::Banyon |
@@ -1122,7 +1122,7 @@ impl DrawChar for Tile {
                                  },
                                  Color::new(0, 159, 225));
             }
-            &Tile::Vegitation(ref v, ..) => v.draw_char(root, pos),
+            &Tile::Vegetation(ref v, ..) => v.draw_char(root, pos),
             &Tile::Fire => {
                 let chr = if TILES {
                     std::char::from_u32(TILES_OBSIDIAN)

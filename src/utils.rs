@@ -3,7 +3,7 @@ extern crate rand;
 use std;
 use std::cmp;
 
-use worldgen::WorldState;
+use worldgen::World;
 use worldgen::terrain::{Slope, Tile};
 
 use physics::PhysicsActor;
@@ -73,37 +73,33 @@ pub fn distance3_d((x1, y1, z1): Point3D,
         .cbrt()
 }
 
-pub fn can_move<'a>(ws: &'a WorldState)
+pub fn can_move<'a>(map: &'a World)
     -> impl FnMut((i32, i32), (i32, i32)) -> f32 {
     move |from, to| {
         let f = (from.0 as usize, from.1 as usize);
-        if let Some(ref map) = ws.map {
-            if let Some(unit_to) =
-                map.get((to.0 as usize, to.1 as usize))
-            {
-                let ut = unit_to.tiles.borrow();
-                let first_empty =
-                    ut.iter()
-                      .enumerate()
-                      .find(|&(_, tile)| !(*tile).solid());
-                if let Some((i, first)) = first_empty {
-                    if i == ws.location_z(f) {
-                        1.0
-                    } else if i == ws.location_z(f) + 1 {
-                        1.0
-                    } else if matches!(first, &Tile::Ramp(_, Slope::Up)) &&
-                               i <= ws.location_z(f) + 3
-                    {
-                        1.0
-                    } else if ws.location_z(f)
-                                .checked_sub(i)
-                                .unwrap_or(0) >=
-                               4
-                    {
-                        1.0
-                    } else {
-                        0.0
-                    }
+        if let Some(unit_to) =
+            map.get((to.0 as usize, to.1 as usize))
+        {
+            let ut = unit_to.tiles.borrow();
+            let first_empty =
+                ut.iter()
+                  .enumerate()
+                  .find(|&(_, tile)| !(*tile).solid());
+            if let Some((i, first)) = first_empty {
+                if i == map.location_z(f) {
+                    1.0
+                } else if i == map.location_z(f) + 1 {
+                    1.0
+                } else if matches!(first, &Tile::Ramp(_, Slope::Up)) &&
+                           i <= map.location_z(f) + 3
+                {
+                    1.0
+                } else if map.location_z(f)
+                             .checked_sub(i)
+                             .unwrap_or(0) >=
+                           4
+                {
+                    1.0
                 } else {
                     0.0
                 }

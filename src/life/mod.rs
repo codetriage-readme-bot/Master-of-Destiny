@@ -4,7 +4,7 @@ use std::option::Option;
 use tcod::{BackgroundFlag, Console, RootConsole};
 
 use utils::{Point2D, Point3D, Rect2D3D};
-use worldgen::WorldState;
+use worldgen::World;
 use worldgen::terrain::Item;
 
 pub mod animal;
@@ -122,21 +122,19 @@ pub trait Living {
     fn prioritize(&mut self, number: usize) -> Vec<Mission>;
     /// Chooses highest priority mission, excecutes one step of it, and
     /// returns it if done, otherwise returns None.
-    fn execute_mission(&mut self, ws: &WorldState) -> MissionResult;
+    fn execute_mission(&mut self, ws: &World) -> MissionResult;
     /// Adds a mission when none is provided. Used all the time for
     /// animals. If there is already a mission going, returns None.
-    fn auto_add_mission(&mut self,
-                        ws: &WorldState)
-        -> Option<Mission>;
+    fn auto_add_mission(&mut self, ws: &World) -> Option<Mission>;
 
     fn current_pos(&self) -> (usize, usize, usize);
-    fn get_draw_char(&self) -> char;
+    fn species(&self) -> &animal::SpeciesProperties;
 }
 impl DrawChar for Living {
     fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
         root.put_char(pos.0 as i32,
                       pos.1 as i32,
-                      self.get_draw_char(),
+                      self.species().chr,
                       BackgroundFlag::Set);
     }
 }

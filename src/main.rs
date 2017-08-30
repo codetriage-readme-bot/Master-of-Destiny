@@ -390,8 +390,10 @@ fn main() {
         game.draw(&mut root);
         root.flush();
     }
+    println!("Closing");
 
     unsafe {
+        println!("Freeing allocated memory");
         match game.world_state.map {
             Some(x) => x.delete_heightmap(),
             None => {}

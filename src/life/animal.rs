@@ -7,7 +7,7 @@ use tcod::RootConsole;
 use tcod::pathfinding::*;
 use utils::{Point3D, can_move, distance, nearest_perimeter_point,
             random_point};
-use worldgen::WorldState;
+use worldgen::World;
 use worldgen::terrain::{Food, Item, Tile};
 
 const THIRST_THRESHOLD: i32 = 259_200;
@@ -204,18 +204,17 @@ impl Animal {
                      species: species.properties(),
                  })
     }
-    fn satisfy_current_goal(&mut self,
-                            ws: &WorldState)
-        -> MissionResult {
+
+    fn satisfy_current_goal(&mut self, map: &World) -> MissionResult {
         let r = self.species.sight as i32;
         let mut adj = vec![];
-        let map = ws.map.as_ref().unwrap();
         for x in (-r)..r {
             for y in (-r)..r {
                 if x * x + y * y <= r * r {
                     let maybe_unit =
                         map.get((x as usize, y as usize));
                     adj.push(if let Some(unit) = maybe_unit {
+                        println!("    Looking at ({}, {})", x, y);
                         let tiles = unit.tiles.borrow();
                         (tiles.get(self.pos.2)
                            .unwrap_or(tiles.get(tiles.len() - 1)
@@ -227,11 +226,11 @@ impl Animal {
                 }
             }
         }
-        self.step_to_goal(ws, adj)
+        self.step_to_goal(map, adj)
     }
 
     fn step_to_goal(&mut self,
-                    ws: &WorldState,
+                    map: &World,
                     adj: Vec<(Tile, Point3D)>)
         -> MissionResult {
         self.hunger += 1;
@@ -248,7 +247,9 @@ impl Animal {
                             let herbivore_food = matches!(s, Species::Herbivore(..)) &&
                                           matches!(tile, Tile::Item(Item::Food(Food::Herb(..))));
                             if carnivore_food || herbivore_food {
-                                if !self.create_path_to(ws, pnt) {
+                                println!("      Edible food unit found");
+                                if !self.create_path_to(map, pnt) {
+                                    println!("      Path to goal not found");
                                     self.current_goal = None;
                                     self.failed_goal = Some(m);
                                 }
@@ -257,7 +258,9 @@ impl Animal {
                         }
                         Drink(_) => {
                             if matches!(tile, Tile::Item(Item::Food(Food::Water(..)))) {
-                                if !self.create_path_to(ws, pnt) {
+                                println!("      Drinkable liquid found");
+                                if !self.create_path_to(map, pnt) {
+                                    println!("      Path to goal not found");
                                     self.current_goal = None;
                                     self.failed_goal = Some(m);
                                 }
@@ -265,16 +268,22 @@ impl Animal {
                             }
                         }
                         AttackEnemy(_) => {
-                            for l in ws.life.iter() {
+                            for l in map.life.iter() {
                                 let pos = l.borrow().current_pos();
                                 let dist = distance((pos.0, pos.1),
                                                     (self.pos.0,
                                                      self.pos.1));
                                 if pos.2 == self.pos.2 &&
                                     dist <=
-                                        self.species.sight as f32
+                                        self.species.sight as f32 &&
+                                    l.borrow().species().species !=
+                                        self.species.species
                                 {
-                                    if !self.create_path_to(ws, pnt) {
+                                    println!("      Enemy in sight, persuing");
+                                    if !self.create_path_to(map,
+                                                            pnt)
+                                    {
+                                        println!("      Cannot find path to enemy");
                                         self.current_goal = None;
                                         self.failed_goal = Some(m);
                                     }
@@ -284,8 +293,9 @@ impl Animal {
                         }
                         GoToArea(rect, _) => {
                             let p = self.pos.clone();
-                            if !self.create_path_to(ws,
+                            if !self.create_path_to(map,
                                                     nearest_perimeter_point(rect, p)) {
+                                println!("      Cannot find path to area.");
                                 self.current_goal = None;
                                 self.failed_goal = Some(m);
                             }
@@ -293,7 +303,8 @@ impl Animal {
                         }
                         Go(point, _) => {
                             let p = self.pos.clone();
-                            if !self.create_path_to(ws, (point.0, point.1, ws.location_z(point))) {
+                            if !self.create_path_to(map, (point.0, point.1, map.location_z(point))) {
+                                println!("       Cannot find path to point {:?}", point);
                                 self.current_goal = None;
                                 self.failed_goal = Some(m);
                             }
@@ -302,28 +313,27 @@ impl Animal {
                         ref q => {}
                     }
                 } else {
-                    self.auto_add_mission(ws);
+                    println!("Adding nonexistant mission");
+                    self.auto_add_mission(map);
                 }
             }
             self.failed_goal = self.current_goal.clone();
             self.current_goal = None;
         } else if self.path.is_some() {
-            self.continue_movement(ws);
+            println!("Moving along path");
+            self.continue_movement(map);
         } else if self.arrived {
-            return self.stationary_action(ws, adj);
+            println!("Performing action on path destination");
+            return self.stationary_action(map, adj);
         }
         MissionResult::NoResult
     }
 
-    fn create_path_to(&mut self,
-                      ws: &WorldState,
-                      pnt: Point3D)
-        -> bool {
-        let m = ws.map.as_ref().unwrap();
-        let (width, height) = m.map_size;
+    fn create_path_to(&mut self, map: &World, pnt: Point3D) -> bool {
+        let (width, height) = map.map_size;
         let mut astar = AStar::new_from_callback(width as i32,
                                                  height as i32,
-                                                 can_move(ws),
+                                                 can_move(map),
                                                  1.0);
         if astar.find((self.pos.0 as i32, self.pos.1 as i32),
                       (pnt.0 as i32, pnt.1 as i32))
@@ -335,28 +345,28 @@ impl Animal {
         }
     }
 
-    fn continue_movement(&mut self, ws: &WorldState) {
+    fn continue_movement(&mut self, map: &World) {
         let path = self.path.as_mut().unwrap();
         if let Some(npos) = path.next() {
             self.pos = (npos.0 as usize,
                         npos.1 as usize,
-                        ws.location_z((npos.0 as usize,
-                                       npos.1 as usize)));
+                        map.location_z((npos.0 as usize,
+                                        npos.1 as usize)));
         } else {
             self.arrived = true;
         }
     }
 
     fn stationary_action(&mut self,
-                         ws: &WorldState,
+                         map: &World,
                          adj: Vec<(Tile, Point3D)>)
         -> MissionResult {
         let result = match self.current_goal {
             Some(Mission::AttackEnemy(_)) => {
-                let enemy = ws.life
-                              .iter()
-                              .enumerate()
-                              .find(|&(_i, e)| {
+                let enemy = map.life
+                               .iter()
+                               .enumerate()
+                               .find(|&(_i, e)| {
                     adj.iter()
                        .find(|&&(_, p)| e.borrow().current_pos() == p)
                        .is_some()
@@ -457,23 +467,27 @@ impl Living for Animal {
         self.goals.drain(0..n).collect()
     }
 
-    fn execute_mission(&mut self, ws: &WorldState) -> MissionResult {
+    fn execute_mission(&mut self, map: &World) -> MissionResult {
         if self.current_goal.is_some() {
-            self.satisfy_current_goal(ws)
+            println!("Executing goal: {:?}",
+                     self.current_goal.clone().unwrap());
+            self.satisfy_current_goal(map)
         } else {
+            println!("Need new goal:");
             let m = self.goals.pop();
+            println!("  Candidate goal: {:?}", m);
             if m.is_some() {
+                println!("    New goal: {:?}", m);
                 self.current_goal = m;
             } else {
-                self.auto_add_mission(ws);
+                println!("    No goals, adding.");
+                self.auto_add_mission(map);
             }
-            self.satisfy_current_goal(ws)
+            self.satisfy_current_goal(map)
         }
     }
 
-    fn auto_add_mission(&mut self,
-                        ws: &WorldState)
-        -> Option<Mission> {
+    fn auto_add_mission(&mut self, map: &World) -> Option<Mission> {
         if self.goals.len() == 0 {
             if self.thirst >= THIRST_THRESHOLD ||
                 self.hunger >= HUNGER_THRESHOLD
@@ -508,14 +522,12 @@ impl Living for Animal {
                     }
                 }
             } else {
-                if let Some(ref m) = ws.map {
-                    self.current_goal =
-                        Some(Mission::Go(random_point(0,
-                                                      m.map_size.0,
-                                                      0,
-                                                      m.map_size.1),
-                                         10));
-                }
+                self.current_goal =
+                    Some(Mission::Go(random_point(0,
+                                                  map.map_size.0,
+                                                  0,
+                                                  map.map_size.1),
+                                     10));
             }
             self.current_goal.clone()
         } else {
@@ -525,5 +537,5 @@ impl Living for Animal {
     }
 
     fn current_pos(&self) -> Point3D { self.pos }
-    fn get_draw_char(&self) -> char { self.species.chr }
+    fn species(&self) -> &SpeciesProperties { &self.species }
 }
