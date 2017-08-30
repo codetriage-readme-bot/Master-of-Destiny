@@ -675,6 +675,7 @@ pub enum BiomeType {
     Swamp,
     Jungle,
     Forest,
+    Desert,
     Pasture,
     Beach,
     Water,
@@ -697,6 +698,9 @@ pub const WATER_BIOME: Biome = Biome {
 impl Biome {
     pub fn survives(&self, veg: VegType) -> bool {
         use self::VegType::*;
+        if self.biome_type == BiomeType::Desert {
+            return false;
+        }
         match veg {
             Bluegrass => {
                 self.biome_type == BiomeType::Forest ||

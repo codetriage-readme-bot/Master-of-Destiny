@@ -85,7 +85,7 @@ impl Index<Range<usize>> for World {
 }
 
 const THRESHOLD: f32 = 0.5;
-const SEA_LEVEL: f32 = 12.0;
+const SEA_LEVEL: f32 = 15.0;
 const VEG_THRESHOLD: f32 = 200.0;
 const RAMP_THRESHOLD: f32 = 0.015;
 const ANIMAL_COUNT: usize = 34;
@@ -111,7 +111,7 @@ impl World {
             stone_vein_noise: Noise::init_with_dimensions(3)
                 .lacunarity(0.43)
                 .hurst(-0.9)
-                .noise_type(NoiseType::Perlin)
+                .noise_type(NoiseType::Simplex)
                 .random(random::Rng::new_with_seed(random::Algo::MT,
                                                    seed))
                 .init(),
@@ -146,7 +146,7 @@ impl World {
                         Species::Carnivore(Carnivore::Fish)
                     }
                 }
-                BiomeType::Beach => {
+                BiomeType::Desert | BiomeType::Beach => {
                     return None;
                 }
                 BiomeType::Forest => {
@@ -302,7 +302,7 @@ impl World {
         let bnoise = Noise::init_with_dimensions(2)
             .lacunarity(0.43)
             .hurst(-0.9)
-            .noise_type(NoiseType::Perlin)
+            .noise_type(NoiseType::Simplex)
             .random(random::Rng::new(random::Algo::MT))
             .init();
         world.iter()
@@ -541,7 +541,7 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
                                                     seed);
             let noise = tcod_sys::TCOD_noise_new(2, 0.7, 0.1, rndn);
             tcod_sys::TCOD_noise_set_type(noise,
-                                          tcod_sys::TCOD_NOISE_PERLIN);
+                                          tcod_sys::TCOD_NOISE_SIMPLEX);
             tcod_sys::TCOD_heightmap_add_fbm(heightmap,
                                              noise,
                                              2.20 * (sx as f32) /
@@ -574,6 +574,7 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
                                                   0.06,
                                                   0.02,
                                                   rndn);
+            tcod_sys::TCOD_heightmap_normalize(heightmap, 0.0, 100.0);
         };
         heightmap
     }
@@ -655,13 +656,18 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
     pub fn biome_from_noise(point_val: i32,
                             avg_height: f32)
         -> Biome {
+        let temp_day = 180f32 - (avg_height * 210f32);
         Biome {
             biome_type: if avg_height < SEA_LEVEL {
                 BiomeType::Beach
+            } else if temp_day > 100.0 &&
+                       avg_height > SEA_LEVEL + 15.0
+            {
+                BiomeType::Desert
             } else {
                 World::biome_type_from_noise(point_val)
             },
-            temperature_day_f: 100f32 - (avg_height * 100f32),
+            temperature_day_f: temp_day,
             temperature_night_f: 80f32 - (avg_height * 100f32),
             percipitation_chance: point_val as f32,
         }
@@ -864,7 +870,7 @@ impl WorldState {
                 .update_to_day(self.time.days, &self.time.clock);
         }
 
-        // Update life
+        /* Update life
         if let Some(ref mut world) = self.map {
             let mut kills = vec![];
             {
@@ -901,7 +907,7 @@ impl WorldState {
                     Tile::Item(Item::Food(Food::Meat(l.species()
                                                       .species)))
             }
-        }
+        }*/
         //physics::run(self, dt);
     }
     /// Add a world map and update its meta layer.
