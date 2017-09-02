@@ -68,17 +68,18 @@
 - [x] Fix empty tile drawing.
 - [x] Terrain collision detection
 - [x] Place animals by biome
-- [ ] Items
-- [ ] Move sun by time of day
 - [x] Animal predators/prey
-- [ ] Use Guile to write AI and properties
 - [x] Special animal behaviour
-- [ ] Minions
-
-## Postponed indefinately until basic gameplay is finished
-- [ ] Add loading screen
-- [ ] Speed up physics engine
 - [x] Water shifted.
-- [ ] Load terrain from seed
-- [ ] Add tree canopies
+- [x] Load terrain from seed
 - [x] Update game loop to be more reliable
+- [ ] Stop animal crashing
+- [ ] Minions
+- [ ] Add loading screen
+- [ ] Weather (see notebook)
+- [ ] Speed up physics engine
+- [ ] Fluid dynamics (see notebook)
+- [ ] Move sun by time of day
+- [ ] Items
+- [ ] Add tree canopies
+- [ ] Fix beaches (again)
