@@ -135,6 +135,6 @@ impl DrawChar for Living {
         root.put_char(pos.0 as i32,
                       pos.1 as i32,
                       self.species().chr,
-                      BackgroundFlag::Set);
+                      BackgroundFlag::Default);
     }
 }

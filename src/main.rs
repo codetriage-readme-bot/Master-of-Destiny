@@ -34,7 +34,7 @@ mod ui;
 mod worldgen;
 mod time;
 
-use ui::{Button, DrawUI, Layout, MouseUI};
+use ui::{Button, DrawUI, Layout, MouseUI, Textbox};
 
 use draw::draw_map;
 
@@ -70,6 +70,7 @@ unsafe fn load_custom_font(rows: usize) {
 enum GameScreen {
     Menu,
     Game,
+    GetSeed,
     Loading,
     Paused,
 }
@@ -86,6 +87,7 @@ struct Game {
     last_time: usize,
     menu: Layout,
     pause_menu: Layout,
+    textbox: Textbox,
     show_tools: Button,
     pub time: usize,
     pub screen: GameScreen,
@@ -120,6 +122,9 @@ impl Game {
                                     (screen_size.0 / 2, 4),
                                     (10, 0),
                                     10),
+            textbox: Textbox::new("Seed",
+                                  (screen_size.0 / 2, 30),
+                                  (10, 0)),
             world_state: WorldState::new(),
             seed: 0,
         }
@@ -149,6 +154,10 @@ impl Game {
 
     pub fn draw(&mut self, root: &mut RootConsole) {
         match self.screen {
+            GameScreen::GetSeed => {
+                root.clear();
+                self.textbox.draw(root, self.world_state.cursor);
+            }
             GameScreen::Loading => {
                 root.clear();
                 root.print_ex(self.constants.screen_size.0 / 2,
@@ -244,7 +253,9 @@ impl Game {
                         Some(item) => {
                             match item.trim().as_ref() {
                                 "new_game" => self.init_game(None),
-                                "use_seed" => self.init_game(None),
+                                "use_seed" => {
+                                    self.screen = GameScreen::GetSeed;
+                                },
                                 "resume" => {
                                     self.screen = GameScreen::Game
                                 }
@@ -307,6 +318,15 @@ impl Game {
 
     fn handle_key(&mut self, key: &input::Key) {
         match self.screen {
+            GameScreen::GetSeed => {
+                if key.code != input::KeyCode::Enter {
+                    self.textbox.input(key);
+                } else {
+                    if let Ok(s) = self.textbox.value.parse::<u32>() {
+                        self.init_game(Some(s));
+                    }
+                }
+            }
             GameScreen::Loading => {}
             GameScreen::Menu => {}
             GameScreen::Paused => {

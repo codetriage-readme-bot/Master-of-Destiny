@@ -1,9 +1,6 @@
 use std;
 
-use draw::DrawChar;
 use life::{Living, Mission, MissionResult};
-use tcod::Console;
-use tcod::RootConsole;
 use tcod::pathfinding::*;
 use utils::{Point3D, can_move, distance, nearest_perimeter_point,
             random_point};
@@ -20,7 +17,7 @@ macro_rules! matches {
             _ => false
         }
     )
- }
+}
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Carnivore {
@@ -216,10 +213,20 @@ impl Animal {
                     adj.push(if let Some(unit) = maybe_unit {
                         println!("    Looking at ({}, {})", x, y);
                         let tiles = unit.tiles.borrow();
-                        (tiles.get(self.pos.2)
-                           .unwrap_or(tiles.get(tiles.len() - 1)
-                                           .unwrap_or(&Tile::Empty)).clone(),
-                         (x as usize, y as usize, std::cmp::min(self.pos.2, tiles.len())))
+                        (
+                            tiles
+                                .get(self.pos.2)
+                                .unwrap_or(tiles
+                                           .get(std::cmp::max(0, tiles.len() as i32 - 1)
+                                                     as usize)
+                                           .unwrap_or(&Tile::Empty))
+                                .clone(),
+                            (
+                                x as usize,
+                                y as usize,
+                                std::cmp::min(self.pos.2, tiles.len()),
+                            ),
+                        )
                     } else {
                         (Tile::Empty, (x as usize, y as usize, 0))
                     })
@@ -243,9 +250,9 @@ impl Animal {
                     match m {
                         Eat(_) => {
                             let carnivore_food = matches!(s, Species::Carnivore(..)) &&
-                                          matches!(tile, Tile::Item(Item::Food(Food::Meat(..))));
+                                matches!(tile, Tile::Item(Item::Food(Food::Meat(..))));
                             let herbivore_food = matches!(s, Species::Herbivore(..)) &&
-                                          matches!(tile, Tile::Item(Item::Food(Food::Herb(..))));
+                                matches!(tile, Tile::Item(Item::Food(Food::Herb(..))));
                             if carnivore_food || herbivore_food {
                                 println!("      Edible food unit found");
                                 if !self.create_path_to(map, pnt) {
@@ -293,8 +300,7 @@ impl Animal {
                         }
                         GoToArea(rect, _) => {
                             let p = self.pos.clone();
-                            if !self.create_path_to(map,
-                                                    nearest_perimeter_point(rect, p)) {
+                            if !self.create_path_to(map, nearest_perimeter_point(rect, p)) {
                                 println!("      Cannot find path to area.");
                                 self.current_goal = None;
                                 self.failed_goal = Some(m);
@@ -303,14 +309,18 @@ impl Animal {
                         }
                         Go(point, _) => {
                             let p = self.pos.clone();
-                            if !self.create_path_to(map, (point.0, point.1, map.location_z(point))) {
+                            if !self.create_path_to(
+                                map,
+                                (point.0, point.1, map.location_z(point)),
+                            )
+                            {
                                 println!("       Cannot find path to point {:?}", point);
                                 self.current_goal = None;
                                 self.failed_goal = Some(m);
                             }
                             return MissionResult::NoResult;
                         }
-                        ref q => {}
+                        _ => {}
                     }
                 } else {
                     println!("Adding nonexistant mission");
@@ -379,14 +389,15 @@ impl Animal {
             }
             Some(Mission::Drink(_)) => {
                 if let Some(&(Tile::Item(Item::Food(Food::Water(q))), pnt)) =
-                    adj.iter().find(|&&(t, _)| {
-                        matches!(t, Tile::Item(Item::Food(..)))
-                    }) {
-                        self.thirst /= 4;
-                        MissionResult::ReplaceItem(pnt, Item::Food(Food::Water(q / 4)))
-                    } else {
-                        MissionResult::NoResult
-                    }
+                    adj.iter().find(
+                        |&&(t, _)| matches!(t, Tile::Item(Item::Food(..))),
+                    )
+                {
+                    self.thirst /= 4;
+                    MissionResult::ReplaceItem(pnt, Item::Food(Food::Water(q / 4)))
+                } else {
+                    MissionResult::NoResult
+                }
             }
             Some(Mission::Eat(p)) => {
                 if let Some(&(Tile::Item(Item::Food(food)), pnt)) =
