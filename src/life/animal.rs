@@ -360,8 +360,9 @@ impl Animal {
         if let Some(npos) = path.next() {
             self.pos = (npos.0 as usize,
                         npos.1 as usize,
-                        map.location_z((npos.0 as usize,
-                                        npos.1 as usize)));
+                        map.location_z_from_to(
+                            self.pos.2,
+                            (npos.0 as usize, npos.1 as usize)));
         } else {
             self.arrived = true;
         }

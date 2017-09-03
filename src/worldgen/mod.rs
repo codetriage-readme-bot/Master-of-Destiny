@@ -823,6 +823,27 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
         })
            .unwrap_or(10000000)
     }
+
+    pub fn location_z_from_to(&self, from: usize, to: Point2D) -> usize {
+        let loc = self.get(to);
+        let openings = loc.map(|u| {
+            let t = u.tiles.borrow();
+            t.iter()
+                .enumerate()
+                .filter(|&(_, t)| t == &Tile::Empty)
+                .map(|(i, _)| i)
+                .collect::<Vec<_>>()
+        }).unwrap_or(vec![1000000]);
+
+        openings.iter().fold(openings[0], |best, new| {
+            if (best as i32 - from as i32).abs() >
+                (*new as i32 - from as i32).abs() {
+                *new
+            } else {
+                best
+            }
+        })
+    }
 }
 
 /// Handles general time:
