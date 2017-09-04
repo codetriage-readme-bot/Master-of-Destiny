@@ -933,7 +933,7 @@ impl WorldState {
     /// Updates world time and then deligates to the physics engine.
     pub fn update(&mut self, time: usize, dt: usize) {
         self.update_time(time, dt);
-        //self.update_life();
+        self.update_life();
         //physics::run(self, dt);
     }
     /// Add a world map and update its meta layer.
