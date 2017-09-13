@@ -8,7 +8,7 @@ use tcod::console::{BackgroundFlag, Console};
 
 use life::Living;
 
-use worldgen::{Frames, WorldState};
+use worldgen::{Frames, World, WorldState};
 use worldgen::terrain::{TILES, Tile};
 
 pub trait DrawChar {
@@ -19,11 +19,83 @@ pub trait FramedDraw {
     fn draw_framed_char(&self,
                         root: &mut RootConsole,
                         pos: (usize, usize),
+                        time: usize,
                         frames_hash: &Frames);
 }
 
 pub trait Describe {
     fn describe(&self) -> String;
+}
+
+fn draw_hud(root: &mut RootConsole,
+            world: &WorldState,
+            world_map: &World,
+            wid: usize,
+            hig: usize) {
+    let frame_start_pos = (wid as i32 / 3) * 2 + 5;
+    let frame_width = wid as i32 - frame_start_pos;
+    let frame_height = hig as i32;
+    let mut window = &OffscreenConsole::new(frame_width,
+                                            frame_height);
+    window.print_frame(0,
+                       0,
+                       frame_width,
+                       frame_height,
+                       true,
+                       BackgroundFlag::Set,
+                       Some("Tools"));
+    let mut hud_info: [String; 8] =
+        [format!("Height: {}", world.level),
+         format!("Screen Position: {}, {}",
+                 world.screen.0,
+                 world.screen.1),
+         format!("Date: {}", world.time.calendar.describe()),
+         format!("Clock: {}", world.time.clock.describe()),
+         format!("Weather: {:?}", world.time.calendar.weather),
+         format!("Life #: {}", world_map.life.len()),
+         String::new(),
+         String::new()];
+    if (world.cursor.0 >= 0 &&
+            world.cursor.0 < world_map[0].len() as i32) &&
+        (world.cursor.1 >= 0 &&
+             world.cursor.1 < world_map.len() as i32)
+    {
+        let (cx, cy) = (world.cursor.0 as usize,
+                        world.cursor.1 as usize);
+        let wmap = &world_map[cy][cx];
+        let wmapt = wmap.tiles.borrow();
+        let len = wmapt.len().checked_sub(1).unwrap_or(0);
+        hud_info[6] = if len < world.level as usize {
+                          wmapt.get(len as usize)
+                      } else {
+                          wmapt.get(world.level as usize)
+                      }
+                      .unwrap_or(&Tile::Empty)
+                      .describe();
+        if len != world.level as usize {
+            hud_info[7] = format!("Distance from Level: {}",
+                                  world.level as i32 - len as i32);
+        }
+        root.set_char_background(cx as i32,
+                                 cy as i32,
+                                 Color::new(100, 100, 100),
+                                 BackgroundFlag::Darken);
+        if TILES {
+            root.set_char_foreground(cx as i32,
+                                     cy as i32,
+                                     Color::new(100, 100, 100));
+        }
+    }
+    for (i, line) in hud_info.iter().enumerate() {
+        window.print(1, i as i32 + 1, line);
+    }
+    console::blit(window,
+                  (0, 0),
+                  (frame_width, frame_height),
+                  root,
+                  (frame_start_pos, 0),
+                  1.0,
+                  0.6);
 }
 
 pub fn draw_map(root: &mut RootConsole,
@@ -59,6 +131,7 @@ pub fn draw_map(root: &mut RootConsole,
                                  .unwrap_or(&Tile::Empty)
                                  .draw_framed_char(root,
                                                    (x, y),
+                                                   time,
                                                    &world_map.frames);
                             if TILES {
                                 let raw_c = (256 as usize)
@@ -87,79 +160,7 @@ pub fn draw_map(root: &mut RootConsole,
             }
 
             if show_hud {
-                let frame_start_pos = (wid as i32 / 3) * 2 + 5;
-                let frame_width = wid as i32 - frame_start_pos;
-                let frame_height = hig as i32;
-                let mut window = &OffscreenConsole::new(frame_width,
-                                                        frame_height);
-                window.print_frame(0,
-                                   0,
-                                   frame_width,
-                                   frame_height,
-                                   true,
-                                   BackgroundFlag::Set,
-                                   Some("Tools"));
-                let mut hud_info: [String; 8] =
-                    [format!("Height: {}", world.level),
-                     format!("Screen Position: {}, {}",
-                             world.screen.0,
-                             world.screen.1),
-                     format!("ToD: {}",
-                             world.time.time_of_day.describe()),
-                     format!("Date: {}",
-                             world.time.calendar.describe()),
-                     format!("Clock: {}",
-                             world.time.clock.describe()),
-                     format!("Weather: {:?}",
-                             world.time.calendar.weather),
-                     String::new(),
-                     String::new()];
-                if (world.cursor.0 >= 0 &&
-                        world.cursor.0 < world_map[0].len() as i32) &&
-                    (world.cursor.1 >= 0 &&
-                         world.cursor.1 < world_map.len() as i32)
-                {
-                    let (cx, cy) = (world.cursor.0 as usize,
-                                    world.cursor.1 as usize);
-                    let wmap = &world_map[cy][cx];
-                    let wmapt = wmap.tiles.borrow();
-                    let len = wmapt.len().checked_sub(1).unwrap_or(0);
-                    hud_info[6] = if len < world.level as usize {
-                                      wmapt.get(len as usize)
-                                  } else {
-                                      wmapt.get(world.level as usize)
-                                  }
-                                  .unwrap_or(&Tile::Empty)
-                                  .describe();
-                    if len != world.level as usize {
-                        hud_info[7] = format!("Distance from Level: {}",
-                                              world.level as i32 -
-                                                  len as i32);
-                    }
-                    root.set_char_background(cx as i32,
-                                             cy as i32,
-                                             Color::new(100,
-                                                        100,
-                                                        100),
-                                             BackgroundFlag::Darken);
-                    if TILES {
-                        root.set_char_foreground(cx as i32,
-                                                 cy as i32,
-                                                 Color::new(100,
-                                                            100,
-                                                            100));
-                    }
-                }
-                for (i, line) in hud_info.iter().enumerate() {
-                    window.print(1, i as i32 + 1, line);
-                }
-                console::blit(window,
-                              (0, 0),
-                              (frame_width, frame_height),
-                              root,
-                              (frame_start_pos, 0),
-                              1.0,
-                              0.6);
+                draw_hud(root, world, world_map, wid, hig);
             }
         }
         None => {}
@@ -180,8 +181,9 @@ fn draw_life(root: &mut RootConsole,
                        pnt.1 as i32 - ws.screen.1);
         if rel_pnt.0 < wid && rel_pnt.1 < hig && rel_pnt.0 >= 0 &&
             rel_pnt.1 >= 0 &&
-            ws.level == l.current_pos().2 as i32
+            ws.level <= l.current_pos().2 as i32
         {
+            println!("{}", l.current_pos().2);
             l.draw_char(root,
                         (rel_pnt.0 as usize, rel_pnt.1 as usize));
         }

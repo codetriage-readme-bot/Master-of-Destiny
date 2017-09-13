@@ -3,9 +3,8 @@ extern crate rand;
 use std;
 use std::cmp;
 
-use worldgen::World;
-use worldgen::terrain::{Slope, Tile};
 use life;
+use worldgen::World;
 
 use physics::PhysicsActor;
 
@@ -74,22 +73,25 @@ pub fn distance3_d((x1, y1, z1): Point3D,
         .cbrt()
 }
 
-pub fn can_move<'a>(map: &'a World, animal: &'a life::Living)
-                    -> impl FnMut((i32, i32), (i32, i32)) -> f32 {
-    move |from, to| {
-        let zloc_from = animal.current_pos().2;
-        let uto = (to.0 as usize, to.1 as usize);
-        if let Some(new_point) = map.get(uto) {
-            let new_zloc = map.location_z_from_to(zloc_from, uto);
-            if (zloc_from as i32 - new_zloc as i32).abs() < 2 &&
-                !new_point.tiles.borrow()[new_zloc].solid() {
-                1.0
-            } else {
-                0.0
-            }
+pub fn can_move<'a>(map: &'a World,
+                    animal: &'a life::Living,
+                    to: (usize, usize))
+    -> isize {
+    let zloc_from = animal.current_pos().2;
+    let uto = (to.0 as usize, to.1 as usize);
+    if let Some(new_point) = map.get(uto) {
+        let new_zloc = map.location_z_from_to(zloc_from, uto);
+        if (zloc_from as i32 - new_zloc as i32)
+            .abs() < 2 &&
+            !new_point.tiles.borrow()[new_zloc]
+                .solid()
+        {
+            1
         } else {
-            0.0
+            0
         }
+    } else {
+        0
     }
 }
 

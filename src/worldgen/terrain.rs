@@ -1,4 +1,5 @@
 extern crate tcod;
+extern crate rand;
 
 use std;
 
@@ -7,8 +8,8 @@ use life::animal::Species;
 use physics::PhysicsActor;
 use tcod::colors::Color;
 use time::Calendar;
-use utils::{Point2D, Point3D};
-use worldgen::{FrameAssoc, Frames};
+use utils::Point2D;
+use worldgen::Frames;
 
 use tcod::RootConsole;
 use tcod::chars;
@@ -680,6 +681,23 @@ pub enum BiomeType {
     Beach,
     Water,
 }
+
+impl BiomeType {
+    pub fn stringified(&self) -> String {
+        use self::BiomeType::*;
+        match self {
+            &Swamp => "s",
+            &Jungle => "j",
+            &Forest => "f",
+            &Desert => "d",
+            &Pasture => "p",
+            &Beach => "b",
+            &Water => "w",
+        }
+        .to_string()
+    }
+}
+
 #[derive(Copy, Clone, PartialEq)]
 pub struct Biome {
     pub biome_type: BiomeType,
@@ -887,13 +905,13 @@ pub enum Item {
 }
 
 impl DrawChar for Item {
-    fn draw_char(&self, root: &mut RootConsole, pos: Point2D) {}
+    fn draw_char(&self, _root: &mut RootConsole, _pos: Point2D) {}
 }
 
 impl Describe for Item {
     fn describe(&self) -> String {
         match self {
-            &Item::Tool(tk, w, l, m) => {
+            &Item::Tool(tk, _w, l, m) => {
                 if m.is_some() {
                     format!("an enchanted length {} {:?}", l, tk)
                 } else {
@@ -1160,17 +1178,22 @@ impl FramedDraw for Tile {
     fn draw_framed_char(&self,
                         root: &mut RootConsole,
                         pos: Point2D,
+                        time: usize,
                         frames_hash: &Frames) {
+        use self::rand::Rng;
         match self {
             &Tile::Water(_, State::Liquid, _) => {
-                let mut frames = frames_hash["Water"].borrow_mut();
-                let chr =
-                    if TILES {
-                        std::char::from_u32(BASE + frames.all[frames.current] as u32)
+                let frames = &frames_hash["Water"];
+                let chr = if TILES {
+                    let rand = *rand::thread_rng()
+                        .choose(&[0, 1, 2])
+                        .unwrap();
+                    let cframe = frames[(time + rand) % frames.len()];
+                    std::char::from_u32(BASE + cframe as u32)
                         .unwrap()
-                    } else {
-                        '\u{f7}'
-                    };
+                } else {
+                    '\u{f7}'
+                };
                 root.put_char_ex(pos.0 as i32,
                                  pos.1 as i32,
                                  chr,
@@ -1180,8 +1203,6 @@ impl FramedDraw for Tile {
                                      Color::new(0, 105, 148)
                                  },
                                  Color::new(0, 159, 225));
-                frames.current += 1;
-                frames.current %= frames.all.len();
             }
             _ => self.draw_char(root, pos),
         }

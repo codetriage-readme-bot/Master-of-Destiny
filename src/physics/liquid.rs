@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use utils::weak_adjacent;
 use worldgen::Unit;
 use worldgen::terrain::*;
 
@@ -46,18 +45,18 @@ pub trait Liquid<L: Liquid<L>> {
     fn new(&self, quantity: i32) -> L;
 }
 
-pub fn solid_physics(pnt: (usize, usize),
-                     aj: Vec<Rc<Unit>>)
+pub fn solid_physics(_pnt: (usize, usize),
+                     _aj: Vec<Rc<Unit>>)
                      -> Option<Vec<Unit>> {
     None
 }
-pub fn liquid_physics(pnt: (usize, usize),
+pub fn liquid_physics(_pnt: (usize, usize),
                       aj: Vec<Rc<Unit>>)
                       -> Option<Vec<Unit>> {
     Some(
         aj.iter()
             .map(|u| {
-                let mut ut = u.tiles.borrow_mut();
+                let ut = u.tiles.borrow_mut();
                 let len = ut.len();
                 let new_height = len % 23;
                 if new_height <= len {

@@ -73,13 +73,15 @@
 - [x] Water shifted.
 - [x] Load terrain from seed
 - [x] Update game loop to be more reliable
-- [ ] Stop animal crashing
+- [x] Stop animal crashing
+- [ ] Make certain number of animals spawn no matter what
+- [ ] Add rivers.
 - [ ] Minions
-- [ ] Add loading screen
 - [ ] Weather (see notebook)
+- [ ] Add tree canopies
+- [ ] Move sun by time of day
+- [ ] Add loading screen
 - [ ] Speed up physics engine
 - [ ] Fluid dynamics (see notebook)
-- [ ] Move sun by time of day
 - [ ] Items
-- [ ] Add tree canopies
 - [ ] Fix beaches (again)

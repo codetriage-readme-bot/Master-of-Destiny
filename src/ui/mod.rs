@@ -1,7 +1,7 @@
 use tcod::RootConsole;
 use tcod::colors::*;
-use tcod::input;
 use tcod::console::{BackgroundFlag, Console, TextAlignment};
+use tcod::input;
 
 // Traits
 pub trait DrawUI {
@@ -72,8 +72,9 @@ pub struct Textbox {
 }
 impl Textbox {
     pub fn new(text: &'static str,
-           pos: (i32, i32),
-           size: (i32, i32)) -> Self {
+               pos: (i32, i32),
+               size: (i32, i32))
+               -> Self {
         Textbox {
             value: "".to_string(),
             placeholder: text.to_string(),
@@ -82,7 +83,6 @@ impl Textbox {
         }
     }
     pub fn input(&mut self, input: &input::Key) {
-        println!("{}", input.printable);
         if input.printable.is_alphanumeric() {
             self.value += &input.printable.to_string().to_owned();
         } else if input.code == input::KeyCode::Backspace {
@@ -108,7 +108,9 @@ impl DrawUI for Textbox {
                       TextAlignment::Center,
                       if self.value.is_empty() {
                           self.placeholder.clone()
-                      } else { self.value.clone() });
+                      } else {
+                          self.value.clone()
+                      });
         root.set_default_foreground(WHITE);
         root.set_default_background(BLACK);
     }
@@ -155,7 +157,7 @@ impl DrawUI for Layout {
 }
 
 impl MouseUI for Layout {
-    fn bbox(&self) -> BBox { ((0,0),(0,0)) }
+    fn bbox(&self) -> BBox { ((0, 0), (0, 0)) }
     fn id(&self) -> String { "".to_string() }
     fn bbox_colliding(&self, cursor: (i32, i32)) -> Option<String> {
         for button in self.buttons.iter().rev() {

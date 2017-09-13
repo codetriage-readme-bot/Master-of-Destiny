@@ -12,10 +12,8 @@ pub mod terrain;
 use self::rand::Rng;
 use self::terrain::*;
 
-use life;
-use life::{Living, Mission, MissionResult};
+use life::{Living, MissionResult};
 
-use physics;
 use physics::PhysicsActor;
 
 use time::{Calendar, Clock, Time};
@@ -41,20 +39,15 @@ pub struct Unit {
     pub tiles: RefCell<Vec<Tile>>,
 }
 
-/// Keeps track of the current animation frame and all the rest of the
-/// animation frames. These frames are stored relative to the
-/// beginning of the tiles in the tileset.
-#[derive(Clone)]
-pub struct FrameAssoc {
-    pub current: usize,
-    pub all: Vec<usize>,
-}
 /// A mapping of a unique string (based on the type of thing animated)
 /// to its FrameAssoc.
-pub type Frames = HashMap<String, RefCell<FrameAssoc>>;
+pub type Frames = HashMap<String, Vec<usize>>;
 
 /// A type alias for the world's map.
 pub type WorldMap = Vec<Vec<Unit>>;
+
+/// A type alias for the biome map.
+pub type BiomeMap = HashMap<String, RefCell<Vec<(usize, usize)>>>;
 
 /// Keeps track of the state of they physical world, including:
 /// * the heightmap
@@ -66,6 +59,7 @@ pub struct World {
     stone_vein_noise: Noise,
     pub map_size: Point2D,
     pub frames: Frames,
+    pub biome_map: BiomeMap,
     pub map: WorldMap,
     pub life: Vec<RefCell<Box<Living>>>,
 }
@@ -88,7 +82,7 @@ const THRESHOLD: f32 = 0.5;
 const SEA_LEVEL: f32 = 15.0;
 const VEG_THRESHOLD: f32 = 200.0;
 const RAMP_THRESHOLD: f32 = 0.015;
-const ANIMAL_COUNT: usize = 34;
+const ANIMAL_COUNT: usize = 300;
 
 impl World {
     /// Generates a new hightmap-based world map of the specified
@@ -108,6 +102,11 @@ impl World {
             map_size: size,
             heightmap: Self::generate_heightmap(size, seed),
             map: vec![],
+            biome_map: ["s", "j", "f", "d", "p", "b", "w"]
+                .iter()
+                .cloned()
+                .map(|x| (x.to_string(), RefCell::new(vec![])))
+                .collect(),
             stone_vein_noise: Noise::init_with_dimensions(3)
                 .lacunarity(0.43)
                 .hurst(-0.9)
@@ -117,13 +116,10 @@ impl World {
                 .init(),
             life: vec![],
             frames: [("Water".to_string(),
-                      FrameAssoc {
-                          current: 0,
-                          all: vec![16, 32, 33, 34, 35, 36],
-                      })]
+                      vec![16, 32, 33, 34, 35, 36])]
                     .iter()
                     .cloned()
-                    .map(|(x, y)| (x, RefCell::new(y)))
+                    .map(|(x, y)| (x, y))
                     .collect(),
         };
         world.map = Self::map_from(size, &world, seed);
@@ -193,24 +189,43 @@ impl World {
         Some(Animal::new(pnt, species))
     }
 
+
     /// Creates a vector of animals based on biome and height.
     pub fn generate_life(&mut self) {
         let mut trng = rand::thread_rng();
-        self.life = (0..ANIMAL_COUNT)
-            .map(|_num| {
-                let x = trng.gen_range(0, self.map_size.0);
-                let y = trng.gen_range(0, self.map_size.1);
-                if let Some(unit) = self.get((x, y)) {
-                    if let Some(animal) = World::create_life_by_biome((x, y,
-                                                     self.location_z((x, y))),
-                                                                      unit.biome.unwrap()) {
-                        Some(RefCell::new(animal))} else {None}
-                } else {
-                    None
+        for _ in 0..ANIMAL_COUNT {
+            let bks = self.biome_map
+                          .iter()
+                          .map(|(k, _)| k.clone())
+                          .collect::<Vec<_>>();
+            println!("Biome options #: {}", bks.len());
+            if let Some(chosen_biome) = trng.choose(&bks) {
+                let bps = &self.biome_map[chosen_biome];
+                println!("  Biome position options #: {}",
+                         bps.borrow().len());
+                if let Some(point) = trng.choose(&bps.borrow()) {
+                    println!("    Point chosen: {:?}", *point);
+                    if let Some(unit) = self.get(*point) {
+                        let z = self.location_z(*point);
+                        let ut = unit.tiles.borrow();
+                        let tile = ut.get(z);
+                        println!("    # of tiles: {}, z level: {}",
+                                 ut.len(),
+                                 z);
+                        if tile.is_some() && !tile.unwrap().solid() {
+                            println!("    Valid point!");
+                            let animal = World::create_life_by_biome(
+                                (point.0, point.1, z),
+                                unit.biome.unwrap());
+                            if let Some(animal) = animal {
+                                println!("      Animal selected.");
+                                self.life.push(RefCell::new(animal));
+                            }
+                        }
+                    }
                 }
-            })
-            .filter_map(|x| x)
-            .collect();
+            }
+        }
     }
 
     unsafe fn get_slope(&self, x: usize, y: usize) -> f32 {
@@ -298,7 +313,10 @@ impl World {
 
     /// Step 3 of map generation:
     /// Generate biomes (temp, percipitation) from altitude and a noise
-    fn biomes_from_height_and_noise(world: WorldMap, seed: u32) -> WorldMap {
+    fn biomes_from_height_and_noise(world_map: WorldMap,
+                                    world: &World,
+                                    seed: u32)
+        -> WorldMap {
         let bnoise = Noise::init_with_dimensions(2)
             .lacunarity(0.43)
             .hurst(-0.9)
@@ -306,9 +324,9 @@ impl World {
             .random(random::Rng::new_with_seed(random::Algo::MT,
                                                seed))
             .init();
-        world.iter()
-             .enumerate()
-             .map(|(y, row)| {
+        world_map.iter()
+                 .enumerate()
+                 .map(|(y, row)| {
             row.iter()
                .enumerate()
                .map(|(x, unit)| {
@@ -316,36 +334,42 @@ impl World {
                     strict_adjacent((x, y))
                         .iter()
                         .map(|&(x, y)| {
-                            let row = get!(world.get(y));
+                            let row = get!(world_map.get(y));
                             let unit = get!(row.get(x));
                             Some(unit.tiles.borrow().len())
                         })
                         .filter_map(|x| x)
                         .fold((0, 0), |(s, n), x| (s + x, n + 1));
-                let noise = (bnoise.get_fbm([x as f32, y as f32], 6) *
-                                 100f32) as
-                    i32;
+                let noise = bnoise.get_fbm([x as f32, y as f32], 6) *
+                    100.0;
+                let biome = World::biome_from_noise(noise as i32,
+                                                    (sh as i32 / n) as
+                                                        f32);
+                let bn = &biome.biome_type.stringified();
+                if let Some(bml) = world.biome_map.get(bn) {
+                    bml.borrow_mut().push((x, y));
+                }
                 Unit {
                     tiles: unit.tiles.clone(),
-                    biome: Some(unit.biome.unwrap_or(World::biome_from_noise(noise,
-                                                        (sh as i32 /
-                                                             n) as
-                                                            f32))),
+                    biome: Some(unit.biome.unwrap_or(biome)),
                 }
             })
                .collect::<Vec<_>>()
         })
-             .collect::<Vec<_>>()
+                 .collect::<Vec<_>>()
     }
 
     /// Step 4 of map generation:
     /// Generate vegitation based on what survives where in the biomes, and height.
-    fn vegitation_from_biomes(world: WorldMap, seed: u32) -> WorldMap {
+    fn vegitation_from_biomes(world: WorldMap,
+                              seed: u32)
+        -> WorldMap {
         let vnoise = Noise::init_with_dimensions(2)
             .lacunarity(0.3)
             .hurst(-0.9)
             .noise_type(NoiseType::Simplex)
-            .random(random::Rng::new_with_seed(random::Algo::MT, seed))
+            .random(random::Rng::new_with_seed(random::Algo::MT,
+                                               seed))
             .init();
         world.iter()
              .enumerate()
@@ -445,7 +469,7 @@ impl World {
             vec![]
                 => {|i| rock_from_terrain(ws, size, i)}
             => water_from_low
-            => { |x| biomes_from_height_and_noise(x, seed) }
+            => { |x| biomes_from_height_and_noise(x, ws, seed) }
             => { |x| vegitation_from_biomes(x, seed) }
             => { |x| add_soil(x, seed) }
         )
@@ -819,30 +843,38 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
              .enumerate()
              .find(|&t| *t.1 == Tile::Empty)
              .map(|(i, _)| i)
-             .unwrap_or(t.len())
+             .unwrap_or(t.len() - 1)
         })
            .unwrap_or(10000000)
     }
 
-    pub fn location_z_from_to(&self, from: usize, to: Point2D) -> usize {
+    pub fn location_z_from_to(&self,
+                              from: usize,
+                              to: Point2D)
+        -> usize {
         let loc = self.get(to);
-        let openings = loc.map(|u| {
-            let t = u.tiles.borrow();
-            t.iter()
-                .enumerate()
-                .filter(|&(_, t)| t == &Tile::Empty)
-                .map(|(i, _)| i)
-                .collect::<Vec<_>>()
-        }).unwrap_or(vec![1000000]);
+        let mut openings =
+            loc.map(|u| {
+                let t = u.tiles.borrow();
+                t.iter()
+                 .enumerate()
+                 .filter(|&(_, t)| t == &Tile::Empty)
+                 .map(|(i, _)| i)
+                 .collect::<Vec<_>>()
+            })
+               .unwrap_or(vec![1000]);
+        openings.sort_by(|a, b| b.cmp(a));
 
-        openings.iter().fold(openings[0], |best, new| {
-            if (best as i32 - from as i32).abs() >
-                (*new as i32 - from as i32).abs() {
+        openings.iter().fold(
+            *openings.get(0).unwrap_or(&1000),
+            |best, new| if (best as i32 - from as i32).abs() >
+                (*new as i32 - from as i32).abs()
+            {
                 *new
             } else {
                 best
-            }
-        })
+            },
+        )
     }
 }
 
@@ -905,7 +937,7 @@ impl WorldState {
                         MissionResult::RemoveItem(pnt) => {
                             let unit = &world.map[pnt.1][pnt.0];
                             let mut tiles = unit.tiles.borrow_mut();
-                            tiles[pnt.2] = Tile::Empty;
+                            tiles[pnt.2] = Tile::Empty
                         }
                         MissionResult::ReplaceItem(pnt, item) => {
                             let unit = &world.map[pnt.1][pnt.0];
@@ -926,14 +958,16 @@ impl WorldState {
                     .borrow_mut()
                     [pos.2] =
                     Tile::Item(Item::Food(Food::Meat(l.species()
-                                                     .species)))
+                                                      .species)))
             }
         }
     }
     /// Updates world time and then deligates to the physics engine.
     pub fn update(&mut self, time: usize, dt: usize) {
         self.update_time(time, dt);
-        self.update_life();
+        if time % 2 == 0 {
+            self.update_life();
+        }
         //physics::run(self, dt);
     }
     /// Add a world map and update its meta layer.

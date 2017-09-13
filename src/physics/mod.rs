@@ -1,5 +1,5 @@
 use utils::strict_adjacent;
-use worldgen::{World, WorldState};
+use worldgen::WorldState;
 use worldgen::terrain::Tile;
 
 pub mod liquid;
@@ -22,7 +22,7 @@ fn unsupported(tile: Tile,
         solid_cnt < 2
 }
 
-pub fn run(ws: &mut WorldState, dt: usize) {
+pub fn run(ws: &mut WorldState, _dt: usize) {
     if let Some(ref world) = ws.map {
         let map = &world.map;
         for y in 0..(world.map_size.1) {

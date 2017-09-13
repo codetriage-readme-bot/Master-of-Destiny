@@ -156,7 +156,8 @@ impl Game {
         match self.screen {
             GameScreen::GetSeed => {
                 root.clear();
-                self.textbox.draw(root, self.world_state.cursor);
+                self.textbox
+                    .draw(root, self.world_state.cursor);
             }
             GameScreen::Loading => {
                 root.clear();
@@ -255,7 +256,7 @@ impl Game {
                                 "new_game" => self.init_game(None),
                                 "use_seed" => {
                                     self.screen = GameScreen::GetSeed;
-                                },
+                                }
                                 "resume" => {
                                     self.screen = GameScreen::Game
                                 }

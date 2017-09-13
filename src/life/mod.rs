@@ -120,6 +120,8 @@ pub trait Living {
     /// Removes n least important missions from goals.
     /// Returns removed missions.
     fn prioritize(&mut self, number: usize) -> Vec<Mission>;
+    /// Returns the current goal.
+    fn goals(&self) -> (Option<&Mission>, Option<&Mission>);
     /// Chooses highest priority mission, excecutes one step of it, and
     /// returns it if done, otherwise returns None.
     fn execute_mission(&mut self, ws: &World) -> MissionResult;
