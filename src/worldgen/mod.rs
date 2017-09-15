@@ -82,7 +82,7 @@ const THRESHOLD: f32 = 0.5;
 const SEA_LEVEL: f32 = 15.0;
 const VEG_THRESHOLD: f32 = 200.0;
 const RAMP_THRESHOLD: f32 = 0.015;
-const ANIMAL_COUNT: usize = 300;
+const ANIMAL_COUNT: usize = 30;
 
 impl World {
     /// Generates a new hightmap-based world map of the specified
@@ -198,30 +198,21 @@ impl World {
                           .iter()
                           .map(|(k, _)| k.clone())
                           .collect::<Vec<_>>();
-            println!("Biome options #: {}", bks.len());
-            if let Some(chosen_biome) = trng.choose(&bks) {
-                let bps = &self.biome_map[chosen_biome];
-                println!("  Biome position options #: {}",
-                         bps.borrow().len());
-                if let Some(point) = trng.choose(&bps.borrow()) {
-                    println!("    Point chosen: {:?}", *point);
-                    if let Some(unit) = self.get(*point) {
-                        let z = self.location_z(*point);
-                        let ut = unit.tiles.borrow();
-                        let tile = ut.get(z);
-                        println!("    # of tiles: {}, z level: {}",
-                                 ut.len(),
-                                 z);
-                        if tile.is_some() && !tile.unwrap().solid() {
-                            println!("    Valid point!");
-                            let animal = World::create_life_by_biome(
-                                (point.0, point.1, z),
-                                unit.biome.unwrap());
-                            if let Some(animal) = animal {
-                                println!("      Animal selected.");
-                                self.life.push(RefCell::new(animal));
-                            }
-                        }
+            let chosen_biome = trng.choose(&bks).unwrap();
+            let bps = &self.biome_map[chosen_biome];
+            if let Some(point) = trng.choose(&bps.borrow()) {
+                let unit = self.get(*point).unwrap();
+                let z = self.location_z(*point);
+                let ut = unit.tiles.borrow();
+                let tile = ut.get(z);
+                if tile.is_some() && !tile.unwrap().solid() {
+                    let p3d = (point.0, point.1, z);
+                    let animal =
+                        World::create_life_by_biome(p3d,
+                                                    unit.biome
+                                                        .unwrap());
+                    if let Some(animal) = animal {
+                        self.life.push(RefCell::new(animal));
                     }
                 }
             }
@@ -843,7 +834,9 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
              .enumerate()
              .find(|&t| *t.1 == Tile::Empty)
              .map(|(i, _)| i)
-             .unwrap_or(t.len() - 1)
+             .unwrap_or(t.len()
+                         .checked_sub(1)
+                         .unwrap_or(1000000))
         })
            .unwrap_or(10000000)
     }
@@ -855,20 +848,24 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
         let loc = self.get(to);
         let mut openings =
             loc.map(|u| {
-                let t = u.tiles.borrow();
-                t.iter()
+                u.tiles
+                 .borrow()
+                 .iter()
                  .enumerate()
-                 .filter(|&(_, t)| t == &Tile::Empty)
-                 .map(|(i, _)| i)
+                 .flat_map(|(i, t)| if t.solid() {
+                               None
+                           } else {
+                               Some(i)
+                           })
                  .collect::<Vec<_>>()
             })
                .unwrap_or(vec![1000]);
         openings.sort_by(|a, b| b.cmp(a));
 
         openings.iter().fold(
-            *openings.get(0).unwrap_or(&1000),
-            |best, new| if (best as i32 - from as i32).abs() >
-                (*new as i32 - from as i32).abs()
+            1000,
+            |best, new| if (*new as i32 - from as i32).abs() <
+                (best as i32 - from as i32).abs()
             {
                 *new
             } else {

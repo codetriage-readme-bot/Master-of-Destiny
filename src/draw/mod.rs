@@ -181,9 +181,8 @@ fn draw_life(root: &mut RootConsole,
                        pnt.1 as i32 - ws.screen.1);
         if rel_pnt.0 < wid && rel_pnt.1 < hig && rel_pnt.0 >= 0 &&
             rel_pnt.1 >= 0 &&
-            ws.level <= l.current_pos().2 as i32
+            ws.level >= l.current_pos().2 as i32
         {
-            println!("{}", l.current_pos().2);
             l.draw_char(root,
                         (rel_pnt.0 as usize, rel_pnt.1 as usize));
         }

@@ -1,11 +1,7 @@
-extern crate pathfinding;
-
-use self::pathfinding::astar;
-
 use std;
 
 use life::{Living, Mission, MissionResult};
-use utils::{Point2D, Point3D, can_move, distance,
+use utils::{Point2D, Point3D, can_move, distance, find_path,
             nearest_perimeter_point, random_point, strict_adjacent};
 use worldgen::World;
 use worldgen::terrain::{Food, Item, Tile};
@@ -182,7 +178,7 @@ pub struct Animal {
     thirst: i32,
     hunger: i32,
     goals: Vec<super::Mission>,
-    path: Option<Vec<Point2D>>,
+    path: Option<Vec<Point3D>>,
     arrived: bool,
     failed_goal: Option<super::Mission>,
     pub species: SpeciesProperties,
@@ -344,38 +340,15 @@ impl Animal {
 
     fn create_path_to(&self,
                       map: &World,
-                      pnt: Point3D)
-        -> Option<Vec<Point2D>> {
-        let goal = (self.pos.0, self.pos.1);
-        astar(
-            &goal,
-            |&pnt| {
-                strict_adjacent(pnt)
-                    .into_iter()
-                    .map(|p| (p, can_move(map, self, p)))
-            },
-            |&(x, y)| {
-                (((x as i32 - pnt.0 as i32).abs() +
-                      (y as i32 - pnt.1 as i32).abs()) /
-                     3) as isize
-            },
-            |&p| p == goal,
-        )
-        .map(|(mut p, _c)| {
-            p.reverse();
-            p
-        })
+                      goal: Point3D)
+        -> Option<Vec<Point3D>> {
+        find_path(map, self.pos, goal)
     }
 
     fn continue_movement(&mut self, map: &World) {
         if let Some(ref mut path) = self.path {
             if let Some(npos) = path.pop() {
-                self.pos =
-                    (npos.0 as usize,
-                     npos.1 as usize,
-                     map.location_z_from_to(self.pos.2,
-                                            (npos.0 as usize,
-                                             npos.1 as usize)));
+                self.pos = npos;
             } else {
                 self.arrived = true;
             }

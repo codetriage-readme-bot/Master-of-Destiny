@@ -2,6 +2,9 @@ extern crate rand;
 
 use std;
 use std::cmp;
+use std::cmp::Ordering;
+use std::collections::BinaryHeap;
+use std::collections::HashMap;
 
 use life;
 use worldgen::World;
@@ -69,6 +72,12 @@ pub fn nearest_perimeter_point(((x1, y1), (x2, y2), _): Rect2D3D,
 pub fn distance3_d((x1, y1, z1): Point3D,
                    (x2, y2, z2): Point3D)
     -> f32 {
+    let x1 = x1 as isize;
+    let y1 = y1 as isize;
+    let z1 = z1 as isize;
+    let x2 = x2 as isize;
+    let y2 = y2 as isize;
+    let z2 = z2 as isize;
     (((x2 - x1).pow(2) + (y2 - y1).pow(2) + (z2 - z1).pow(2)) as f32)
         .cbrt()
 }
@@ -76,7 +85,7 @@ pub fn distance3_d((x1, y1, z1): Point3D,
 pub fn can_move<'a>(map: &'a World,
                     animal: &'a life::Living,
                     to: (usize, usize))
-    -> isize {
+    -> bool {
     let zloc_from = animal.current_pos().2;
     let uto = (to.0 as usize, to.1 as usize);
     if let Some(new_point) = map.get(uto) {
@@ -86,12 +95,12 @@ pub fn can_move<'a>(map: &'a World,
             !new_point.tiles.borrow()[new_zloc]
                 .solid()
         {
-            1
+            true
         } else {
-            0
+            false
         }
     } else {
-        0
+        false
     }
 }
 
@@ -102,4 +111,94 @@ pub fn random_point(min_x: usize,
     -> Point2D {
     let mut trng = rand::thread_rng();
     (trng.gen_range(min_x, max_x), trng.gen_range(min_y, max_y))
+}
+
+pub fn strict_3d_adjacent(pos: Point3D, map: &World) -> Vec<Point3D> {
+    strict_adjacent((pos.0, pos.1))
+        .iter()
+        .map(|pnt| {
+            (pnt.0, pnt.1, map.location_z_from_to(pos.2, *pnt))
+        })
+        .filter(|pnt3d| {
+            map.get((pnt3d.0, pnt3d.1))
+               .map_or(false, |unit| {
+                unit.tiles
+                    .borrow()
+                    .get(pnt3d.2)
+                    .map_or(false, |x| !x.solid())
+            })
+        })
+        .collect()
+}
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+struct State {
+    cost: isize,
+    pos: Point3D,
+}
+
+impl Ord for State {
+    fn cmp(&self, other: &State) -> Ordering {
+        other.cost.cmp(&self.cost)
+    }
+}
+
+impl PartialOrd for State {
+    fn partial_cmp(&self, other: &State) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+/// Greedy best-first pathfinding search. Works on 3D points, but
+/// treats them as just levels of a 2D plane, not full 3D. This means
+/// that when it goes from one tile to the next, it chooses the
+/// closest empty tile on the second one. I chose GBFS because it is
+/// fast and simple, and finding the absolute best path is not a goal.
+pub fn find_path(map: &World,
+                 start: Point3D,
+                 goal: Point3D)
+    -> Option<Vec<Point3D>> {
+    let mut frontier = BinaryHeap::new();
+    frontier.push(State {
+                      cost: 0,
+                      pos: start,
+                  });
+
+    let mut came_from = HashMap::new();
+    came_from.insert(start, None);
+
+    while frontier.len() != 0 {
+        let current = frontier.pop();
+        if current.unwrap().pos == goal {
+            break;
+        }
+        for next in strict_3d_adjacent(current.unwrap().pos, map) {
+            if !came_from.contains_key(&next) {
+                frontier.push(State {
+                                  pos: next,
+                                  cost: distance3_d(goal, next) as
+                                      isize,
+                              });
+                came_from.insert(next, current.map(|a| a.pos));
+            }
+        }
+    }
+
+    let mut current = goal;
+    let mut path = vec![current];
+    while current != start {
+        if let Some(c) = came_from.get(&current) {
+            if let Some(c) = *c {
+                current = c;
+                path.push(current);
+            } else {
+                return None;
+            }
+        } else {
+            return None;
+        }
+    }
+    path.push(start);
+    path.reverse();
+    Some(path)
 }
