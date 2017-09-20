@@ -410,23 +410,11 @@ impl World {
                     let adj =
                         strict_adjacent((x, y))
                             .iter()
-                            .map(|p| if let Some(unit) = get_op(
-                                *p,
-                                &world,
-                            )
-                            {
-                                unit.tiles
-                                    .borrow()
-                                    .get(h as usize)
-                                    .unwrap_or(&Tile::Empty)
-                                    .clone()
-                            } else {
-                                Tile::Empty
-                            })
+                            .filter_map(|p| get_op(*p, &world).cloned())
                             .collect::<Vec<_>>();
                     if (h as usize) < t.len() {
                         t[h as usize] = Tile::Stone(
-                           StoneTypes::Soil(World::soil_choice(adj, seed)),
+                           StoneTypes::Soil(World::soil_choice(h, adj, seed)),
                            State::Solid);
                     } else {
                         break;
@@ -697,21 +685,44 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
         }
     }
 
+    pub fn is_water(x: Tile) -> bool { matches!(x, Tile::Water(..)) }
+
+    pub fn is_sand(x: Tile) -> bool {
+        matches!(x, Tile::Stone(StoneTypes::Soil(SoilTypes::Sandy), _))
+    }
+
+    pub fn is_veg(x: Tile) -> bool {
+        matches!(x, Tile::Vegetation(..))
+    }
+
+    pub fn is_stone(x: Tile) -> bool { matches!(x, Tile::Stone(..)) }
+
     /// Chooses a type of soil based on adjacency to certain features.
-    fn soil_choice(adj: Vec<Tile>, seed: u32) -> SoilTypes {
+    fn soil_choice(height: i32,
+                   adj: Vec<Unit>,
+                   seed: u32)
+        -> SoilTypes {
         use self::rand::{Rng, SeedableRng, StdRng};
         let seed: &[_] = &[seed as usize];
         let mut rng: StdRng = SeedableRng::from_seed(seed);
 
-        let (water_adjacent, sand_adjacent, veg_adjacent, sedimentary_adjacent) = adj.iter()
-                                .fold((false, false, false, false),
-                                      |(w, s, v, sd), x|
-                                      {
-                                          (w || matches!(*x, Tile::Water(..)),
-                                           s || matches!(*x, Tile::Stone(StoneTypes::Soil(SoilTypes::Sandy), _)),
-                                           v || matches!(*x, Tile::Vegetation(..)),
-                                           sd || matches!(*x, Tile::Stone(..)))
-                                      });
+        let falses = (false, false, false, false);
+        let adjacencies = adj.iter()
+                             .fold(falses, |(w, s, v, sd), x| {
+            let ut = x.tiles.borrow();
+            if let Some(tx) = ut.get(height as usize) {
+                (w || ut.iter().any(|x| Self::is_water(*x)),
+                 s || Self::is_sand(*tx),
+                 v || Self::is_veg(*tx),
+                 sd || Self::is_stone(*tx))
+            } else {
+                (w || ut.iter().any(|x| Self::is_water(*x)), s, v, sd)
+            }
+        });
+        let (water_adjacent,
+             sand_adjacent,
+             veg_adjacent,
+             sedimentary_adjacent) = adjacencies;
         if water_adjacent {
             SoilTypes::Sandy
         } else if sand_adjacent && rng.gen_range(0, 100) <= 55 {

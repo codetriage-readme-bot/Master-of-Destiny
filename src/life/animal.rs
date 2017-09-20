@@ -1,13 +1,17 @@
+extern crate rand;
+use self::rand::Rng;
+
 use std;
 
 use life::{Living, Mission, MissionResult};
-use utils::{Point2D, Point3D, can_move, distance, find_path,
-            nearest_perimeter_point, random_point, strict_adjacent};
+use utils::{Point3D, distance, find_path, nearest_perimeter_point,
+            random_point};
 use worldgen::World;
-use worldgen::terrain::{Food, Item, Tile};
+use worldgen::terrain::{Biome, BiomeType, Food, IgneousRocks, Item,
+                        State, StoneTypes, Tile};
 
-const THIRST_THRESHOLD: i32 = 259_200;
-const HUNGER_THRESHOLD: i32 = 1_814_400;
+const THIRST_THRESHOLD: i32 = 3000;
+const HUNGER_THRESHOLD: i32 = 6800;
 
 macro_rules! matches {
     ($e:expr, $p:pat) => (
@@ -51,6 +55,25 @@ pub struct SpeciesProperties {
     pub sight: u8,
     pub mood: super::Mood,
     pub species: Species,
+}
+
+impl SpeciesProperties {
+    pub fn can_go(&self, biome: Biome) -> bool {
+        use self::Species::*;
+        use self::Carnivore::*;
+
+        let b = biome.biome_type;
+        match self.species {
+            Carnivore(Whale) => b == BiomeType::Water,
+            Carnivore(Fish) => b == BiomeType::Water,
+            Carnivore(Shark) => b == BiomeType::Water,
+            Carnivore(Dog) => b != BiomeType::Water,
+            Carnivore(Cat) => b != BiomeType::Water,
+            Carnivore(Wolf) => b != BiomeType::Water,
+            Herbivore(_) => b != BiomeType::Water,
+            _ => true,
+        }
+    }
 }
 
 impl Species {
@@ -190,7 +213,7 @@ impl Animal {
     pub fn new(pnt: Point3D, species: Species) -> Box<super::Living> {
         Box::new(Animal {
                      thirst: 30,
-                     hunger: 200,
+                     hunger: 0,
                      goals: vec![],
                      path: None,
                      arrived: false,
@@ -239,8 +262,6 @@ impl Animal {
                     map: &World,
                     adj: Vec<(Tile, Point3D)>)
         -> MissionResult {
-        self.hunger += 1;
-        self.thirst += 1;
         use self::Mission::*;
         if self.path.is_none() && !self.arrived {
             for (tile, pnt) in adj {
@@ -331,8 +352,11 @@ impl Animal {
             self.failed_goal = self.current_goal.clone();
             self.current_goal = None;
         } else if self.path.is_some() {
+            self.hunger += 10;
+            self.thirst += 10;
             self.continue_movement(map);
         } else if self.arrived {
+            self.thirst += 10;
             return self.stationary_action(map, adj);
         }
         MissionResult::NoResult
@@ -342,10 +366,15 @@ impl Animal {
                       map: &World,
                       goal: Point3D)
         -> Option<Vec<Point3D>> {
-        find_path(map, self.pos, goal)
+        let unit = map.get((goal.0, goal.1)).unwrap();
+        if self.species.can_go(unit.biome.unwrap()) {
+            find_path(map, self.pos, goal)
+        } else {
+            None
+        }
     }
 
-    fn continue_movement(&mut self, map: &World) {
+    fn continue_movement(&mut self, _map: &World) {
         if let Some(ref mut path) = self.path {
             if let Some(npos) = path.pop() {
                 self.pos = npos;
@@ -463,10 +492,15 @@ impl Living for Animal {
     }
 
     fn prioritize(&mut self, n: usize) -> Vec<Mission> {
-        self.goals.drain(0..n).collect()
+        if n <= self.goals.len() {
+            self.goals.drain(0..n).collect()
+        } else {
+            self.goals.clone()
+        }
     }
 
     fn execute_mission(&mut self, map: &World) -> MissionResult {
+        println!("{:?}", self.goals);
         if self.current_goal.is_some() {
             self.satisfy_current_goal(map)
         } else {
@@ -485,17 +519,18 @@ impl Living for Animal {
             self.hunger >= HUNGER_THRESHOLD
         {
             return Some(Mission::Die);
-        } else if self.thirst >= THIRST_THRESHOLD - self.tolerance() {
-            self.prioritize(2);
-            let magnitude = (self.thirst - THIRST_THRESHOLD)
+        }
+        if self.thirst >= THIRST_THRESHOLD - self.tolerance() {
+            let magnitude = (THIRST_THRESHOLD - self.thirst)
                 .abs() as usize;
             self.add_goal(Mission::Drink(magnitude));
-        } else if self.hunger >= HUNGER_THRESHOLD - self.tolerance() {
-            self.prioritize(2);
-            let magnitude = (self.hunger - THIRST_THRESHOLD)
+        }
+        if self.hunger >= HUNGER_THRESHOLD - self.tolerance() {
+            let magnitude = (HUNGER_THRESHOLD - self.hunger)
                 .abs() as usize;
             self.add_goal(Mission::Eat(magnitude));
-        } else if let Some(g) = self.failed_goal.clone() {
+        }
+        if let Some(g) = self.failed_goal.clone() {
             match g {
                 Mission::Eat(p) => {
                     if matches!(self.species.species,
@@ -509,13 +544,43 @@ impl Living for Animal {
                     self.failed_goal = None;
                 }
             }
-        } else {
-            self.current_goal =
-                Some(Mission::Go(random_point(0,
-                                              map.map_size.0,
-                                              0,
-                                              map.map_size.1),
-                                 10));
+        }
+        println!("{:?}", self.goals);
+        if self.goals.len() == 0 {
+            match self.species.species {
+                // Whales like to form schools. That should become an
+                // emergant property of this.
+                Species::Carnivore(Carnivore::Whale) => {
+                    let mut trng = self::rand::thread_rng();
+                    let whales =
+                        &map.life
+                            .iter()
+                            .filter_map(
+                            |a| if let Ok(a) = a.try_borrow() {
+                                if a.species().species ==
+                            Species::Carnivore(Carnivore::Whale)
+                        {
+                            Some(a.current_pos())
+                        } else {
+                            None
+                        }
+                            } else {
+                                None
+                            },
+                        )
+                            .collect::<Vec<_>>();
+                    let goal = trng.choose(whales).unwrap();
+                    self.add_goal(Mission::Go((goal.0, goal.1), 10));
+                }
+                _ => {
+                    self.add_goal(
+                    Mission::Go(random_point(0,
+                                                  map.map_size.0,
+                                                  0,
+                                                  map.map_size.1),
+                                     12));
+                }
+            }
         }
         self.current_goal.clone()
     }
