@@ -49,13 +49,6 @@ const MAP_SIZE: (usize, usize) = (160, 160);
 
 const MOVE_DIST: i32 = 5;
 
-const TITLE_CARD: [&'static str; 6] = ["   _________ __",
-                                       "  /   _____/|  | __ ___.__.  ____________  _____     ____    ____",
-                                       "  \\_____  \\ |  |/ /<   |  | /  ___/\\____ \\ \\__  \\  _/ ___\\ _/ __ \\",
-                                       "  /        \\|    <  \\___  | \\___ \\ |  |_> > / __ \\_\\  \\___ \\  ___/",
-                                       " /_______  /|__|_ \\ / ____|/____  >|   __/ (____  / \\___  > \\___  >",
-                                       " \\/      \\/      \\/             \\/ |__|         \\/      \\/      \\/"];
-
 unsafe fn load_custom_font(rows: usize) {
     let mut loc = BASE;
     for y in 16..(16 + rows) {
@@ -177,9 +170,14 @@ impl Game {
             }
             GameScreen::Menu => {
                 root.clear();
+                let TITLE_CARD: Vec<&'static str> =
+                    r" _      ____  ____ _____ _____ ____    ____  _____   ____  _____ ____ _____ _  _     ___  _
+/ \__/|/  _ \/ ___Y__ __Y  __//  __\  /  _ \/    /  /  _ \/  __// ___Y__ __Y \/ \  /|\  \//
+| |\/||| / \||    \ / \ |  \  |  \/|  | / \||  __\  | | \||  \  |    \ / \ | || |\ || \  /
+| |  ||| |-||\___ | | | |  /_ |    /  | \_/|| |     | |_/||  /_ \___ | | | | || | \|| / /
+\_/  \|\_/ \|\____/ \_/ \____\\_/\_\  \____/\_/     \____/\____\\____/ \_/ \_/\_/  \|/_/".split("\n").collect::<Vec<_>>();
                 for (i, line) in TITLE_CARD.iter().enumerate() {
-                    root.print_ex(self.constants.screen_size.0 / 2 -
-                                      32,
+                    root.print_ex(5,
                                   i as i32 + 2,
                                   BackgroundFlag::None,
                                   TextAlignment::Left,
@@ -389,7 +387,7 @@ fn main() {
     let screen_size = SHOW_SIZE;
     let mut root = RootConsole::initializer()
         .size(screen_size.0, screen_size.1)
-        .title("Skyspace")
+        .title("Master of Destiny")
         .font_type(FontType::Default)
         .renderer(Renderer::OpenGL)
         .font_dimensions(16, 20)

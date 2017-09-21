@@ -154,9 +154,10 @@ impl PartialOrd for State {
 /// that when it goes from one tile to the next, it chooses the
 /// closest empty tile on the second one. I chose GBFS because it is
 /// fast and simple, and finding the absolute best path is not a goal.
-pub fn find_path(map: &World,
-                 start: Point3D,
-                 goal: Point3D)
+pub fn find_path<'a>(map: &World,
+                     start: Point3D,
+                     goal: Point3D,
+                     can_move: Box<Fn(Point3D) -> bool + 'a>)
     -> Option<Vec<Point3D>> {
     let mut frontier = BinaryHeap::new();
     frontier.push(State {
@@ -173,7 +174,7 @@ pub fn find_path(map: &World,
             break;
         }
         for next in strict_3d_adjacent(current.unwrap().pos, map) {
-            if !came_from.contains_key(&next) {
+            if !came_from.contains_key(&next) && can_move(next) {
                 frontier.push(State {
                                   pos: next,
                                   cost: distance3_d(goal, next) as

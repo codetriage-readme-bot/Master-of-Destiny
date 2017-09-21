@@ -74,7 +74,10 @@
 - [x] Load terrain from seed
 - [x] Update game loop to be more reliable
 - [x] Stop animal crashing
-- [ ] Make certain number of animals spawn no matter what
+- [x] Make certain number of animals spawn no matter what
+- [x] Make animals assign goals properly
+- [x] Keep animals in proper biome
+- [ ] Kill animals when dead
 - [ ] Add rivers.
 - [ ] Minions
 - [ ] Weather (see notebook)
@@ -84,4 +87,4 @@
 - [ ] Speed up physics engine
 - [ ] Fluid dynamics (see notebook)
 - [ ] Items
-- [ ] Fix beaches (again)
+- [x] Fix beaches (again)

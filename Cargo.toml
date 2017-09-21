@@ -1,6 +1,6 @@
 [package]
-name = "skyspace"
-version = "0.1.5"
+name = "master-of-destiny"
+version = "0.1.6"
 repository = "https://github.com/christopherdumas/Skyspace"
 description = "A sci-fi citybuilding survival roguelike-like. Graphics and UI/UX design by William Trovinger, gameplay and system design and programming by Christopher Dumas."
 homepage = "christopherdumas.github.io/Skyspace"

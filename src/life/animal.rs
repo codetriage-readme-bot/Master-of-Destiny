@@ -7,8 +7,7 @@ use life::{Living, Mission, MissionResult};
 use utils::{Point3D, distance, find_path, nearest_perimeter_point,
             random_point};
 use worldgen::World;
-use worldgen::terrain::{Biome, BiomeType, Food, IgneousRocks, Item,
-                        State, StoneTypes, Tile};
+use worldgen::terrain::{Biome, BiomeType, Food, Item, Tile};
 
 const THIRST_THRESHOLD: i32 = 3000;
 const HUNGER_THRESHOLD: i32 = 6800;
@@ -212,8 +211,8 @@ pub struct Animal {
 impl Animal {
     pub fn new(pnt: Point3D, species: Species) -> Box<super::Living> {
         Box::new(Animal {
-                     thirst: 30,
-                     hunger: 0,
+                     thirst: 300,
+                     hunger: 600,
                      goals: vec![],
                      path: None,
                      arrived: false,
@@ -367,8 +366,15 @@ impl Animal {
                       goal: Point3D)
         -> Option<Vec<Point3D>> {
         let unit = map.get((goal.0, goal.1)).unwrap();
-        if self.species.can_go(unit.biome.unwrap()) {
-            find_path(map, self.pos, goal)
+        if unit.biome.is_some() &&
+            self.species.can_go(unit.biome.unwrap())
+        {
+            find_path(map, self.pos, goal, box |point| {
+                let b = map.get((point.0, point.1))
+                           .unwrap()
+                           .biome;
+                return b.is_some() && self.species.can_go(b.unwrap());
+            })
         } else {
             None
         }
@@ -500,7 +506,6 @@ impl Living for Animal {
     }
 
     fn execute_mission(&mut self, map: &World) -> MissionResult {
-        println!("{:?}", self.goals);
         if self.current_goal.is_some() {
             self.satisfy_current_goal(map)
         } else {
@@ -518,19 +523,27 @@ impl Living for Animal {
         if self.thirst >= THIRST_THRESHOLD ||
             self.hunger >= HUNGER_THRESHOLD
         {
+            println!("Died of hunger or thirst");
             return Some(Mission::Die);
         }
-        if self.thirst >= THIRST_THRESHOLD - self.tolerance() {
+        let thirsty = self.thirst >=
+            THIRST_THRESHOLD - self.tolerance();
+        if thirsty {
+            println!("Thirsty");
             let magnitude = (THIRST_THRESHOLD - self.thirst)
                 .abs() as usize;
             self.add_goal(Mission::Drink(magnitude));
         }
-        if self.hunger >= HUNGER_THRESHOLD - self.tolerance() {
+        let hungry = self.hunger >=
+            HUNGER_THRESHOLD - self.tolerance();
+        if hungry {
+            println!("Hungry");
             let magnitude = (HUNGER_THRESHOLD - self.hunger)
                 .abs() as usize;
             self.add_goal(Mission::Eat(magnitude));
         }
         if let Some(g) = self.failed_goal.clone() {
+            println!("Correcting failed goal");
             match g {
                 Mission::Eat(p) => {
                     if matches!(self.species.species,
@@ -545,8 +558,8 @@ impl Living for Animal {
                 }
             }
         }
-        println!("{:?}", self.goals);
-        if self.goals.len() == 0 {
+        if self.goals.len() == 0 && !(hungry || thirsty) {
+            println!("Exploring.");
             match self.species.species {
                 // Whales like to form schools. That should become an
                 // emergant property of this.
