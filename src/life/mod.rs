@@ -3,9 +3,9 @@ use std::option::Option;
 
 use tcod::{BackgroundFlag, Console, RootConsole};
 
-use utils::{Point2D, Point3D, Rect2D3D};
+use utils::{Point2D, Point3D, Rect2D3D, Rect2D};
 use worldgen::World;
-use worldgen::terrain::Item;
+use worldgen::terrain::{Item, Tile};
 
 pub mod animal;
 pub mod bird;
@@ -32,14 +32,14 @@ pub enum Mood {
 }
 
 /// Player assigned missions (orders)
-#[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Clone)]
+#[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Clone, Copy)]
 pub enum Order {
     Mine(Point2D, Point2D),
     GatherPlants(Point2D, Point2D),
     FellTrees((i32, i32), Point2D),
     CartGoods(Point2D, Point2D, Point2D),
-    BuildWall(Vec<Point2D>),
-    BuildRoof(Vec<Point2D>),
+    BuildWall(Point2D, Point2D),
+    BuildRoof(Rect2D),
     Go(Point3D),
 }
 
@@ -59,13 +59,14 @@ pub trait Drinkable {
 #[derive(Debug, Clone, PartialEq)]
 pub enum MissionResult {
     NoResult,
+    Die,
     Kill(usize),
     ReplaceItem(Point3D, Item),
     RemoveItem(Point3D),
 }
 
 /// Basic missions that animals can assign to themselves
-#[derive(Debug, Eq, PartialOrd, Clone)]
+#[derive(Debug, Eq, PartialOrd, Clone, Copy)]
 pub enum Mission {
     Eat(Priority),
     Drink(Priority),
@@ -127,13 +128,15 @@ pub trait Living {
     fn execute_mission(&mut self, ws: &World) -> MissionResult;
     /// Adds a mission when none is provided. Used all the time for
     /// animals. If there is already a mission going, returns None.
-    fn auto_add_mission(&mut self, ws: &World) -> Option<Mission>;
+    fn auto_add_mission(&mut self, ws: &World,
+                        adj: Vec<(Tile, Point3D)>) -> Option<Mission>;
 
     fn current_pos(&self) -> (usize, usize, usize);
     fn species(&self) -> &animal::SpeciesProperties;
 }
 impl DrawChar for Living {
-    fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
+    fn draw_char(&self, root: &mut RootConsole,
+                 pos: (usize, usize)) {
         root.put_char(pos.0 as i32,
                       pos.1 as i32,
                       self.species().chr,

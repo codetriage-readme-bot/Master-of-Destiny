@@ -35,7 +35,8 @@ pub fn weak_adjacent(p: Point2D) -> Vec<Point2D> {
 }
 
 pub fn distance((x1, y1): Point2D, (x2, y2): Point2D) -> f32 {
-    (((x2 - x1).pow(2) + (y2 - y1).pow(2)) as f32)
+    (((x2 as i32 - x1 as i32).pow(2) +
+      (y2 as i32 - y1 as i32).pow(2)) as f32)
         .sqrt()
 }
 

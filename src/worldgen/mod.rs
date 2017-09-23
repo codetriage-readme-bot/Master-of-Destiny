@@ -1,7 +1,7 @@
 extern crate rand;
 extern crate tcod_sys;
 
-use std::cell::RefCell;
+use std::cell::{RefCell, Cell};
 use std::collections::HashMap;
 use std::ops::{Index, Range};
 
@@ -10,6 +10,7 @@ use tcod::random;
 
 pub mod terrain;
 use self::rand::Rng;
+use self::rand::SeedableRng;
 use self::terrain::*;
 
 use life::{Living, MissionResult};
@@ -57,6 +58,7 @@ pub type BiomeMap = HashMap<String, RefCell<Vec<(usize, usize)>>>;
 pub struct World {
     heightmap: *mut tcod_sys::TCOD_heightmap_t,
     stone_vein_noise: Noise,
+    seed: u32,
     pub map_size: Point2D,
     pub frames: Frames,
     pub biome_map: BiomeMap,
@@ -79,7 +81,8 @@ impl Index<Range<usize>> for World {
 }
 
 const THRESHOLD: f32 = 0.5;
-const SEA_LEVEL: f32 = 15.0;
+const SEA_LEVEL: Cell<f32> = Cell::new(15.0);
+const WATER_LEVEL: f32 = 7.0;
 const VEG_THRESHOLD: f32 = 200.0;
 const RAMP_THRESHOLD: f32 = 0.015;
 const ANIMAL_COUNT: usize = 30;
@@ -96,6 +99,9 @@ impl World {
     /// * dig randomly sized hills
     pub fn new(size: Point2D, seed: u32) -> World {
         println!("Generating world from seed {}", seed);
+        let rng = random::Rng::new_with_seed(random::Algo::MT,
+                                             seed);
+        SEA_LEVEL.set(rng.get_float(13.0, 18.0));
 
         // Vegetation
         let mut world: World = World {
@@ -111,10 +117,10 @@ impl World {
                 .lacunarity(0.43)
                 .hurst(-0.9)
                 .noise_type(NoiseType::Simplex)
-                .random(random::Rng::new_with_seed(random::Algo::MT,
-                                                   seed))
+                .random(rng)
                 .init(),
             life: vec![],
+            seed: seed,
             frames: [("Water".to_string(),
                       vec![16, 32, 33, 34, 35, 36])]
                     .iter()
@@ -122,7 +128,7 @@ impl World {
                     .map(|(x, y)| (x, y))
                     .collect(),
         };
-        world.map = Self::map_from(size, &world, seed);
+        world.map = Self::map_from(size, &world);
         world
     }
 
@@ -135,11 +141,11 @@ impl World {
             match biome.biome_type {
                 BiomeType::Water => {
                     if biome.temperature_night_f < 50.0 {
-                        Species::Carnivore(Carnivore::Whale)
-                    } else if biome.temperature_day_f > 80.0 {
+                        Species::Herbivore(Herbivore::Whale)
+                    } /*else if biome.temperature_day_f > 80.0 {
                         Species::Carnivore(Carnivore::Shark)
-                    } else {
-                        Species::Carnivore(Carnivore::Fish)
+                    } */else {
+                        Species::Herbivore(Herbivore::Fish)
                     }
                 }
                 BiomeType::Desert | BiomeType::Beach => {
@@ -147,22 +153,22 @@ impl World {
                 }
                 BiomeType::Forest => {
                     *trng.choose(&[
-                        if biome.temperature_day_f > 70.0 {
+                        /*if biome.temperature_day_f > 70.0 {
                             Species::Carnivore(Carnivore::Dog)
                         } else if biome.temperature_day_f < 60.0 {
                             Species::Carnivore(Carnivore::Wolf)
                         } else {
                             Species::Carnivore(Carnivore::Cat)
-                        },
+                        },*/
                         Species::Herbivore(Herbivore::Rabbit),
-                        Species::Carnivore(Carnivore::Wolf)]).unwrap()
+                        /*Species::Carnivore(Carnivore::Wolf)*/]).unwrap()
                 }
                 BiomeType::Jungle => {
                     *trng.choose(&[
                         Species::Herbivore(Herbivore::Hippo),
-                        Species::Carnivore(Carnivore::Alligator),
-                        Species::Carnivore(Carnivore::Wolf),
-                        Species::Carnivore(Carnivore::Fish),
+                        //Species::Carnivore(Carnivore::Alligator),
+                        //Species::Carnivore(Carnivore::Wolf),
+                        Species::Herbivore(Herbivore::Fish),
                     ]).unwrap()
                 }
                 BiomeType::Pasture => {
@@ -171,15 +177,15 @@ impl World {
                         Species::Herbivore(Herbivore::Cow),
                         Species::Herbivore(Herbivore::Rabbit),
                         Species::Herbivore(Herbivore::Armadillo),
-                        Species::Carnivore(Carnivore::Dog),
-                        Species::Carnivore(Carnivore::Cat),
+                        //Species::Carnivore(Carnivore::Dog),
+                        //Species::Carnivore(Carnivore::Cat),
                     ]).unwrap()
                 }
                 BiomeType::Swamp => {
                     *trng.choose(&[
-                        Species::Carnivore(Carnivore::Alligator),
-                        Species::Carnivore(Carnivore::Shark),
-                        Species::Carnivore(Carnivore::Fish),
+                        //Species::Carnivore(Carnivore::Alligator),
+                        //Species::Carnivore(Carnivore::Shark),
+                        Species::Herbivore(Herbivore::Fish),
                         Species::Herbivore(Herbivore::Hippo),
                         Species::Herbivore(Herbivore::Armadillo)
                     ]).unwrap()
@@ -192,15 +198,15 @@ impl World {
 
     /// Creates a vector of animals based on biome and height.
     pub fn generate_life(&mut self) {
-        let mut trng = rand::thread_rng();
+        let mut rng = rand::IsaacRng::from_seed(&[self.seed]);
         for _ in 0..ANIMAL_COUNT {
             let bks = self.biome_map
                           .iter()
                           .map(|(k, _)| k.clone())
-                          .collect::<Vec<_>>();
-            let chosen_biome = trng.choose(&bks).unwrap();
+                .collect::<Vec<_>>();
+            let chosen_biome = rng.choose(&bks).unwrap();
             let bps = &self.biome_map[chosen_biome];
-            if let Some(point) = trng.choose(&bps.borrow()) {
+            if let Some(point) = rng.choose(&bps.borrow()) {
                 let unit = self.get(*point).unwrap();
                 let z = self.location_z(*point);
                 let ut = unit.tiles.borrow();
@@ -263,40 +269,47 @@ impl World {
              .map(|(y, row)| {
             row.iter()
                .enumerate()
-               .map(|(x, unit)| {
-                let landlocked =
-                    !strict_adjacent((x, y))
-                        .iter()
-                        .map(|&(x, y)| {
-                            let row = get!(world.get(y));
-                            let unit = get!(row.get(x));
-                            Some(unit.tiles.borrow().len() >
-                                     SEA_LEVEL as usize)
-                        })
-                        .any(
-                            |thing| thing.is_some() && thing.unwrap(),
-                        );
-                let d = unit.tiles.borrow().len();
-                let water_unit = Unit {
-                    biome: Some(WATER_BIOME),
-                    tiles: RefCell::new(
-                        (0..d)
-                            .map(|depth| {
-                                Tile::Water(World::purity(),
-                                            State::Liquid,
-                                            d as i32 - depth as i32)
-                            })
-                            .collect(),
-                    ),
-                };
-                if (d < SEA_LEVEL as usize) ||
-                    (landlocked && d < SEA_LEVEL as usize + 2)
-                {
-                    water_unit
-                } else {
-                    unit.clone()
-                }
-            })
+                     .map(|(x, unit)| {
+                         let landlocked =
+                             !strict_adjacent((x, y))
+                             .iter()
+                             .map(|&(x, y)| {
+                                 let row = get!(world.get(y));
+                                 let unit = get!(row.get(x));
+                                 Some(unit.tiles.borrow().len() >
+                                      SEA_LEVEL.get() as usize)
+                             })
+                             .any(
+                                 |thing| thing.is_some() && thing.unwrap(),
+                             );
+
+                         let ut = unit.tiles.borrow();
+                         let unit_height = ut.len();
+                         let water_unit = Unit {
+                             biome: Some(WATER_BIOME),
+                             tiles: RefCell::new(
+                                 (0..unit_height)
+                                     .map(|depth| {
+                                         if depth <= unit_height
+                                             .checked_sub(WATER_LEVEL as usize).unwrap_or(0) {
+                                             ut[depth].clone()
+                                         } else {
+                                             Tile::Water(World::purity(),
+                                                         State::Liquid,
+                                                         unit_height as i32 - depth as i32)
+                                         }
+                                     })
+                                     .collect(),
+                             ),
+                         };
+                         if (unit_height < SEA_LEVEL.get() as usize) ||
+                             (landlocked && unit_height < SEA_LEVEL.get() as usize + 2)
+                         {
+                             water_unit
+                         } else {
+                             unit.clone()
+                         }
+                     })
                .collect::<Vec<_>>()
         })
              .collect::<Vec<_>>()
@@ -305,15 +318,14 @@ impl World {
     /// Step 3 of map generation:
     /// Generate biomes (temp, percipitation) from altitude and a noise
     fn biomes_from_height_and_noise(world_map: WorldMap,
-                                    world: &World,
-                                    seed: u32)
+                                    world: &World)
         -> WorldMap {
         let bnoise = Noise::init_with_dimensions(2)
             .lacunarity(0.43)
             .hurst(-0.9)
             .noise_type(NoiseType::Simplex)
             .random(random::Rng::new_with_seed(random::Algo::MT,
-                                               seed))
+                                               world.seed))
             .init();
         world_map.iter()
                  .enumerate()
@@ -378,6 +390,8 @@ impl World {
                         tiles: RefCell::new(tiles),
                     }
                 } else {
+                    // Seaweed from bottom to not quite surface. For
+                    // fish and wales to eat.
                     unit.clone()
                 }
             } else {
@@ -406,7 +420,7 @@ impl World {
                .enumerate()
                .map(|(x, unit)| {
                 let mut t = unit.tiles.clone().into_inner();
-                for h in (SEA_LEVEL as i32)..(SEA_LEVEL as i32 + 4) {
+                for h in (SEA_LEVEL.get() as i32)..(SEA_LEVEL.get() as i32 + 4) {
                     let adj =
                         strict_adjacent((x, y))
                             .iter()
@@ -437,7 +451,7 @@ impl World {
     /// * Generate biomes (temp, percipitation) from altitude and a noise
     /// * Generate vegitation based on what survives where in the biomes
     /// * Generate the soil (and snow) based on plant and biome.
-    fn map_from(size: Point2D, ws: &World, seed: u32) -> WorldMap {
+    fn map_from(size: Point2D, ws: &World) -> WorldMap {
         let rock_from_terrain = World::rock_from_terrain;
         let water_from_low = World::water_from_low;
         let biomes_from_height_and_noise =
@@ -448,9 +462,9 @@ impl World {
             vec![]
                 => {|i| rock_from_terrain(ws, size, i)}
             => water_from_low
-            => { |x| biomes_from_height_and_noise(x, ws, seed) }
-            => { |x| vegitation_from_biomes(x, seed) }
-            => { |x| add_soil(x, seed) }
+            => { |x| biomes_from_height_and_noise(x, ws) }
+            => { |x| vegitation_from_biomes(x, ws.seed) }
+            => { |x| add_soil(x, ws.seed) }
         )
     }
 
@@ -662,10 +676,10 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
         -> Biome {
         let temp_day = 180f32 - (avg_height * 210f32);
         Biome {
-            biome_type: if avg_height < SEA_LEVEL {
+            biome_type: if avg_height < SEA_LEVEL.get() {
                 BiomeType::Beach
             } else if temp_day > 100.0 &&
-                       avg_height > SEA_LEVEL + 15.0
+                       avg_height > SEA_LEVEL.get() + 15.0
             {
                 BiomeType::Desert
             } else {
@@ -760,10 +774,10 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
                     if height < 10 {
                         let v = World::rock_choice(igneous, rn);
                         StoneTypes::Igneous(v.clone())
-                    } else if height as f32 <= SEA_LEVEL - 4.0 {
+                    } else if height as f32 <= SEA_LEVEL.get() - 4.0 {
                         let v = World::rock_choice(metamorphic, rn);
                         StoneTypes::Metamorphic(v.clone())
-                    } else if height as f32 <= SEA_LEVEL + 13.0 {
+                    } else if height as f32 <= SEA_LEVEL.get() + 13.0 {
                         let v = World::rock_choice(sedimentary, rn);
                         StoneTypes::Sedimentary(v.clone())
                     } else {
@@ -939,6 +953,10 @@ impl WorldState {
                     let mut actor = world.life[i].borrow_mut();
                     let res = actor.execute_mission(world);
                     match res {
+                        MissionResult::Die => {
+                            println!("#{} is dead", i);
+                            kills.push(i);
+                        }
                         MissionResult::Kill(i) => {
                             kills.push(i);
                         }

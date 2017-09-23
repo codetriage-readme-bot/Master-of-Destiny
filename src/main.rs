@@ -1,4 +1,9 @@
-#![feature(box_syntax, box_patterns, vec_remove_item, conservative_impl_trait, exclusive_range_pattern)]
+#![feature(box_syntax,
+           box_patterns,
+           vec_remove_item,
+           conservative_impl_trait,
+           exclusive_range_pattern,
+           const_fn)]
 #![allow(dead_code)]
 
 extern crate tcod;
