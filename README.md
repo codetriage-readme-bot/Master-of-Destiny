@@ -1,14 +1,13 @@
 <pre>
-_________ __
-/   _____/|  | __ ___.__.  ____________  _____     ____    ____
-\_____  \ |  |/ /<   |  | /  ___/\____ \ \__  \  _/ ___\ _/ __ \
-/        \|    <  \___  | \___ \ |  |_> > / __ \_\  \___ \  ___/
-/_______  /|__|_ \ / ____|/____  >|   __/ (____  / \___  > \___  >
-\/      \/ \/          \/ |__|         \/      \/      \/
+._      ____  ____ _____ _____ ____    ____  _____   ____  _____ ____ _____ _  _     ___  _
+/ \__/|/  _ \/ ___Y__ __Y  __//  __\  /  _ \/    /  /  _ \/  __// ___Y__ __Y \/ \  /|\  \//
+| |\/||| / \||    \ / \ |  \  |  \/|  | / \||  __\  | | \||  \  |    \ / \ | || |\ || \  /
+| |  ||| |-||\___ | | | |  /_ |    /  | \_/|| |     | |_/||  /_ \___ | | | | || | \|| / /
+\_/  \|\_/ \|\____/ \_/ \____\\_/\_\  \____/\_/     \____/\____\\____/ \_/ \_/\_/  \|/_/
 </pre>
 
 
-# Skyspace
+# Master of Destiny
 
 [![Code Triagers Badge](https://www.codetriage.com/christopherdumas/skyspace/badges/users.svg)](https://www.codetriage.com/christopherdumas/skyspace)
 
@@ -17,12 +16,12 @@ _________ __
 ![Main Screenshot](assets/screenshots/mainshot.png?raw=true "A particularly interesting generated world.")
 ![](assets/screenshots/new_terrain_generator_algorithm.png?raw=true)
 
-In *Skyspace* you are the first settler on a hostile planet in a
-far-removed star system. You are all alone, but if you succed in
-showing your homeworld that this new frontier is habitable and
-profitable, more settlers will join you.
+In *Master of Destiny* you are the first settler on a new world
+created by the Gods. You are all alone, but if you succed in showing
+your kind that this new frontier is habitable and profitable,
+more settlers will join you.
 
-*Skyspace* is a strategically deep, complex, and permissive
+*Master of Destiny* is a strategically deep, complex, and permissive
 world. While it may be complex, with intricate systems allowing you to
 do largely whatever you want that makes sense, it aims to have a
 simple, useable user interface. It wants to be your sandbox: there are
@@ -31,7 +30,7 @@ only a few tools in your toolbox and through your own prowess, smarts
 and enginuity you can expand your abilities. There's no limit to how
 far you can go!
 
-In *Skyspace* you start out with a single character. This
+In *Master of Destiny* you start out with a single character. This
 represents your first settler. You designate jobs and your settler
 will proceed to do them. Your goal for the first part of the game is to
 survive. If you keep your settler alive long enough, others will start
@@ -44,7 +43,7 @@ gain skill in certain areas, they'll start being able to expand to
 similar areas, as well as completing the jobs they're talented at
 faster.
 
-In *Skyspace* your entire environment is interacive. You can
+In *Master of Destiny* your entire environment is interacive. You can
 cut down trees, gather plants, delve into mountains, re-channel
 rivers, dig holes, harness the flow of magma from underground and
 build any number of things. Plants have different medicinal properties
@@ -54,7 +53,7 @@ dirty. Rope, levers, pressure plates, mills, wheels, drawbridges,
 waterwheels, corkscrews, tracks, steam and plenty of other mechanical
 elements will be added eventually to allow for even more fun.
 
-When managing a *Skyspace* settlement, as the seasons come and go you
+When managing a *Master of Destiny* settlement, as the seasons come and go you
 must provide food, shelter, occupation, and creature comforts for your
 characters, or they might die or go insane. You must also defend not
 only against the elements but also against beasts and malevolent
@@ -92,7 +91,7 @@ cleanup, from a refactor to prehaps a performance issue.
 
 ## More Info
 
-- [Screenshots](https://github.com/christopherdumas/Skyspace/tree/master/assets/screenshots) are available.
+- [Screenshots](https://github.com/christopherdumas/Master of Destiny/tree/master/assets/screenshots) are available.
 - Christopher can be emailed at any time.
-- For information on contributing, see [CONTRUBITING.md](https://github.com/christopherdumas/Skyspace/tree/master/CONTRIBUTING.md)
-- For contact information, see [CREDITS.md](https://github.com/christopherdumas/Skyspace/tree/master/CREDITS.md)
+- For information on contributing, see [CONTRUBITING.md](https://github.com/christopherdumas/Master of Destiny/tree/master/CONTRIBUTING.md)
+- For contact information, see [CREDITS.md](https://github.com/christopherdumas/Master of Destiny/tree/master/CREDITS.md)
