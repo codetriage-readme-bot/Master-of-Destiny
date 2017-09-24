@@ -4,10 +4,10 @@ use self::rand::Rng;
 use std;
 
 use life::{Living, Mission, MissionResult};
+use physics::PhysicsActor;
 use utils::{Point3D, distance, find_path, nearest_perimeter_point,
             random_point, strict_adjacent};
 use worldgen::World;
-use physics::PhysicsActor;
 use worldgen::terrain::{Biome, BiomeType, Food, Item, Tile, VegType};
 
 const THIRST_THRESHOLD: i32 = 3000;
@@ -259,7 +259,10 @@ impl Animal {
         adj
     }
 
-    fn add_path_to_point(&mut self, map: &World, pnt: Point3D, mission: Mission) {
+    fn add_path_to_point(&mut self,
+                         map: &World,
+                         pnt: Point3D,
+                         mission: Mission) {
         if let Some(path) = self.create_path_to(map, pnt) {
             self.path = Some(path);
         } else {
@@ -268,12 +271,14 @@ impl Animal {
         }
     }
 
-    fn set_up_new_goal(&mut self, map: &World,
-                       in_sight: Vec<(Tile, Point3D)>) -> MissionResult {
+    fn set_up_new_goal(&mut self,
+                       map: &World,
+                       in_sight: Vec<(Tile, Point3D)>)
+        -> MissionResult {
         use self::Mission::*;
         if let Some(m) = self.current_goal {
-        for (tile, pnt) in in_sight {
-            // Set up to complete the current goal.
+            for (tile, pnt) in in_sight {
+                // Set up to complete the current goal.
                 let s = self.species.species;
                 return match m {
                     // If we need to eat, find a food item nearby to eat.
@@ -290,14 +295,19 @@ impl Animal {
                     // If we need to drink, find the shoreline.
                     Drink(_) => {
                         let mut trng = self::rand::thread_rng();
-                        if let Some(pnt) = trng.choose(&map.biome_map["w"].borrow()) {
+                        if let Some(pnt) =
+                            trng.choose(&map.biome_map["w"].borrow())
+                        {
                             let adj = strict_adjacent(*pnt);
                             let shore = adj.iter().find(|pnt| {
                                 let map = map.get(**pnt).unwrap();
                                 let ut = map.tiles.borrow();
-                                ut.iter().enumerate().find(
-                                    |&(i, tile)| !tile.solid() && ut[i - 1].solid()
-                                ).is_some()
+                                ut.iter()
+                                  .enumerate()
+                                  .find(|&(i, tile)| {
+                                    !tile.solid() && ut[i - 1].solid()
+                                })
+                                  .is_some()
                             });
                             if let Some(&(x, y)) = shore {
                                 self.add_path_to_point(
@@ -317,10 +327,9 @@ impl Animal {
                                                 (self.pos.0,
                                                  self.pos.1));
                             if pos.2 == self.pos.2 &&
-                                dist <=
-                                self.species.sight as f32 &&
+                                dist <= self.species.sight as f32 &&
                                 l.borrow().species().species !=
-                                self.species.species
+                                    self.species.species
                             {
                                 self.add_path_to_point(map, pnt, m);
                             }
@@ -351,7 +360,7 @@ impl Animal {
                         println!("Executing death as mission");
                         MissionResult::Die
                     }
-                    _ => MissionResult::NoResult
+                    _ => MissionResult::NoResult,
                 };
             }
         } else {
@@ -546,8 +555,10 @@ impl Living for Animal {
         }
     }
 
-    fn auto_add_mission(&mut self, map: &World,
-                        adj: Vec<(Tile, Point3D)>) -> Option<Mission> {
+    fn auto_add_mission(&mut self,
+                        map: &World,
+                        adj: Vec<(Tile, Point3D)>)
+        -> Option<Mission> {
         if self.thirst >= THIRST_THRESHOLD ||
             self.hunger >= HUNGER_THRESHOLD
         {
@@ -570,64 +581,68 @@ impl Living for Animal {
             self.add_goal(Mission::Eat(magnitude));
         }
         match &self.failed_goal {
-                &Some(Mission::Eat(p)) => {
-                    if matches!(self.species.species,
-                                Species::Carnivore(..)) {
-                        self.add_goal(Mission::AttackEnemy(p));
-                    } else {
-                        let (x, y, z) = self.current_pos();
-                        let plant = adj.iter().find(|&&(tile, _)|
-                                                           matches!(tile,
-                                                                    Tile::Vegetation(..)));
-                        if let Some(&(Tile::Vegetation(vt, ..), (x, y, z))) = plant {
-                            let unit = map.get((x, y)).unwrap();
-                            let mut ut = unit.tiles.borrow_mut();
-                            ut[z] = Tile::Item(Item::Food(Food::Herb(vt)));
-                        }
+            &Some(Mission::Eat(p)) => {
+                if matches!(self.species.species,
+                            Species::Carnivore(..))
+                {
+                    self.add_goal(Mission::AttackEnemy(p));
+                } else {
+                    let (x, y, z) = self.current_pos();
+                    let plant = adj.iter().find(|&&(tile, _)| {
+                        matches!(tile, Tile::Vegetation(..))
+                    });
+                    if let Some(&(Tile::Vegetation(vt, ..),
+                                  (x, y, z))) = plant
+                    {
+                        let unit = map.get((x, y)).unwrap();
+                        let mut ut = unit.tiles.borrow_mut();
+                        ut[z] =
+                            Tile::Item(Item::Food(Food::Herb(vt)));
                     }
                 }
-                _ => {
-                    self.current_goal = self.goals.pop();
-                    self.failed_goal = None;
-                }
+            }
+            _ => {
+                self.current_goal = self.goals.pop();
+                self.failed_goal = None;
+            }
         }
         if self.goals.len() == 0 || (hungry || thirsty) {
             match self.species.species {
                 // Fish group to confuse enemies
                 Species::Herbivore(Herbivore::Fish) => {
                     let mut trng = self::rand::thread_rng();
-                    let fish =
-                        &map.life
-                            .iter()
-                            .filter_map(
-                            |a| if let Ok(a) = a.try_borrow() {
-                                if a.species().species ==
-                            Species::Herbivore(Herbivore::Fish)
-                        {
-                            Some(a.current_pos())
-                        } else {
-                            None
-                        }
+                    let fish = &map.life
+                                   .iter()
+                                   .filter_map(
+                        |a| if let Ok(a) = a.try_borrow() {
+                            if a.species().species ==
+                                Species::Herbivore(Herbivore::Fish)
+                            {
+                                Some(a.current_pos())
                             } else {
                                 None
-                            },
-                        )
-                            .collect::<Vec<_>>();
+                            }
+                        } else {
+                            None
+                        },
+                    )
+                                   .collect::<Vec<_>>();
                     for l in map.life.iter() {
                         let other = l.borrow();
                         let pos = other.current_pos();
                         let dist = distance((pos.0, pos.1),
-                                            (self.pos.0,
-                                             self.pos.1));
+                                            (self.pos.0, self.pos.1));
                         if pos.2 <= self.pos.2 &&
-                            dist <=
-                            self.species.sight as f32 &&
+                            dist <= self.species.sight as f32 &&
                             other.species().species !=
-                            self.species.species &&
-                            matches!(other.species().species, Species::Carnivore(..))
+                                self.species.species &&
+                            matches!(other.species().species,
+                                     Species::Carnivore(..))
                         {
                             if let Some(goal) = trng.choose(&fish) {
-                                self.add_goal(Mission::Go((goal.0, goal.1), 0));
+                                self.add_goal(Mission::Go((goal.0,
+                                                           goal.1),
+                                                          0));
                             }
                         }
                     }
@@ -654,7 +669,8 @@ impl Living for Animal {
                         )
                             .collect::<Vec<_>>();
                     if let Some(goal) = trng.choose(whales) {
-                        self.add_goal(Mission::Go((goal.0, goal.1), 10));
+                        self.add_goal(Mission::Go((goal.0, goal.1),
+                                                  10));
                     } else {
                         self.add_goal(
                             Mission::Go(random_point(0,

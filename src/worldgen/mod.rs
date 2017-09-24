@@ -1,7 +1,7 @@
 extern crate rand;
 extern crate tcod_sys;
 
-use std::cell::{RefCell, Cell};
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::ops::{Index, Range};
 
@@ -99,8 +99,7 @@ impl World {
     /// * dig randomly sized hills
     pub fn new(size: Point2D, seed: u32) -> World {
         println!("Generating world from seed {}", seed);
-        let rng = random::Rng::new_with_seed(random::Algo::MT,
-                                             seed);
+        let rng = random::Rng::new_with_seed(random::Algo::MT, seed);
         SEA_LEVEL.set(rng.get_float(13.0, 18.0));
 
         // Vegetation
@@ -132,6 +131,16 @@ impl World {
         world
     }
 
+    pub fn kill(&mut self, i: usize) {
+        let l = self.life.remove(i).into_inner();
+        let pos = l.current_pos();
+        self.map[pos.0][pos.1]
+            .tiles
+            .borrow_mut()
+            [pos.2] = Tile::Item(Item::Food(Food::Meat(l.species()
+                                                        .species)))
+    }
+
     pub fn create_life_by_biome(pnt: Point3D,
                                 biome: Biome)
         -> Option<Box<Living>> {
@@ -142,9 +151,11 @@ impl World {
                 BiomeType::Water => {
                     if biome.temperature_night_f < 50.0 {
                         Species::Herbivore(Herbivore::Whale)
-                    } /*else if biome.temperature_day_f > 80.0 {
+                    }
+                    /*else if biome.temperature_day_f > 80.0 {
                         Species::Carnivore(Carnivore::Shark)
-                    } */else {
+                    } */
+                    else {
                         Species::Herbivore(Herbivore::Fish)
                     }
                 }
@@ -203,7 +214,7 @@ impl World {
             let bks = self.biome_map
                           .iter()
                           .map(|(k, _)| k.clone())
-                .collect::<Vec<_>>();
+                          .collect::<Vec<_>>();
             let chosen_biome = rng.choose(&bks).unwrap();
             let bps = &self.biome_map[chosen_biome];
             if let Some(point) = rng.choose(&bps.borrow()) {
@@ -269,47 +280,51 @@ impl World {
              .map(|(y, row)| {
             row.iter()
                .enumerate()
-                     .map(|(x, unit)| {
-                         let landlocked =
-                             !strict_adjacent((x, y))
-                             .iter()
-                             .map(|&(x, y)| {
-                                 let row = get!(world.get(y));
-                                 let unit = get!(row.get(x));
-                                 Some(unit.tiles.borrow().len() >
-                                      SEA_LEVEL.get() as usize)
-                             })
-                             .any(
-                                 |thing| thing.is_some() && thing.unwrap(),
-                             );
+               .map(|(x, unit)| {
+                let landlocked =
+                    !strict_adjacent((x, y))
+                        .iter()
+                        .map(|&(x, y)| {
+                            let row = get!(world.get(y));
+                            let unit = get!(row.get(x));
+                            Some(unit.tiles.borrow().len() >
+                                     SEA_LEVEL.get() as usize)
+                        })
+                        .any(
+                            |thing| thing.is_some() && thing.unwrap(),
+                        );
 
-                         let ut = unit.tiles.borrow();
-                         let unit_height = ut.len();
-                         let water_unit = Unit {
-                             biome: Some(WATER_BIOME),
-                             tiles: RefCell::new(
-                                 (0..unit_height)
-                                     .map(|depth| {
-                                         if depth <= unit_height
-                                             .checked_sub(WATER_LEVEL as usize).unwrap_or(0) {
-                                             ut[depth].clone()
-                                         } else {
-                                             Tile::Water(World::purity(),
-                                                         State::Liquid,
-                                                         unit_height as i32 - depth as i32)
-                                         }
-                                     })
-                                     .collect(),
-                             ),
-                         };
-                         if (unit_height < SEA_LEVEL.get() as usize) ||
-                             (landlocked && unit_height < SEA_LEVEL.get() as usize + 2)
-                         {
-                             water_unit
-                         } else {
-                             unit.clone()
-                         }
-                     })
+                let ut = unit.tiles.borrow();
+                let unit_height = ut.len();
+                let water_unit = Unit {
+                    biome: Some(WATER_BIOME),
+                    tiles: RefCell::new(
+                        (0..unit_height)
+                            .map(|depth| if depth <=
+                                unit_height.checked_sub(
+                                    WATER_LEVEL as usize,
+                                )
+                                           .unwrap_or(0)
+                            {
+                                ut[depth].clone()
+                            } else {
+                                Tile::Water(World::purity(),
+                                            State::Liquid,
+                                            unit_height as i32 -
+                                                depth as i32)
+                            })
+                            .collect(),
+                    ),
+                };
+                if (unit_height < SEA_LEVEL.get() as usize) ||
+                    (landlocked &&
+                         unit_height < SEA_LEVEL.get() as usize + 2)
+                {
+                    water_unit
+                } else {
+                    unit.clone()
+                }
+            })
                .collect::<Vec<_>>()
         })
              .collect::<Vec<_>>()
@@ -770,31 +785,33 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
         let igneous = &[IgneousRocks::Obsidian, IgneousRocks::Basalt];
         let metamorphic = &[MetamorphicRocks::Marble,
                             MetamorphicRocks::Gneiss];
-        Tile::Stone(// Stone type
-                    if height < 10 {
-                        let v = World::rock_choice(igneous, rn);
-                        StoneTypes::Igneous(v.clone())
-                    } else if height as f32 <= SEA_LEVEL.get() - 4.0 {
-                        let v = World::rock_choice(metamorphic, rn);
-                        StoneTypes::Metamorphic(v.clone())
-                    } else if height as f32 <= SEA_LEVEL.get() + 13.0 {
-                        let v = World::rock_choice(sedimentary, rn);
-                        StoneTypes::Sedimentary(v.clone())
-                    } else {
-                        let v = World::rock_choice(metamorphic, rn);
-                        StoneTypes::Metamorphic(v.clone())
-                    },
+        Tile::Stone(
+            // Stone type
+            if height < 10 {
+                let v = World::rock_choice(igneous, rn);
+                StoneTypes::Igneous(v.clone())
+            } else if height as f32 <= SEA_LEVEL.get() - 4.0 {
+                let v = World::rock_choice(metamorphic, rn);
+                StoneTypes::Metamorphic(v.clone())
+            } else if height as f32 <= SEA_LEVEL.get() + 13.0 {
+                let v = World::rock_choice(sedimentary, rn);
+                StoneTypes::Sedimentary(v.clone())
+            } else {
+                let v = World::rock_choice(metamorphic, rn);
+                StoneTypes::Metamorphic(v.clone())
+            },
 
-                    // State
-                    if height < 3 {
-                        if rn < 0.0 {
-                            State::Liquid
-                        } else {
-                            State::Solid
-                        }
-                    } else {
-                        State::Solid
-                    })
+            // State
+            if height < 3 {
+                if rn < 0.0 {
+                    State::Liquid
+                } else {
+                    State::Solid
+                }
+            } else {
+                State::Solid
+            },
+        )
     }
 
     /// Gets the correct vegitation based on the heightmap's height and random selection.
@@ -947,44 +964,26 @@ impl WorldState {
 
     fn update_life(&mut self) {
         if let Some(ref mut world) = self.map {
-            let mut kills = vec![];
-            {
-                for i in 0..world.life.len() {
+            for i in 0..world.life.len() {
+                let res = {
                     let mut actor = world.life[i].borrow_mut();
-                    let res = actor.execute_mission(world);
-                    match res {
-                        MissionResult::Die => {
-                            println!("#{} is dead", i);
-                            kills.push(i);
-                        }
-                        MissionResult::Kill(i) => {
-                            kills.push(i);
-                        }
-                        MissionResult::RemoveItem(pnt) => {
-                            let unit = &world.map[pnt.1][pnt.0];
-                            let mut tiles = unit.tiles.borrow_mut();
-                            tiles[pnt.2] = Tile::Empty
-                        }
-                        MissionResult::ReplaceItem(pnt, item) => {
-                            let unit = &world.map[pnt.1][pnt.0];
-                            let mut tiles = unit.tiles.borrow_mut();
-                            tiles[pnt.2] = Tile::Item(item);
-                        }
-                        _ => {}
+                    actor.execute_mission(world)
+                };
+                match res {
+                    MissionResult::Die => world.kill(i),
+                    MissionResult::Kill(i) => world.kill(i),
+                    MissionResult::RemoveItem(pnt) => {
+                        let unit = &world.map[pnt.1][pnt.0];
+                        let mut tiles = unit.tiles.borrow_mut();
+                        tiles[pnt.2] = Tile::Empty;
                     }
+                    MissionResult::ReplaceItem(pnt, item) => {
+                        let unit = &world.map[pnt.1][pnt.0];
+                        let mut tiles = unit.tiles.borrow_mut();
+                        tiles[pnt.2] = Tile::Item(item);
+                    }
+                    _ => (),
                 }
-            }
-
-            // Kill things that should die
-            for k in kills {
-                let l = world.life.remove(k).into_inner();
-                let pos = l.current_pos();
-                world.map[pos.0][pos.1]
-                    .tiles
-                    .borrow_mut()
-                    [pos.2] =
-                    Tile::Item(Item::Food(Food::Meat(l.species()
-                                                      .species)))
             }
         }
     }

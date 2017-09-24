@@ -3,7 +3,7 @@ use std::option::Option;
 
 use tcod::{BackgroundFlag, Console, RootConsole};
 
-use utils::{Point2D, Point3D, Rect2D3D, Rect2D};
+use utils::{Point2D, Point3D, Rect2D, Rect2D3D};
 use worldgen::World;
 use worldgen::terrain::{Item, Tile};
 
@@ -128,15 +128,16 @@ pub trait Living {
     fn execute_mission(&mut self, ws: &World) -> MissionResult;
     /// Adds a mission when none is provided. Used all the time for
     /// animals. If there is already a mission going, returns None.
-    fn auto_add_mission(&mut self, ws: &World,
-                        adj: Vec<(Tile, Point3D)>) -> Option<Mission>;
+    fn auto_add_mission(&mut self,
+                        ws: &World,
+                        adj: Vec<(Tile, Point3D)>)
+        -> Option<Mission>;
 
     fn current_pos(&self) -> (usize, usize, usize);
     fn species(&self) -> &animal::SpeciesProperties;
 }
 impl DrawChar for Living {
-    fn draw_char(&self, root: &mut RootConsole,
-                 pos: (usize, usize)) {
+    fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
         root.put_char(pos.0 as i32,
                       pos.1 as i32,
                       self.species().chr,
