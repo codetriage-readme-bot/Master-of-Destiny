@@ -69,6 +69,7 @@ pub enum MissionResult {
 #[derive(Debug, Eq, PartialOrd, Clone, Copy)]
 pub enum Mission {
     Eat(Priority),
+    PickFood(Priority),
     Drink(Priority),
     AttackEnemy(Priority),
     GoToArea(Rect2D3D, Priority),
@@ -82,15 +83,15 @@ impl Ord for Mission {
     fn cmp(&self, other: &Self) -> Ordering {
         use self::Mission::*;
         let priority_a = match self {
-            &Eat(p) | &Drink(p) | &AttackEnemy(p) |
-            &GoToArea(_, p) | &Obey(p, _) => p,
+            &PickFood(p) | &Eat(p) | &Drink(p) |
+            &AttackEnemy(p) | &GoToArea(_, p) | &Obey(p, _) => p,
             &Go(_, p) => p,
             &Die => 1000,
         };
 
         let priority_b = match other {
-            &Eat(p) | &Drink(p) | &AttackEnemy(p) |
-            &GoToArea(_, p) | &Obey(p, _) => p,
+            &PickFood(p) | &Eat(p) | &Drink(p) |
+            &AttackEnemy(p) | &GoToArea(_, p) | &Obey(p, _) => p,
             &Go(_, p) => p,
             &Die => 1000,
         };

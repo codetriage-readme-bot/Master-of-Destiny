@@ -1,6 +1,7 @@
 extern crate rand;
 extern crate tcod_sys;
 
+use std;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::ops::{Index, Range};
@@ -80,8 +81,8 @@ impl Index<Range<usize>> for World {
     }
 }
 
-const THRESHOLD: f32 = 0.5;
-const SEA_LEVEL: Cell<f32> = Cell::new(15.0);
+const THRESHOLD: f32 = 0.3;
+const SEA_LEVEL: Cell<f32> = Cell::new(13.0);
 const WATER_LEVEL: f32 = 7.0;
 const VEG_THRESHOLD: f32 = 200.0;
 const RAMP_THRESHOLD: f32 = 0.015;
@@ -100,7 +101,7 @@ impl World {
     pub fn new(size: Point2D, seed: u32) -> World {
         println!("Generating world from seed {}", seed);
         let rng = random::Rng::new_with_seed(random::Algo::MT, seed);
-        SEA_LEVEL.set(rng.get_float(13.0, 18.0));
+        SEA_LEVEL.set(rng.get_float(14.0, 17.0));
 
         // Vegetation
         let mut world: World = World {
@@ -257,7 +258,7 @@ impl World {
                         Unit {
                             biome: None,
                             tiles: RefCell::new(
-                                (0..height)
+                                (0..std::cmp::max(height, 5))
                                     .map(|h| {
                                         ws.rock_type((x, y),
                                                      h as isize)
@@ -585,7 +586,7 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
                                              0.0,
                                              10.0,
                                              1.0,
-                                             2.05);
+                                             4.0);
             Self::add_random_hills(heightmap,
                                    (sx, sy),
                                    600,
@@ -787,13 +788,13 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
                             MetamorphicRocks::Gneiss];
         Tile::Stone(
             // Stone type
-            if height < 10 {
+            if height < 2 {
                 let v = World::rock_choice(igneous, rn);
                 StoneTypes::Igneous(v.clone())
-            } else if height as f32 <= SEA_LEVEL.get() - 4.0 {
+            } else if height as f32 <= SEA_LEVEL.get() - 1.0 {
                 let v = World::rock_choice(metamorphic, rn);
                 StoneTypes::Metamorphic(v.clone())
-            } else if height as f32 <= SEA_LEVEL.get() + 13.0 {
+            } else if height as f32 <= SEA_LEVEL.get() + 3.25 {
                 let v = World::rock_choice(sedimentary, rn);
                 StoneTypes::Sedimentary(v.clone())
             } else {
@@ -802,7 +803,7 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
             },
 
             // State
-            if height < 3 {
+            if height == 0 {
                 if rn < 0.0 {
                     State::Liquid
                 } else {

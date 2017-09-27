@@ -50,7 +50,7 @@ use worldgen::terrain::{BASE, TILES};
 const SHOW_FONT: &'static str = "assets/master16x16_ro.png";
 
 const SHOW_SIZE: (i32, i32) = (100, 60);
-const MAP_SIZE: (usize, usize) = (160, 160);
+const MAP_SIZE: (usize, usize) = (110, 70);
 
 const MOVE_DIST: i32 = 5;
 
