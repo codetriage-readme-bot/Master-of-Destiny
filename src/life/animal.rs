@@ -405,19 +405,12 @@ impl Animal {
                       map: &World,
                       goal: Point3D)
         -> Option<Vec<Point3D>> {
-        let unit = map.get((goal.0, goal.1)).unwrap();
-        if unit.biome.is_some() &&
-            self.species.can_go(unit.biome.unwrap())
-        {
-            find_path(map, self.pos, goal, box |point| {
-                let b = map.get((point.0, point.1))
-                           .unwrap()
-                           .biome;
-                return b.is_some() && self.species.can_go(b.unwrap());
-            })
-        } else {
-            None
-        }
+        find_path(map, self.pos, goal, box |point| {
+            let b = map.get((point.0, point.1))
+                       .unwrap()
+                       .biome;
+            return b.is_some() && self.species.can_go(b.unwrap());
+        })
     }
 
     fn continue_movement(&mut self, _map: &World) {
@@ -436,17 +429,13 @@ impl Animal {
         -> MissionResult {
         let result = match self.current_goal {
             Some(Mission::AttackEnemy(_)) => {
-                let enemy = map.life
-                               .iter()
-                               .enumerate()
-                               .find(|&(_i, e)| {
+                let enemys_sighted =
                     in_sight.iter()
-                            .find(
-                        |&&(_, p)| e.borrow().current_pos() == p,
+                            .filter_map(
+                        |&(_, p)| map.life_at_point(p.0, p.1),
                     )
-                            .is_some()
-                });
-                if let Some((i, _)) = enemy {
+                            .collect::<Vec<_>>();
+                if let Some(&(i, _)) = enemys_sighted.get(0) {
                     MissionResult::Kill(i)
                 } else {
                     MissionResult::NoResult

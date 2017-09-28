@@ -484,6 +484,21 @@ impl World {
         )
     }
 
+
+    pub fn life_at_point(
+        &self,
+        x: usize,
+        y: usize)
+        -> Option<(usize, &RefCell<Box<Living>>)> {
+        self.life
+            .iter()
+            .enumerate()
+            .find(|&(_i, e)| {
+            let op = e.borrow().current_pos();
+            (op.0, op.1) == (x, y)
+        })
+    }
+
     /// A general method for dealing with generating random hills of a limited size, position, and height.
     fn random_hill_operation<F>(heightmap: *mut tcod_sys::TCOD_heightmap_t,
                             (hmw, hmh): Point2D,
@@ -996,6 +1011,7 @@ impl WorldState {
         }
         //physics::run(self, dt);
     }
+
     /// Add a world map and update its meta layer.
     pub fn add_map(&mut self, world: World) {
         let max = world.map

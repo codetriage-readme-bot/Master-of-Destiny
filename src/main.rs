@@ -47,23 +47,12 @@ use utils::clamp;
 use worldgen::{World, WorldState};
 use worldgen::terrain::{BASE, TILES};
 
-const SHOW_FONT: &'static str = "assets/master16x16_ro.png";
+const SHOW_FONT: &'static str = "assets/master32x32_ro.png";
 
-const SHOW_SIZE: (i32, i32) = (100, 60);
-const MAP_SIZE: (usize, usize) = (110, 70);
+const SHOW_SIZE: (i32, i32) = (52, 32);
+const MAP_SIZE: (usize, usize) = (100, 60);
 
 const MOVE_DIST: i32 = 5;
-
-unsafe fn load_custom_font(rows: usize) {
-    let mut loc = BASE;
-    for y in 16..(16 + rows) {
-        tcod_sys::TCOD_console_map_ascii_codes_to_font(loc as i32,
-                                                       16,
-                                                       0,
-                                                       y as i32);
-        loc += 16;
-    }
-}
 
 enum GameScreen {
     Menu,
@@ -110,7 +99,7 @@ impl Game {
                                      screen_size.1 - 2),
                                     (6, 1)),
             menu: Layout::new(vec!["New Game", "Use Seed", "Exit"],
-                              (screen_size.0 / 2, 30),
+                              (screen_size.0 / 2, 15),
                               (8, 0),
                               8),
             pause_menu: Layout::new(vec!["Main Menu",
@@ -176,13 +165,19 @@ impl Game {
             GameScreen::Menu => {
                 root.clear();
                 let TITLE_CARD: Vec<&'static str> =
-                    r" _      ____  ____ _____ _____ ____    ____  _____   ____  _____ ____ _____ _  _     ___  _
-/ \__/|/  _ \/ ___Y__ __Y  __//  __\  /  _ \/    /  /  _ \/  __// ___Y__ __Y \/ \  /|\  \//
-| |\/||| / \||    \ / \ |  \  |  \/|  | / \||  __\  | | \||  \  |    \ / \ | || |\ || \  /
-| |  ||| |-||\___ | | | |  /_ |    /  | \_/|| |     | |_/||  /_ \___ | | | | || | \|| / /
-\_/  \|\_/ \|\____/ \_/ \____\\_/\_\  \____/\_/     \____/\____\\____/ \_/ \_/\_/  \|/_/".split("\n").collect::<Vec<_>>();
+                    r" _      ____  ____ _____ _____ ____    ____  _____
+/ \__/|/  _ \/ ___Y__ __Y  __//  __\  /  _ \/    /
+| |\/||| / \||    \ / \ |  \  |  \/|  | / \||  __\
+| |  ||| |-||\___ | | | |  /_ |    /  | \_/|| |
+\_/  \|\_/ \|\____/ \_/ \____\\_/\_\  \____/\_/
+
+ ____  _____ ____ _____ _  _     ___  _
+/  _ \/  __// ___Y__ __Y \/ \  /|\  \//
+| | \||  \  |    \ / \ | || |\ || \  /
+| |_/||  /_ \___ | | | | || | \|| / /
+\____/\____\\____/ \_/ \_/\_/  \|/_/".split("\n").collect::<Vec<_>>();
                 for (i, line) in TITLE_CARD.iter().enumerate() {
-                    root.print_ex(5,
+                    root.print_ex(1,
                                   i as i32 + 2,
                                   BackgroundFlag::None,
                                   TextAlignment::Left,
@@ -393,15 +388,22 @@ fn main() {
     let mut root = RootConsole::initializer()
         .size(screen_size.0, screen_size.1)
         .title("Master of Destiny")
+        .font_dimensions(16, 20)
         .font_type(FontType::Default)
         .renderer(Renderer::OpenGL)
-        .font_dimensions(16, 20)
         .font(SHOW_FONT, FontLayout::AsciiInRow)
         .init();
 
     if TILES {
-        unsafe {
-            load_custom_font(3);
+        let mut x = 0;
+        let mut y = 16;
+        for chr in BASE..(BASE + 30) {
+            root.map_ascii_code_to_font(chr as i32, x, y);
+            x += 1;
+            if x >= 16 {
+                y += 1;
+                x = 0;
+            }
         }
     }
 

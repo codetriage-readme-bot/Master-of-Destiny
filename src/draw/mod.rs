@@ -32,7 +32,7 @@ fn draw_hud(root: &mut RootConsole,
             world_map: &World,
             wid: usize,
             hig: usize) {
-    let frame_start_pos = (wid as i32 / 3) * 2 + 5;
+    let frame_start_pos = (wid as i32 / 3) * 2 - 10;
     let frame_width = wid as i32 - frame_start_pos;
     let frame_height = hig as i32;
     let mut window = &OffscreenConsole::new(frame_width,
@@ -55,35 +55,27 @@ fn draw_hud(root: &mut RootConsole,
          format!("Life #: {}", world_map.life.len()),
          String::new(),
          String::new()];
-    if (world.cursor.0 >= 0 &&
-            world.cursor.0 < world_map[0].len() as i32) &&
-        (world.cursor.1 >= 0 &&
-             world.cursor.1 < world_map.len() as i32)
-    {
-        let (cx, cy) = (world.cursor.0 as usize,
-                        world.cursor.1 as usize);
+    let (cx, cy) = (world.cursor.0 as usize, world.cursor.1 as usize);
+    if (cx >= 0 && cx < wid) && (cy >= 0 && cy < hig) {
         let wmap = &world_map[cy][cx];
         let wmapt = wmap.tiles.borrow();
         let len = wmapt.len().checked_sub(1).unwrap_or(0);
-        hud_info[6] = if len < world.level as usize {
-                          wmapt.get(len as usize)
-                      } else {
-                          wmapt.get(world.level as usize)
-                      }
-                      .unwrap_or(&Tile::Empty)
-                      .describe();
+        hud_info[6] = if let Some((_id, life)) =
+            world_map.life_at_point(cx, cy)
+        {
+            format!("{:?}", life.borrow().species().species)
+        } else {
+            if len < world.level as usize {
+                wmapt.get(len as usize)
+            } else {
+                wmapt.get(world.level as usize)
+            }
+            .unwrap_or(&Tile::Empty)
+            .describe()
+        };
         if len != world.level as usize {
             hud_info[7] = format!("Distance from Level: {}",
                                   world.level as i32 - len as i32);
-        }
-        root.set_char_background(cx as i32,
-                                 cy as i32,
-                                 Color::new(100, 100, 100),
-                                 BackgroundFlag::Darken);
-        if TILES {
-            root.set_char_foreground(cx as i32,
-                                     cy as i32,
-                                     Color::new(100, 100, 100));
         }
     }
     for (i, line) in hud_info.iter().enumerate() {
@@ -159,6 +151,21 @@ pub fn draw_map(root: &mut RootConsole,
                 }
             }
 
+            let (cx, cy) = (world.cursor.0 as usize,
+                            world.cursor.1 as usize);
+            if (cx >= 0 && cx < wid) && (cy >= 0 && cy < hig) {
+                root.set_char_background(cx as i32,
+                                         cy as i32,
+                                         Color::new(100, 100, 100),
+                                         BackgroundFlag::Darken);
+                if TILES {
+                    root.set_char_foreground(cx as i32,
+                                             cy as i32,
+                                             Color::new(100,
+                                                        100,
+                                                        100));
+                }
+            }
             if show_hud {
                 draw_hud(root, world, world_map, wid, hig);
             }

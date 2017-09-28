@@ -77,8 +77,10 @@
 - [x] Make certain number of animals spawn no matter what
 - [x] Make animals assign goals properly
 - [x] Keep animals in proper biome
-- [ ] Kill animals when dead
-- [ ] Add rivers.
+- [x] Kill animals when dead
+- [x] Add rivers.
+- [ ] Finish animal functionality
+- [ ] Zoom graphics
 - [ ] Minions
 - [ ] Weather (see notebook)
 - [ ] Add tree canopies
