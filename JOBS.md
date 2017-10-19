@@ -79,8 +79,11 @@
 - [x] Keep animals in proper biome
 - [x] Kill animals when dead
 - [x] Add rivers.
-- [ ] Finish animal functionality
-- [ ] Zoom graphics
+- [x] Finish animal functionality
+- [x] Zoom graphics
+- [x] Items
+- [x] Fix beaches (again)
+- [ ] Command system
 - [ ] Minions
 - [ ] Weather (see notebook)
 - [ ] Add tree canopies
@@ -88,5 +91,3 @@
 - [ ] Add loading screen
 - [ ] Speed up physics engine
 - [ ] Fluid dynamics (see notebook)
-- [ ] Items
-- [x] Fix beaches (again)

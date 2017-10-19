@@ -14,7 +14,7 @@ use self::rand::Rng;
 use self::rand::SeedableRng;
 use self::terrain::*;
 
-use life::{Living, MissionResult};
+use life::{Living, MissionResult, Order};
 
 use physics::PhysicsActor;
 
@@ -86,7 +86,7 @@ const SEA_LEVEL: Cell<f32> = Cell::new(13.0);
 const WATER_LEVEL: f32 = 7.0;
 const VEG_THRESHOLD: f32 = 200.0;
 const RAMP_THRESHOLD: f32 = 0.015;
-const ANIMAL_COUNT: usize = 30;
+const ANIMAL_COUNT: usize = 50;
 
 impl World {
     /// Generates a new hightmap-based world map of the specified
@@ -147,62 +147,67 @@ impl World {
         -> Option<Box<Living>> {
         use life::animal::*;
         let mut trng = rand::thread_rng();
-        let species =
-            match biome.biome_type {
-                BiomeType::Water => {
-                    if biome.temperature_night_f < 50.0 {
-                        Species::Herbivore(Herbivore::Whale)
-                    }
-                    /*else if biome.temperature_day_f > 80.0 {
-                        Species::Carnivore(Carnivore::Shark)
-                    } */
-                    else {
-                        Species::Herbivore(Herbivore::Fish)
-                    }
+        let species = match biome.biome_type {
+            BiomeType::Water => {
+                if biome.temperature_night_f < 50.0 {
+                    Species::Herbivore(Herbivore::Whale)
+                } else if biome.temperature_day_f > 80.0 {
+                    Species::Carnivore(Carnivore::Shark)
+                } else {
+                    Species::Herbivore(Herbivore::Fish)
                 }
-                BiomeType::Desert | BiomeType::Beach => {
-                    return None;
-                }
-                BiomeType::Forest => {
-                    *trng.choose(&[
-                        /*if biome.temperature_day_f > 70.0 {
-                            Species::Carnivore(Carnivore::Dog)
-                        } else if biome.temperature_day_f < 60.0 {
-                            Species::Carnivore(Carnivore::Wolf)
-                        } else {
-                            Species::Carnivore(Carnivore::Cat)
-                        },*/
-                        Species::Herbivore(Herbivore::Rabbit),
-                        /*Species::Carnivore(Carnivore::Wolf)*/]).unwrap()
-                }
-                BiomeType::Jungle => {
-                    *trng.choose(&[
+            }
+            BiomeType::Desert | BiomeType::Beach => {
+                return None;
+            }
+            BiomeType::Forest => {
+                *trng.choose(
+                    &[if biome.temperature_day_f > 70.0 {
+                          Species::Carnivore(Carnivore::Dog)
+                      } else if biome.temperature_day_f < 60.0 {
+                          Species::Carnivore(Carnivore::Wolf)
+                      } else {
+                          Species::Carnivore(Carnivore::Cat)
+                      },
+                      Species::Herbivore(Herbivore::Rabbit),
+                      Species::Carnivore(Carnivore::Wolf)],
+                )
+                     .unwrap()
+            }
+            BiomeType::Jungle => {
+                *trng.choose(
+                    &[
                         Species::Herbivore(Herbivore::Hippo),
-                        //Species::Carnivore(Carnivore::Alligator),
-                        //Species::Carnivore(Carnivore::Wolf),
+                        Species::Carnivore(Carnivore::Alligator),
+                        Species::Carnivore(Carnivore::Wolf),
                         Species::Herbivore(Herbivore::Fish),
-                    ]).unwrap()
-                }
-                BiomeType::Pasture => {
-                    *trng.choose(&[
+                    ],
+                ).unwrap()
+            }
+            BiomeType::Pasture => {
+                *trng.choose(
+                    &[
                         Species::Herbivore(Herbivore::Sheep),
                         Species::Herbivore(Herbivore::Cow),
                         Species::Herbivore(Herbivore::Rabbit),
                         Species::Herbivore(Herbivore::Armadillo),
-                        //Species::Carnivore(Carnivore::Dog),
-                        //Species::Carnivore(Carnivore::Cat),
-                    ]).unwrap()
-                }
-                BiomeType::Swamp => {
-                    *trng.choose(&[
-                        //Species::Carnivore(Carnivore::Alligator),
-                        //Species::Carnivore(Carnivore::Shark),
+                        Species::Carnivore(Carnivore::Dog),
+                        Species::Carnivore(Carnivore::Cat),
+                    ],
+                ).unwrap()
+            }
+            BiomeType::Swamp => {
+                *trng.choose(
+                    &[
+                        Species::Carnivore(Carnivore::Alligator),
+                        Species::Carnivore(Carnivore::Shark),
                         Species::Herbivore(Herbivore::Fish),
                         Species::Herbivore(Herbivore::Hippo),
-                        Species::Herbivore(Herbivore::Armadillo)
-                    ]).unwrap()
-                }
-            };
+                        Species::Herbivore(Herbivore::Armadillo),
+                    ],
+                ).unwrap()
+            }
+        };
 
         Some(Animal::new(pnt, species))
     }
@@ -253,16 +258,12 @@ impl World {
             .map(|y| {
                 (0..sw)
                     .map(|x| {
-                        let height = unsafe { ws.get_height(x, y) } as
-                            usize;
+                        let height = unsafe { ws.get_height(x, y) } as usize;
                         Unit {
                             biome: None,
                             tiles: RefCell::new(
                                 (0..std::cmp::max(height, 5))
-                                    .map(|h| {
-                                        ws.rock_type((x, y),
-                                                     h as isize)
-                                    })
+                                    .map(|h| ws.rock_type((x, y), h as isize))
                                     .collect(),
                             ),
                         }
@@ -429,35 +430,36 @@ impl World {
             Some(unit)
         }
 
-        world.iter()
-             .enumerate()
-             .map(|(y, row)| {
-            row.iter()
-               .enumerate()
-               .map(|(x, unit)| {
-                let mut t = unit.tiles.clone().into_inner();
-                for h in (SEA_LEVEL.get() as i32)..(SEA_LEVEL.get() as i32 + 4) {
-                    let adj =
-                        strict_adjacent((x, y))
-                            .iter()
-                            .filter_map(|p| get_op(*p, &world).cloned())
-                            .collect::<Vec<_>>();
-                    if (h as usize) < t.len() {
-                        t[h as usize] = Tile::Stone(
-                           StoneTypes::Soil(World::soil_choice(h, adj, seed)),
-                           State::Solid);
-                    } else {
-                        break;
-                    }
-                }
-                Unit {
-                    biome: unit.biome,
-                    tiles: RefCell::new(t),
-                }
+        world
+            .iter()
+            .enumerate()
+            .map(|(y, row)| {
+                row.iter()
+                    .enumerate()
+                    .map(|(x, unit)| {
+                        let mut t = unit.tiles.clone().into_inner();
+                        for h in (SEA_LEVEL.get() as i32)..(SEA_LEVEL.get() as i32 + 4) {
+                            let adj = strict_adjacent((x, y))
+                                .iter()
+                                .filter_map(|p| get_op(*p, &world).cloned())
+                                .collect::<Vec<_>>();
+                            if (h as usize) < t.len() {
+                                t[h as usize] = Tile::Stone(
+                                    StoneTypes::Soil(World::soil_choice(h, adj, seed)),
+                                    State::Solid,
+                                );
+                            } else {
+                                break;
+                            }
+                        }
+                        Unit {
+                            biome: unit.biome,
+                            tiles: RefCell::new(t),
+                        }
+                    })
+                    .collect::<Vec<_>>()
             })
-               .collect::<Vec<_>>()
-        })
-             .collect::<Vec<_>>()
+            .collect::<Vec<_>>()
     }
 
     /// Generates a new unit map for World from the given (incomplete) World.
@@ -500,20 +502,18 @@ impl World {
     }
 
     /// A general method for dealing with generating random hills of a limited size, position, and height.
-    fn random_hill_operation<F>(heightmap: *mut tcod_sys::TCOD_heightmap_t,
-                            (hmw, hmh): Point2D,
-                            num_hills: i32,
-                            base_radius: f32,
-                            radius: f32,
-                            height: f32,
-                            rndn: tcod_sys::TCOD_random_t,
-                            operation: &F)
-where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
-       f32,
-       f32,
-       f32,
-       f32),
-{
+    fn random_hill_operation<F>(
+        heightmap: *mut tcod_sys::TCOD_heightmap_t,
+        (hmw, hmh): Point2D,
+        num_hills: i32,
+        base_radius: f32,
+        radius: f32,
+        height: f32,
+        rndn: tcod_sys::TCOD_random_t,
+        operation: &F,
+    ) where
+        F: Fn(*mut tcod_sys::TCOD_heightmap_t, f32, f32, f32, f32),
+    {
         unsafe {
             for _ in 0..num_hills {
                 let radius =
@@ -585,12 +585,9 @@ where F: Fn(*mut tcod_sys::TCOD_heightmap_t,
             tcod_sys::TCOD_heightmap_new(sx as i32, sy as i32)
         };
         unsafe {
-            let rndn =
-                tcod_sys::TCOD_random_new_from_seed(tcod_sys::TCOD_RNG_MT,
-                                                    seed);
+            let rndn = tcod_sys::TCOD_random_new_from_seed(tcod_sys::TCOD_RNG_MT, seed);
             let noise = tcod_sys::TCOD_noise_new(2, 0.7, 0.1, rndn);
-            tcod_sys::TCOD_noise_set_type(noise,
-                                          tcod_sys::TCOD_NOISE_SIMPLEX);
+            tcod_sys::TCOD_noise_set_type(noise, tcod_sys::TCOD_NOISE_SIMPLEX);
             tcod_sys::TCOD_heightmap_add_fbm(heightmap,
                                              noise,
                                              2.20 * (sx as f32) /
@@ -959,6 +956,7 @@ pub struct WorldState {
     pub screen: (i32, i32),
     pub cursor: (i32, i32),
     pub level: i32,
+    pub commands: Vec<Order>,
     pub map: Option<World>,
     pub highest_level: usize,
     pub time: TimeHandler,
@@ -978,27 +976,30 @@ impl WorldState {
         }
     }
 
-    fn update_life(&mut self) {
+    fn update_life(&mut self, time: usize) {
         if let Some(ref mut world) = self.map {
             for i in 0..world.life.len() {
-                let res = {
-                    let mut actor = world.life[i].borrow_mut();
-                    actor.execute_mission(world)
-                };
-                match res {
-                    MissionResult::Die => world.kill(i),
-                    MissionResult::Kill(i) => world.kill(i),
-                    MissionResult::RemoveItem(pnt) => {
-                        let unit = &world.map[pnt.1][pnt.0];
-                        let mut tiles = unit.tiles.borrow_mut();
-                        tiles[pnt.2] = Tile::Empty;
+                let modifier = if i % 2 == 0 { 2 } else { 3 };
+                if time % modifier == 0 {
+                    let res = {
+                        let mut actor = world.life[i].borrow_mut();
+                        actor.execute_mission(world)
+                    };
+                    match res {
+                        MissionResult::Die => world.kill(i),
+                        MissionResult::Kill(i) => world.kill(i),
+                        MissionResult::RemoveItem(pnt) => {
+                            let unit = &world.map[pnt.1][pnt.0];
+                            let mut tiles = unit.tiles.borrow_mut();
+                            tiles[pnt.2] = Tile::Empty;
+                        }
+                        MissionResult::ReplaceItem(pnt, item) => {
+                            let unit = &world.map[pnt.1][pnt.0];
+                            let mut tiles = unit.tiles.borrow_mut();
+                            tiles[pnt.2] = Tile::Item(item);
+                        }
+                        _ => (),
                     }
-                    MissionResult::ReplaceItem(pnt, item) => {
-                        let unit = &world.map[pnt.1][pnt.0];
-                        let mut tiles = unit.tiles.borrow_mut();
-                        tiles[pnt.2] = Tile::Item(item);
-                    }
-                    _ => (),
                 }
             }
         }
@@ -1006,9 +1007,7 @@ impl WorldState {
     /// Updates world time and then deligates to the physics engine.
     pub fn update(&mut self, time: usize, dt: usize) {
         self.update_time(time, dt);
-        if time % 2 == 0 {
-            self.update_life();
-        }
+        self.update_life(time);
         //physics::run(self, dt);
     }
 
@@ -1034,6 +1033,7 @@ impl WorldState {
     pub fn new() -> WorldState {
         let clock = Clock { time: (12, 30) };
         WorldState {
+            commands: vec![],
             screen: (0, 0),
             level: 31,
             highest_level: 0,

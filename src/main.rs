@@ -26,36 +26,45 @@ macro_rules! get(
     ($e:expr) => (match $e { Some(e) => e, None => return None })
 );
 
-use tcod::{FontLayout, FontType, Renderer, RootConsole};
+use tcod::{Color, FontLayout, FontType, Renderer, RootConsole};
 use tcod::console::{BackgroundFlag, Console, TextAlignment};
 use tcod::input;
 use tcod::input::KeyCode;
 
 mod utils;
+use utils::{Rect2D, clamp};
+
 mod life;
+
 mod draw;
-mod physics;
-mod ui;
-mod worldgen;
-mod time;
-
-use ui::{Button, DrawUI, Layout, MouseUI, Textbox};
-
 use draw::draw_map;
 
-use utils::clamp;
+mod physics;
+
+#[macro_use]
+mod ui;
+use ui::{Button, DrawUI, Layout, MouseUI, Textbox};
+
+mod worldgen;
 use worldgen::{World, WorldState};
 use worldgen::terrain::{BASE, TILES};
 
-const SHOW_FONT: &'static str = "assets/master32x32_ro.png";
+mod time;
 
-const SHOW_SIZE: (i32, i32) = (52, 32);
-const MAP_SIZE: (usize, usize) = (100, 60);
+const SHOW_FONT: &'static str = "assets/master20x20_ro.png";
+
+const SHOW_SIZE: (i32, i32) = (75, 50);
+const MAP_SIZE: (usize, usize) = (110, 70);
 
 const MOVE_DIST: i32 = 5;
 
 enum GameScreen {
     Menu,
+    SelectCommand,
+    SelectArea,
+    SelectBuildable,
+    SelectDiggable,
+    SelectOtherCommand,
     Game,
     GetSeed,
     Loading,
@@ -68,18 +77,34 @@ struct Calc {
     pub screen_size: (i32, i32),
 }
 
+enum PartialCommand {
+    Move,
+    Other,
+    Build,
+    Dig,
+    Destroy,
+    Cancel,
+}
+
 struct Game {
     show_hud: bool,
     constants: Calc,
     last_time: usize,
     menu: Layout,
+    command_list: Layout,
     pause_menu: Layout,
+    build_commands: Layout,
+    dig_commands: Layout,
+    other_commands: Layout,
+    move_commands: Layout,
     textbox: Textbox,
+    selection: Rect2D,
     show_tools: Button,
+    partial_command: PartialCommand,
+    seed: u32,
     pub time: usize,
     pub screen: GameScreen,
     pub world_state: WorldState,
-    seed: u32,
 }
 
 impl Game {
@@ -91,6 +116,8 @@ impl Game {
                 highest_world: 0,
                 screen_size: screen_size,
             },
+            partial_command: PartialCommand::Cancel,
+            selection: ((0, 0), (0, 0)),
             last_time: 0,
             time: 0,
             screen: GameScreen::Menu,
@@ -102,6 +129,32 @@ impl Game {
                               (screen_size.0 / 2, 15),
                               (8, 0),
                               8),
+
+            build_commands: Layout::new(vec!["Wall", "Fence",
+                                             "Ramp"],
+                                        (screen_size.0 / 2, 15),
+                                        (8, 0),
+                                        8),
+            dig_commands: Layout::new(vec!["Mine"],
+                                      (screen_size.0 / 2, 15),
+                                      (8, 0),
+                                      8),
+            move_commands: Layout::new(vec!["Go To", "Cart Goods"],
+                                       (screen_size.0 / 2, 15),
+                                       (10, 0),
+                                       10),
+            other_commands: Layout::new(vec!["Gather Plants",
+                                             "Fell Trees"],
+                                        (screen_size.0 / 2, 15),
+                                        (13, 0),
+                                        13),
+
+            command_list: Layout::new(vec!["Build", "Destroy",
+                                           "Dig", "Move", "Cancel",
+                                           "Other", "Back"],
+                                      (screen_size.0 / 2, 15),
+                                      (8, 0),
+                                      8),
             pause_menu: Layout::new(vec!["Main Menu",
                                          "Back",
                                          "Fullscreen",
@@ -141,6 +194,44 @@ impl Game {
 
     pub fn draw(&mut self, root: &mut RootConsole) {
         match self.screen {
+            GameScreen::SelectArea => {
+                root.clear();
+                draw_map(root,
+                         &self.world_state,
+                         false,
+                         self.last_time);
+                let ((sx1, sy1), (sx2, sy2)) = self.selection;
+                for y in sy1..sy2 {
+                    for x in sx1..sx2 {
+                        root.set_char_foreground(x as i32,
+                                                 y as i32,
+                                                 Color::new(100,
+                                                            100,
+                                                            100));
+                    }
+                }
+            }
+            GameScreen::SelectDiggable => {
+                root.clear();
+                self.dig_commands
+                    .draw(root, self.world_state.cursor);
+            }
+            GameScreen::SelectBuildable => {
+                root.clear();
+                self.build_commands
+                    .draw(root, self.world_state.cursor);
+            }
+            GameScreen::SelectOtherCommand => {
+                root.clear();
+                self.other_commands
+                    .draw(root, self.world_state.cursor);
+            }
+
+            GameScreen::SelectCommand => {
+                root.clear();
+                self.command_list
+                    .draw(root, self.world_state.cursor);
+            }
             GameScreen::GetSeed => {
                 root.clear();
                 self.textbox
@@ -154,18 +245,24 @@ impl Game {
                               TextAlignment::Center,
                               "Loading...");
                 for c in 0..(16 * 19) {
-                    root.put_char(c % self.constants.screen_size.0,
-                                  c / self.constants.screen_size.0 +
-                                      3,
-                                  std::char::from_u32(c as u32)
-                                      .unwrap(),
-                                  BackgroundFlag::Set);
+                    if let Some(chr) = std::char::from_u32(c as u32) {
+                        root.put_char(c %
+                                          self.constants
+                                              .screen_size
+                                              .0,
+                                      c /
+                                          self.constants
+                                              .screen_size
+                                              .0 +
+                                          3,
+                                      chr,
+                                      BackgroundFlag::Set);
+                    }
                 }
             }
             GameScreen::Menu => {
                 root.clear();
-                let TITLE_CARD: Vec<&'static str> =
-                    r" _      ____  ____ _____ _____ ____    ____  _____
+                let TITLE_CARD: Vec<&'static str> = r" _      ____  ____ _____ _____ ____    ____  _____
 / \__/|/  _ \/ ___Y__ __Y  __//  __\  /  _ \/    /
 | |\/||| / \||    \ / \ |  \  |  \/|  | / \||  __\
 | |  ||| |-||\___ | | | |  /_ |    /  | \_/|| |
@@ -175,7 +272,9 @@ impl Game {
 /  _ \/  __// ___Y__ __Y \/ \  /|\  \//
 | | \||  \  |    \ / \ | || |\ || \  /
 | |_/||  /_ \___ | | | | || | \|| / /
-\____/\____\\____/ \_/ \_/\_/  \|/_/".split("\n").collect::<Vec<_>>();
+\____/\____\\____/ \_/ \_/\_/  \|/_/"
+                    .split("\n")
+                    .collect::<Vec<_>>();
                 for (i, line) in TITLE_CARD.iter().enumerate() {
                     root.print_ex(1,
                                   i as i32 + 2,
@@ -243,26 +342,174 @@ impl Game {
                     root: &mut RootConsole,
                     mouse: &input::Mouse) {
         match self.screen {
-            GameScreen::Menu => {
+            GameScreen::SelectArea => {
+                let (point1, point2) = self.selection;
                 if mouse.lbutton_pressed {
-                    let bitem =
-                        self.menu
-                            .bbox_colliding(self.world_state.cursor);
-                    match bitem {
-                        Some(item) => {
-                            match item.trim().as_ref() {
-                                "new_game" => self.init_game(None),
-                                "use_seed" => {
-                                    self.screen = GameScreen::GetSeed;
+                    let p1_unset = point1 == (0, 0);
+                    let p2_unset = point2 == (0, 0);
+                    let mouse_pos =
+                        (self.world_state.cursor.0 as usize,
+                         self.world_state.cursor.1 as usize);
+
+                    if p1_unset {
+                        self.selection = (mouse_pos, point2);
+                    } else if p2_unset {
+                        self.selection = (point1, mouse_pos);
+                    } else if !p2_unset && !p1_unset {
+                        use life::Order::*;
+                        if let Some(order) =
+                            self.world_state.commands.pop()
+                        {
+                            let new = match order {
+                                Mine(_) => Mine(self.selection),
+                                BuildWall(_) => {
+                                    BuildWall(self.selection)
                                 }
-                                "resume" => {
-                                    self.screen = GameScreen::Game
+                                BuildFence(_) => {
+                                    BuildFence(self.selection)
                                 }
-                                "exit" => std::process::exit(0),
-                                _ => {}
-                            }
+                                BuildRamp(..) => {
+                                    BuildRamp(self.selection.0)
+                                }
+                                Go(_) => {
+                                    let (x, y) = self.selection.0;
+                                    if let Some(ref ws) =
+                                        self.world_state.map
+                                    {
+                                        Go((x,
+                                            y,
+                                            ws.location_z((x, y))))
+                                    } else {
+                                        Go((x, y, 100))
+                                    }
+                                }
+                                CartGoods(_) => {
+                                    CartGoods(self.selection)
+                                }
+                                GatherPlants(_) => {
+                                    GatherPlants(self.selection)
+                                }
+                                FellTrees(_) => {
+                                    FellTrees(self.selection)
+                                }
+                            };
+                            println!("{:?}", new);
+                            self.world_state.commands.push(new);
                         }
-                        None => {}
+                        self.screen = GameScreen::Game;
+                    }
+                } else if mouse.rbutton_pressed {
+                    self.selection = ((0, 0), (0, 0));
+                }
+                //self.selection = ((0, 0), (0, 0));
+            }
+
+            GameScreen::SelectBuildable => {
+                menu_event!{
+                    (mouse, self.build_commands)
+                    "wall" => {
+                        self.world_state.commands.push(
+                            life::Order::BuildWall(((0,0), (0,0)))
+                        );
+                    }
+                    "fence" => {
+                        self.world_state.commands.push(
+                            life::Order::BuildFence(((0,0), (0,0)))
+                        );
+                    }
+                    "ramp" => {
+                        self.world_state.commands.push(
+                            life::Order::BuildRamp((0,0))
+                        );
+                    }
+                }
+                self.selection = ((0, 0), (0, 0));
+                self.screen = GameScreen::SelectArea;
+            }
+            GameScreen::SelectOtherCommand => {
+                menu_event!{
+                    (mouse, self.other_commands)
+                    "gather_plants" => {
+                        self.world_state.commands.push(
+                            life::Order::GatherPlants(((0,0), (0,0)))
+                        );
+                    }
+                    "fell_trees" => {
+                        self.world_state.commands.push(
+                            life::Order::FellTrees(((0,0), (0,0)))
+                        );
+                    }
+                }
+                self.selection = ((0, 0), (0, 0));
+                self.screen = GameScreen::SelectArea;
+            }
+            GameScreen::SelectDiggable => {
+                menu_event!{
+                    (mouse, self.other_commands)
+                    "mine" => {
+                        self.world_state.commands.push(
+                            life::Order::Mine(((0,0), (0,0)))
+                        );
+                    }
+                }
+                self.selection = ((0, 0), (0, 0));
+                self.screen = GameScreen::SelectArea;
+            }
+
+            GameScreen::Menu => {
+                menu_event!{
+                    (mouse, self.menu)
+                    "new_game" => { self.init_game(None) }
+                    "use_seed" => {
+                        self.screen = GameScreen::GetSeed;
+                    }
+                    "resume" => {
+                        self.screen = GameScreen::Game
+                    }
+                    "exit" => { std::process::exit(0) }
+                }
+            }
+            GameScreen::SelectCommand => {
+                self.selection = ((0, 0), (0, 0));
+                menu_event!{
+                    (mouse, self.command_list)
+                    "build" => {
+                        self.partial_command =
+                            PartialCommand::Build;
+                        self.screen =
+                            GameScreen::SelectBuildable;
+                    }
+                    "destroy" => {
+                        self.partial_command =
+                            PartialCommand::Destroy;
+                        self.screen =
+                            GameScreen::SelectArea;
+                    }
+                    "dig" => {
+                        self.partial_command =
+                            PartialCommand::Dig;
+                        self.screen =
+                            GameScreen::SelectDiggable;
+                    }
+                    "move" => {
+                        self.partial_command =
+                            PartialCommand::Move;
+                        self.screen =
+                            GameScreen::SelectArea;
+                    }
+                    "other" => {
+                        self.partial_command =
+                            PartialCommand::Other;
+                        self.screen = GameScreen::SelectOtherCommand;
+                    }
+                    "cancel" => {
+                        self.partial_command =
+                            PartialCommand::Cancel;
+                        self.screen =
+                            GameScreen::SelectArea;
+                    }
+                    "back" => {
+                        self.screen = GameScreen::Game;
                     }
                 }
             }
@@ -285,29 +532,21 @@ impl Game {
                 }
             }
             GameScreen::Paused => {
-                if mouse.lbutton_pressed {
-                    let bitem =
-                        self.pause_menu
-                            .bbox_colliding(self.world_state.cursor);
-                    match bitem {
-                        Some(item) => {
-                            match item.trim().as_ref() {
-                                "main_menu" => {
-                                    self.screen = GameScreen::Menu
-                                }
-                                "fullscreen" => {
-                                    let fullscreen =
-                                        root.is_fullscreen();
-                                    root.set_fullscreen(!fullscreen);
-                                }
-                                "back" => {
-                                    self.screen = GameScreen::Game
-                                }
-                                "exit" => std::process::exit(0),
-                                _ => {}
-                            }
-                        }
-                        None => {}
+                menu_event!{
+                    (mouse, self.menu)
+                    "main_menu" => {
+                        self.screen = GameScreen::Menu
+                    }
+                    "fullscreen" => {
+                        let fullscreen =
+                            root.is_fullscreen();
+                        root.set_fullscreen(!fullscreen);
+                    }
+                    "back" => {
+                        self.screen = GameScreen::Game;
+                    }
+                    "exit" => {
+                        std::process::exit(0)
                     }
                 }
             }
@@ -317,6 +556,12 @@ impl Game {
 
     fn handle_key(&mut self, key: &input::Key) {
         match self.screen {
+            GameScreen::SelectOtherCommand => {}
+            GameScreen::SelectCommand => {}
+            GameScreen::SelectArea => {}
+            GameScreen::SelectDiggable => {}
+            GameScreen::SelectBuildable => {}
+
             GameScreen::GetSeed => {
                 if key.code != input::KeyCode::Enter {
                     self.textbox.input(key);
@@ -355,6 +600,10 @@ impl Game {
                     }
                     KeyCode::Char => {
                         match key.printable {
+                            'c' => {
+                                self.screen =
+                                    GameScreen::SelectCommand;
+                            }
                             '<' => {
                                 self.world_state.level =
                                     clamp(self.world_state.level - 1,

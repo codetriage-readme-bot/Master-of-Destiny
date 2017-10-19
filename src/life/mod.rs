@@ -34,19 +34,21 @@ pub enum Mood {
 /// Player assigned missions (orders)
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Clone, Copy)]
 pub enum Order {
-    Mine(Point2D, Point2D),
-    GatherPlants(Point2D, Point2D),
-    FellTrees((i32, i32), Point2D),
-    CartGoods(Point2D, Point2D, Point2D),
-    BuildWall(Point2D, Point2D),
-    BuildRoof(Rect2D),
+    GatherPlants(Rect2D),
+    FellTrees(Rect2D),
+
+    CartGoods(Rect2D),
     Go(Point3D),
+
+    Mine(Rect2D),
+    BuildWall(Rect2D),
+    BuildFence(Rect2D),
+    BuildRamp(Point2D),
 }
 
 /// Actions that can be performed on an eatable object.
 pub trait Eatable {
     fn cook(self) -> Self;
-    fn neutrition(self) -> Self;
 }
 
 /// Actions that can be performed on a drinkable object.
@@ -134,6 +136,7 @@ pub trait Living {
                         adj: Vec<(Tile, Point3D)>)
         -> Option<Mission>;
 
+    fn current_goal(&self) -> Option<Mission>;
     fn current_pos(&self) -> (usize, usize, usize);
     fn species(&self) -> &animal::SpeciesProperties;
 }

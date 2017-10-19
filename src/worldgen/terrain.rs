@@ -780,15 +780,6 @@ pub enum Compass {
     West,
 }
 
-/// The slope of a ramp. If it is none, the ramp is actually a floor
-/// tile (a tile that does not fill the entirity of its space.).
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum Slope {
-    Up,
-    Down,
-    None,
-}
-
 /// Tile types that can be defined to be moveable or as ramps.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum RestrictedTile {
@@ -847,7 +838,7 @@ impl DrawChar for RestrictedTile {
 
 /// The
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum ToolKind {
+pub enum Tool {
     // Weapons
     Sword,
     Spear,
@@ -875,6 +866,10 @@ pub enum ToolKind {
     Wheel,
 }
 
+impl DrawChar for Tool {
+    fn draw_char(&self, root: &mut RootConsole, pos: Point2D) {}
+}
+
 type Quantity = u8;
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Food {
@@ -882,10 +877,58 @@ pub enum Food {
     Herb(VegType),
     Water(Quantity),
 }
+
+impl DrawChar for Food {
+    fn draw_char(&self, root: &mut RootConsole, pos: Point2D) {
+        match self {
+            &Food::Meat(_) => {
+                root.set_default_foreground(Color::new(138, 7, 7));
+                root.put_char(pos.0 as i32,
+                              pos.1 as i32,
+                              '%',
+                              BackgroundFlag::None);
+            }
+            &Food::Herb(_) => {
+                root.set_default_foreground(Color::new(139, 172, 44));
+                root.put_char(pos.0 as i32,
+                              pos.1 as i32,
+                              '#',
+                              BackgroundFlag::None);
+            }
+            _ => {}
+        }
+        root.set_default_foreground(Color::new(255, 255, 255));
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Material {
     Wood(VegType),
     Stone(StoneTypes),
+}
+
+impl DrawChar for Material {
+    fn draw_char(&self, root: &mut RootConsole, pos: Point2D) {
+        match self {
+            &Material::Wood(_) => {
+                root.set_default_foreground(Color::new(139, 69, 19));
+                root.put_char(pos.0 as i32,
+                              pos.1 as i32,
+                              '/',
+                              BackgroundFlag::None);
+            }
+            &Material::Stone(_) => {
+                root.set_default_foreground(Color::new(139,
+                                                       141,
+                                                       122));
+                root.put_char(pos.0 as i32,
+                              pos.1 as i32,
+                              '/',
+                              BackgroundFlag::None);
+            }
+        }
+        root.set_default_foreground(Color::new(255, 255, 255));
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -899,13 +942,19 @@ type Weight = u8;
 type Length = u8;
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Item {
-    Tool(ToolKind, Weight, Length, Option<Magic>),
+    Tool(Tool, Weight, Length, Option<Magic>),
     Food(Food),
     Material(Material),
 }
 
 impl DrawChar for Item {
-    fn draw_char(&self, _root: &mut RootConsole, _pos: Point2D) {}
+    fn draw_char(&self, root: &mut RootConsole, pos: Point2D) {
+        match self {
+            &Item::Tool(t, ..) => t.draw_char(root, pos),
+            &Item::Food(f) => f.draw_char(root, pos),
+            &Item::Material(m) => m.draw_char(root, pos),
+        }
+    }
 }
 
 impl Describe for Item {
@@ -932,7 +981,7 @@ impl Describe for Item {
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Tile {
     Empty,
-    Ramp(RestrictedTile, Slope),
+    Ramp(RestrictedTile),
     Moveable(RestrictedTile),
     Item(Item),
     Water(LiquidPurity, State, Depth),
@@ -963,17 +1012,7 @@ impl Describe for Tile {
     fn describe(&self) -> String {
         match self {
             &Tile::Empty => "Emtpy space".to_string(),
-            &Tile::Ramp(ref s, ref slope) => {
-                match slope {
-                    &Slope::Up => {
-                        format!("Up hill of {}", s.describe())
-                    }
-                    &Slope::Down => {
-                        format!("Down hill of {}", s.describe())
-                    }
-                    &Slope::None => format!("{} floor", s.describe()),
-                }
-            }
+            &Tile::Ramp(ref s) => "A ramp".to_string(),
             &Tile::Moveable(ref s) => {
                 format!("Loose pile of {}", s.describe())
             }
@@ -1017,37 +1056,7 @@ impl Describe for Tile {
 impl DrawChar for Tile {
     fn draw_char(&self, root: &mut RootConsole, pos: Point2D) {
         match self {
-            &Tile::Ramp(ref undertile, ref s) => {
-                match s {
-                    &Slope::Up => {
-                        undertile.draw_char(root, pos);
-                        if !TILES {
-                            root.put_char(pos.0 as i32,
-                                          pos.1 as i32,
-                                          chars::ARROW2_N,
-                                          BackgroundFlag::None);
-                        }
-                    }
-                    &Slope::None => {
-                        undertile.draw_char(root, pos);
-                        if !TILES {
-                            root.put_char(pos.0 as i32,
-                                          pos.1 as i32,
-                                          '.',
-                                          BackgroundFlag::None);
-                        }
-                    }
-                    &Slope::Down => {
-                        undertile.draw_char(root, pos);
-                        if !TILES {
-                            root.put_char(pos.0 as i32,
-                                          pos.1 as i32,
-                                          chars::ARROW2_S,
-                                          BackgroundFlag::None);
-                        }
-                    }
-                }
-            }
+            &Tile::Ramp(_) => {}
             &Tile::Moveable(ref t) => {
                 match t {
                     &RestrictedTile::Stone(ref s, State::Solid) => {

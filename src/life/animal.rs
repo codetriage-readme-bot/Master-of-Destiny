@@ -366,10 +366,7 @@ impl Animal {
                         MissionResult::NoResult
                     }
                     // Die
-                    Mission::Die => {
-                        println!("Executing death as mission");
-                        MissionResult::Die
-                    }
+                    Mission::Die => MissionResult::Die,
                     _ => MissionResult::NoResult,
                 };
             }
@@ -493,7 +490,6 @@ impl Animal {
                 }
             }
             Some(Mission::Die) => {
-                println!("Executing death at stationary.");
                 return MissionResult::Die;
             }
             _ => MissionResult::NoResult,
@@ -509,7 +505,6 @@ impl Animal {
 impl Living for Animal {
     fn add_goal(&mut self, mission: Mission) {
         if matches!(mission, Mission::Die) {
-            println!("Adding death mission.");
             self.failed_goal = None;
             self.current_goal = Some(Mission::Die);
             self.species.health = 0;
@@ -665,22 +660,23 @@ impl Living for Animal {
                         self.add_goal(Mission::Go((goal.0, goal.1),
                                                   10));
                     } else {
-                        self.add_goal(
-                            Mission::Go(random_point(0,
-                                                     map.map_size.0,
-                                                     0,
-                                                     map.map_size.1),
-                                        12));
+                        let &(x, y, _) =
+                            trng.choose(&in_sight.iter()
+                                        .map(|&(_, x)| x)
+                                        .collect::<Vec<_>>())
+                            .unwrap();
+                        self.add_goal(Mission::Go((x, y), 12));
                     }
                 }
                 _ => {
                     // Wander
-                    self.add_goal(
-                        Mission::Go(random_point(0,
-                                                 map.map_size.0,
-                                                 0,
-                                                 map.map_size.1),
-                                    12));
+                    let mut trng = self::rand::thread_rng();
+                    let &(x, y, _) =
+                        trng.choose(&in_sight.iter()
+                                             .map(|&(_, x)| x)
+                                             .collect::<Vec<_>>())
+                            .unwrap();
+                    self.add_goal(Mission::Go((x, y), 12));
                 }
             }
         }
@@ -688,6 +684,7 @@ impl Living for Animal {
     }
 
     fn current_pos(&self) -> Point3D { self.pos }
+    fn current_goal(&self) -> Option<Mission> { self.current_goal }
     fn species(&self) -> &SpeciesProperties { &self.species }
     fn goals(&self) -> (Option<&Mission>, Option<&Mission>) {
         (self.current_goal.as_ref(), self.failed_goal.as_ref())

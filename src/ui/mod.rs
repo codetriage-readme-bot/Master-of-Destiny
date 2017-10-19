@@ -22,9 +22,10 @@ pub trait MouseUI {
     }
 }
 
+// Data structures
+type BBox = ((i32, i32), (i32, i32));
 
 // UI Elements
-type BBox = ((i32, i32), (i32, i32));
 pub struct Button {
     pub bbox: BBox,
     pub text: String,
@@ -34,7 +35,7 @@ impl Button {
     pub fn new(name: &'static str,
                pos: (i32, i32),
                size: (i32, i32))
-               -> Button {
+        -> Button {
         Button {
             bbox: calculate_bbox(pos, size),
             text: format!("{:1$}", name, size.0 as usize),
@@ -74,7 +75,7 @@ impl Textbox {
     pub fn new(text: &'static str,
                pos: (i32, i32),
                size: (i32, i32))
-               -> Self {
+        -> Self {
         Textbox {
             value: "".to_string(),
             placeholder: text.to_string(),
@@ -116,6 +117,11 @@ impl DrawUI for Textbox {
     }
 }
 
+pub struct Selection {
+    bbox: BBox,
+}
+
+// Functions
 fn calculate_bbox(pos: (i32, i32), size: (i32, i32)) -> BBox {
     (pos, (pos.0 + size.0, pos.1 + size.1))
 }
@@ -130,20 +136,20 @@ impl Layout {
                pos: (i32, i32),
                button_size: (i32, i32),
                wrap_at: i32)
-               -> Layout {
+        -> Layout {
         Layout {
             buttons: elements.iter()
-                .enumerate()
-                .map(|(i, text)| {
-                    let raw_x = i as i32 * button_size.0;
-                    Button::new(text,
-                                (pos.0 + (raw_x % wrap_at),
-                                 pos.1 +
+                             .enumerate()
+                             .map(|(i, text)| {
+                let raw_x = i as i32 * button_size.0;
+                Button::new(text,
+                            (pos.0 + (raw_x % wrap_at),
+                             pos.1 +
                                  (raw_x / wrap_at *
-                                  (button_size.1 + 1))),
-                                button_size)
-                })
-                .collect(),
+                                      (button_size.1 + 1))),
+                            button_size)
+            })
+                             .collect(),
         }
     }
 }
@@ -166,5 +172,23 @@ impl MouseUI for Layout {
             }
         }
         None
+    }
+}
+
+#[macro_export]
+macro_rules! menu_event {
+    ( ($mouse:expr, $menu:expr) $( $name:expr => $e:block )+ ) => {
+        if $mouse.lbutton_pressed {
+            match $menu.bbox_colliding(($mouse.cx as i32,
+                                        $mouse.cy as i32)) {
+                Some(item) => {
+                    match item.trim().as_ref() {
+                        $( $name => $e )+
+                            _ => {}
+                    }
+                }
+                None => {}
+            }
+        }
     }
 }

@@ -55,8 +55,9 @@ fn draw_hud(root: &mut RootConsole,
          format!("Life #: {}", world_map.life.len()),
          String::new(),
          String::new()];
-    let (cx, cy) = (world.cursor.0 as usize, world.cursor.1 as usize);
-    if (cx >= 0 && cx < wid) && (cy >= 0 && cy < hig) {
+    let (cx, cy) = (world.cursor.0, world.cursor.1);
+    if (cx >= 0 && cx < wid as i32) && (cy >= 0 && cy < hig as i32) {
+        let (cx, cy) = (cx as usize, cy as usize);
         let wmap = &world_map[cy][cx];
         let wmapt = wmap.tiles.borrow();
         let len = wmapt.len().checked_sub(1).unwrap_or(0);
@@ -130,7 +131,7 @@ pub fn draw_map(root: &mut RootConsole,
                                     .checked_sub((world.level as
                                                       usize -
                                                       len) *
-                                                     8)
+                                                     6)
                                     .unwrap_or(0);
                                 let c = std::cmp::max(raw_c, 10) as
                                     u8;
@@ -151,9 +152,10 @@ pub fn draw_map(root: &mut RootConsole,
                 }
             }
 
-            let (cx, cy) = (world.cursor.0 as usize,
-                            world.cursor.1 as usize);
-            if (cx >= 0 && cx < wid) && (cy >= 0 && cy < hig) {
+            let (cx, cy) = (world.cursor.0, world.cursor.1);
+            if (cx >= 0 && cx < wid as i32) &&
+                (cy >= 0 && cy < hig as i32)
+            {
                 root.set_char_background(cx as i32,
                                          cy as i32,
                                          Color::new(100, 100, 100),
@@ -172,7 +174,9 @@ pub fn draw_map(root: &mut RootConsole,
         }
         None => {}
     }
-    draw_life(root, world, &world.map.as_ref().unwrap().life);
+    if let Some(ref map) = world.map {
+        draw_life(root, world, &map.life);
+    }
 }
 
 fn draw_life(root: &mut RootConsole,

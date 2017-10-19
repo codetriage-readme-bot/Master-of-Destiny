@@ -14,10 +14,10 @@ fn unsupported(tile: Tile,
                adj: Vec<Tile>,
                above: Tile,
                below: Tile)
-               -> bool {
+    -> bool {
     let solid_cnt = adj.iter()
-        .take_while(|x| x.solid())
-        .count();
+                       .take_while(|x| x.solid())
+                       .count();
     !below.solid() && (!above.solid() || !tile.heavy()) &&
         solid_cnt < 2
 }
@@ -46,10 +46,10 @@ pub fn run(ws: &mut WorldState, _dt: usize) {
                     if unsupported(tile,
                                    adj,
                                    *ut.get(h + 1)
-                                   .unwrap_or(&Tile::Empty),
+                                      .unwrap_or(&Tile::Empty),
                                    *ut.get((h.checked_sub(1)
-                                            .unwrap_or(0)))
-                                   .unwrap_or(&Tile::Empty))
+                                             .unwrap_or(0)))
+                                      .unwrap_or(&Tile::Empty))
                     {
                         let tmp = ut[h];
                         ut[h] = Tile::Empty;
