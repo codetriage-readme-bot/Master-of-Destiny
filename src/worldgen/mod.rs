@@ -6,6 +6,9 @@ use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::ops::{Index, Range};
 
+use std::sync::mpsc::{Receiver, Sender, channel};
+use std::thread;
+
 use tcod::noise::{Noise, NoiseType};
 use tcod::random;
 
@@ -14,13 +17,15 @@ use self::rand::Rng;
 use self::rand::SeedableRng;
 use self::terrain::*;
 
-use life::{Living, MissionResult, Order};
+use life::{DrawableLiving, Living, MissionResult, Order};
 
 use physics::PhysicsActor;
 
 use time::{Calendar, Clock, Time};
 
-use utils::{Point2D, Point3D, strict_adjacent};
+use utils::{Point2D, Point3D, distance3_d, strict_adjacent};
+
+use life::animal::{Species, SpeciesProperties};
 
 /// Returns the Some() of the restricted version of a Tile if it can be restricted, if not, returns None.
 fn restricted_from_tile(tile: Tile) -> Option<RestrictedTile> {
@@ -45,11 +50,84 @@ pub struct Unit {
 /// to its FrameAssoc.
 pub type Frames = HashMap<String, Vec<usize>>;
 
-/// A type alias for the world's map.
-pub type WorldMap = Vec<Vec<Unit>>;
-
 /// A type alias for the biome map.
 pub type BiomeMap = HashMap<String, RefCell<Vec<(usize, usize)>>>;
+
+/// A type alias for the world's map.
+pub struct WorldMap {
+    pub map: Vec<Vec<Unit>>,
+    pub biome_map: BiomeMap,
+}
+
+impl WorldMap {
+    /// Test if the given point is on the World plane.
+    pub fn located_inside(&self, pos: Point2D) -> bool {
+        pos.0 < self.map.len() && pos.1 < self.map[0].len()
+    }
+
+    pub fn get(&self, pos: Point2D) -> Option<Unit> {
+        if self.located_inside(pos) {
+            Some(self.map[pos.1][pos.0].clone())
+        } else {
+            None
+        }
+    }
+
+    pub fn location_z(&self, pos: Point2D) -> usize {
+        let loc = self.get(pos);
+        loc.map(|u| {
+            let t = u.tiles.borrow();
+            t.iter()
+             .enumerate()
+             .find(|&t| *t.1 == Tile::Empty)
+             .map(|(i, _)| i)
+             .unwrap_or(t.len()
+                         .checked_sub(1)
+                         .unwrap_or(1000000))
+        })
+           .unwrap_or(10000000)
+    }
+
+    pub fn location_z_from_to(&self,
+                              from: usize,
+                              to: Point2D)
+        -> usize {
+        let loc = self.get(to);
+        let mut openings =
+            loc.map(|u| {
+                u.tiles
+                 .borrow()
+                 .iter()
+                 .enumerate()
+                 .flat_map(|(i, t)| if t.solid() {
+                               None
+                           } else {
+                               Some(i)
+                           })
+                 .collect::<Vec<_>>()
+            })
+               .unwrap_or(vec![1000]);
+        openings.sort_by(|a, b| b.cmp(a));
+
+        openings.iter().fold(
+            1000,
+            |best, new| if (*new as i32 - from as i32).abs() <
+                (best as i32 - from as i32).abs()
+            {
+                *new
+            } else {
+                best
+            },
+        )
+    }
+}
+
+pub enum AnimalHandlerEvent {
+    Update(usize, WorldMap),
+    Draw,
+    NewAnimal(Box<Living>),
+}
+
 
 /// Keeps track of the state of they physical world, including:
 /// * the heightmap
@@ -62,23 +140,7 @@ pub struct World {
     seed: u32,
     pub map_size: Point2D,
     pub frames: Frames,
-    pub biome_map: BiomeMap,
     pub map: WorldMap,
-    pub life: Vec<RefCell<Box<Living>>>,
-}
-
-impl Index<usize> for World {
-    type Output = Vec<Unit>;
-    fn index(&self, location: usize) -> &Self::Output {
-        &self.map[location]
-    }
-}
-
-impl Index<Range<usize>> for World {
-    type Output = [Vec<Unit>];
-    fn index(&self, location: Range<usize>) -> &Self::Output {
-        &self.map[location]
-    }
 }
 
 const THRESHOLD: f32 = 0.3;
@@ -107,19 +169,20 @@ impl World {
         let mut world: World = World {
             map_size: size,
             heightmap: Self::generate_heightmap(size, seed),
-            map: vec![],
-            biome_map: ["s", "j", "f", "d", "p", "b", "w"]
-                .iter()
-                .cloned()
-                .map(|x| (x.to_string(), RefCell::new(vec![])))
-                .collect(),
+            map: WorldMap {
+                map: vec![],
+                biome_map: ["s", "j", "f", "d", "p", "b", "w"]
+                    .iter()
+                    .cloned()
+                    .map(|x| (x.to_string(), RefCell::new(vec![])))
+                    .collect(),
+            },
             stone_vein_noise: Noise::init_with_dimensions(3)
                 .lacunarity(0.43)
                 .hurst(-0.9)
                 .noise_type(NoiseType::Simplex)
                 .random(rng)
                 .init(),
-            life: vec![],
             seed: seed,
             frames: [("Water".to_string(),
                       vec![16, 32, 33, 34, 35, 36])]
@@ -130,16 +193,6 @@ impl World {
         };
         world.map = Self::map_from(size, &world);
         world
-    }
-
-    pub fn kill(&mut self, i: usize) {
-        let l = self.life.remove(i).into_inner();
-        let pos = l.current_pos();
-        self.map[pos.0][pos.1]
-            .tiles
-            .borrow_mut()
-            [pos.2] = Tile::Item(Item::Food(Food::Meat(l.species()
-                                                        .species)))
     }
 
     pub fn create_life_by_biome(pnt: Point3D,
@@ -212,33 +265,10 @@ impl World {
         Some(Animal::new(pnt, species))
     }
 
-
-    /// Creates a vector of animals based on biome and height.
-    pub fn generate_life(&mut self) {
-        let mut rng = rand::IsaacRng::from_seed(&[self.seed]);
-        for _ in 0..ANIMAL_COUNT {
-            let bks = self.biome_map
-                          .iter()
-                          .map(|(k, _)| k.clone())
-                          .collect::<Vec<_>>();
-            let chosen_biome = rng.choose(&bks).unwrap();
-            let bps = &self.biome_map[chosen_biome];
-            if let Some(point) = rng.choose(&bps.borrow()) {
-                let unit = self.get(*point).unwrap();
-                let z = self.location_z(*point);
-                let ut = unit.tiles.borrow();
-                let tile = ut.get(z);
-                if tile.is_some() && !tile.unwrap().solid() {
-                    let p3d = (point.0, point.1, z);
-                    let animal =
-                        World::create_life_by_biome(p3d,
-                                                    unit.biome
-                                                        .unwrap());
-                    if let Some(animal) = animal {
-                        self.life.push(RefCell::new(animal));
-                    }
-                }
-            }
+    pub fn kill_at(&mut self, pos: Point3D, species: Species) {
+        if let Some(unit) = self.map.get((pos.0, pos.1)) {
+            unit.tiles.borrow_mut()[pos.2] =
+                Tile::Item(Item::Food(Food::Meat(species)))
         }
     }
 
@@ -252,8 +282,8 @@ impl World {
     /// Generate bedrock and mountains/hills from terrain info
     fn rock_from_terrain(ws: &World,
                          (sw, sh): Point2D,
-                         world: WorldMap)
-        -> WorldMap {
+                         world: Vec<Vec<Unit>>)
+        -> Vec<Vec<Unit>> {
         (0..sh)
             .map(|y| {
                 (0..sw)
@@ -276,7 +306,7 @@ impl World {
     /// Step 2 of map generation:
     /// Replace low rock with water of a similar depth.
     /// The sea level is raised when inland to allow for rivers and pools.
-    fn water_from_low(world: WorldMap) -> WorldMap {
+    fn water_from_low(world: Vec<Vec<Unit>>) -> Vec<Vec<Unit>> {
         world.iter()
              .enumerate()
              .map(|(y, row)| {
@@ -334,9 +364,9 @@ impl World {
 
     /// Step 3 of map generation:
     /// Generate biomes (temp, percipitation) from altitude and a noise
-    fn biomes_from_height_and_noise(world_map: WorldMap,
+    fn biomes_from_height_and_noise(world_map: Vec<Vec<Unit>>,
                                     world: &World)
-        -> WorldMap {
+        -> Vec<Vec<Unit>> {
         let bnoise = Noise::init_with_dimensions(2)
             .lacunarity(0.43)
             .hurst(-0.9)
@@ -366,7 +396,7 @@ impl World {
                                                     (sh as i32 / n) as
                                                         f32);
                 let bn = &biome.biome_type.stringified();
-                if let Some(bml) = world.biome_map.get(bn) {
+                if let Some(bml) = world.map.biome_map.get(bn) {
                     bml.borrow_mut().push((x, y));
                 }
                 Unit {
@@ -381,9 +411,9 @@ impl World {
 
     /// Step 4 of map generation:
     /// Generate vegitation based on what survives where in the biomes, and height.
-    fn vegitation_from_biomes(world: WorldMap,
+    fn vegitation_from_biomes(world: Vec<Vec<Unit>>,
                               seed: u32)
-        -> WorldMap {
+        -> Vec<Vec<Unit>> {
         let vnoise = Noise::init_with_dimensions(2)
             .lacunarity(0.3)
             .hurst(-0.9)
@@ -421,9 +451,9 @@ impl World {
 
     /// Step 5 of map generation:
     /// Generate the soil (and snow) based on plant and biome.
-    fn add_soil(world: WorldMap, seed: u32) -> WorldMap {
+    fn add_soil(world: Vec<Vec<Unit>>, seed: u32) -> Vec<Vec<Unit>> {
         fn get_op<'a>(p: Point2D,
-                      world: &'a WorldMap)
+                      world: &'a Vec<Vec<Unit>>)
             -> Option<&'a Unit> {
             let row = get!(world.get(p.1));
             let unit = get!(row.get(p.0));
@@ -476,29 +506,16 @@ impl World {
             World::biomes_from_height_and_noise;
         let vegitation_from_biomes = World::vegitation_from_biomes;
         let add_soil = World::add_soil;
-        pipe!(
-            vec![]
-                => {|i| rock_from_terrain(ws, size, i)}
-            => water_from_low
-            => { |x| biomes_from_height_and_noise(x, ws) }
-            => { |x| vegitation_from_biomes(x, ws.seed) }
-            => { |x| add_soil(x, ws.seed) }
-        )
-    }
-
-
-    pub fn life_at_point(
-        &self,
-        x: usize,
-        y: usize)
-        -> Option<(usize, &RefCell<Box<Living>>)> {
-        self.life
-            .iter()
-            .enumerate()
-            .find(|&(_i, e)| {
-            let op = e.borrow().current_pos();
-            (op.0, op.1) == (x, y)
-        })
+        WorldMap {
+            map: pipe!(
+                vec![]
+                    => {|i| rock_from_terrain(ws, size, i)}
+                => water_from_low
+                => { |x| biomes_from_height_and_noise(x, ws) }
+                => { |x| vegitation_from_biomes(x, ws.seed) }
+                => { |x| add_soil(x, ws.seed) }),
+            biome_map: ws.map.biome_map,
+        }
     }
 
     /// A general method for dealing with generating random hills of a limited size, position, and height.
@@ -627,16 +644,7 @@ impl World {
 
     /// Get the unit at the specified position. Returns an optional type.
     pub fn get(&self, pos: Point2D) -> Option<Unit> {
-        if self.located_inside(pos) {
-            Some(self.map[pos.1][pos.0].clone())
-        } else {
-            None
-        }
-    }
-
-    /// Test if the given point is on the World plane.
-    pub fn located_inside(&self, pos: Point2D) -> bool {
-        return pos.0 < self.map_size.0 && pos.1 < self.map_size.1;
+        self.map.get(pos)
     }
 
     /// For memory cleanup.
@@ -677,13 +685,13 @@ impl World {
 
     pub fn len(&self) -> usize {
         match *self {
-            World { ref map, .. } => map.len(),
+            World { ref map, .. } => map.map.len(),
         }
     }
 
     pub fn push(&mut self, value: Vec<Unit>) {
         match *self {
-            World { ref mut map, .. } => map.push(value),
+            World { ref mut map, .. } => map.map.push(value),
         }
     }
 
@@ -880,54 +888,6 @@ impl World {
             Tile::Vegetation(VegType::Dandelion, 1, State::Solid)
         }
     }
-
-    pub fn location_z(&self, pos: Point2D) -> usize {
-        let loc = self.get(pos);
-        loc.map(|u| {
-            let t = u.tiles.borrow();
-            t.iter()
-             .enumerate()
-             .find(|&t| *t.1 == Tile::Empty)
-             .map(|(i, _)| i)
-             .unwrap_or(t.len()
-                         .checked_sub(1)
-                         .unwrap_or(1000000))
-        })
-           .unwrap_or(10000000)
-    }
-
-    pub fn location_z_from_to(&self,
-                              from: usize,
-                              to: Point2D)
-        -> usize {
-        let loc = self.get(to);
-        let mut openings =
-            loc.map(|u| {
-                u.tiles
-                 .borrow()
-                 .iter()
-                 .enumerate()
-                 .flat_map(|(i, t)| if t.solid() {
-                               None
-                           } else {
-                               Some(i)
-                           })
-                 .collect::<Vec<_>>()
-            })
-               .unwrap_or(vec![1000]);
-        openings.sort_by(|a, b| b.cmp(a));
-
-        openings.iter().fold(
-            1000,
-            |best, new| if (*new as i32 - from as i32).abs() <
-                (best as i32 - from as i32).abs()
-            {
-                *new
-            } else {
-                best
-            },
-        )
-    }
 }
 
 /// Handles general time:
@@ -953,6 +913,9 @@ pub struct TimeHandler {
 /// performance reasons, is not requred on the creation of the struct,
 /// instead relying on after-the-fact linking.
 pub struct WorldState {
+    life_sent: bool,
+    pub life_send_tc: Sender<AnimalHandlerEvent>,
+    pub life_receive_tc: Receiver<MissionResult>,
     pub screen: (i32, i32),
     pub cursor: (i32, i32),
     pub level: i32,
@@ -978,42 +941,52 @@ impl WorldState {
 
     fn update_life(&mut self, time: usize) {
         if let Some(ref mut world) = self.map {
-            for i in 0..world.life.len() {
-                let modifier = if i % 2 == 0 { 2 } else { 3 };
-                if time % modifier == 0 {
-                    let res = {
-                        let mut actor = world.life[i].borrow_mut();
-                        actor.execute_mission(world)
-                    };
-                    match res {
-                        MissionResult::Die => world.kill(i),
-                        MissionResult::Kill(i) => world.kill(i),
-                        MissionResult::RemoveItem(pnt) => {
-                            let unit = &world.map[pnt.1][pnt.0];
-                            let mut tiles = unit.tiles.borrow_mut();
-                            tiles[pnt.2] = Tile::Empty;
-                        }
-                        MissionResult::ReplaceItem(pnt, item) => {
-                            let unit = &world.map[pnt.1][pnt.0];
-                            let mut tiles = unit.tiles.borrow_mut();
-                            tiles[pnt.2] = Tile::Item(item);
-                        }
-                        _ => (),
-                    }
-                }
-            }
+            self.life_send_tc
+                .send(AnimalHandlerEvent::Update(time, world.map));
         }
     }
     /// Updates world time and then deligates to the physics engine.
     pub fn update(&mut self, time: usize, dt: usize) {
         self.update_time(time, dt);
-        self.update_life(time);
+        if !self.life_sent {
+            self.update_life(time);
+            self.life_sent = true;
+        }
+
+        if let Some(ref mut world) = self.map {
+            let r = self.life_receive_tc.recv();
+            match r {
+                Ok(MissionResult::RemoveItem(pnt)) => {
+                    if let Some(unit) =
+                        world.map.get((pnt.0, pnt.1))
+                    {
+                        let mut tiles = unit.tiles.borrow_mut();
+                        tiles[pnt.2] = Tile::Empty;
+                    }
+                }
+                Ok(MissionResult::Kill2(pnt, species)) => {
+                    world.kill_at(pnt, species)
+                }
+                Ok(MissionResult::ReplaceItem(pnt, item)) => {
+                    if let Some(unit) =
+                        world.map.get((pnt.0, pnt.1))
+                    {
+                        let mut tiles = unit.tiles.borrow_mut();
+                        tiles[pnt.2] = Tile::Item(item);
+                    }
+                }
+                Ok(_) => (),
+                Err(err) => panic!(err),
+            }
+            self.life_sent = !r.is_ok();
+        }
         //physics::run(self, dt);
     }
 
     /// Add a world map and update its meta layer.
     pub fn add_map(&mut self, world: World) {
         let max = world.map
+                       .map
                        .iter()
                        .flat_map(|r| {
             r.iter()
@@ -1023,16 +996,48 @@ impl WorldState {
                        .max();
         self.map = Some(world);
         self.highest_level = max.unwrap_or(30);
-        self.map
-            .as_mut()
-            .unwrap()
-            .generate_life();
+        self.generate_life();
+    }
+
+    /// Creates a vector of animals based on biome and height.
+    pub fn generate_life(&mut self) {
+        if let Some(ref mut world) = self.map {
+            let mut rng = rand::IsaacRng::from_seed(&[world.seed]);
+            for _ in 0..ANIMAL_COUNT {
+                let bks = world.map
+                               .biome_map
+                               .iter()
+                               .map(|(k, _)| k.clone())
+                               .collect::<Vec<_>>();
+                let chosen_biome = rng.choose(&bks).unwrap();
+                let bps = &world.map.biome_map[chosen_biome];
+                if let Some(point) = rng.choose(&bps.borrow()) {
+                    let unit = world.get(*point).unwrap();
+                    let z = world.map.location_z(*point);
+                    let ut = unit.tiles.borrow();
+                    let tile = ut.get(z);
+                    if tile.is_some() && !tile.unwrap().solid() {
+                        let p3d = (point.0, point.1, z);
+                        let animal =
+                            World::create_life_by_biome(p3d,
+                                                        unit.biome
+                                                        .unwrap());
+                        if let Some(animal) = animal {
+                            self.life_send_tc.send(
+                                AnimalHandlerEvent::NewAnimal(animal));
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// Create a new WorldState, loaded with sensable defaults.
     pub fn new() -> WorldState {
         let clock = Clock { time: (12, 30) };
-        WorldState {
+        let (send_to_thread, receive_from_world) = channel();
+        let (send_to_world, receive_from_thread) = channel();
+        let ws = WorldState {
             commands: vec![],
             screen: (0, 0),
             level: 31,
@@ -1044,7 +1049,150 @@ impl WorldState {
                 time_of_day: Time::Morning,
                 clock: clock,
             },
+            life_sent: false,
+            life_send_tc: send_to_thread,
+            life_receive_tc: receive_from_thread,
             map: None,
+        };
+        std::thread::spawn(handle_life(receive_from_world,
+                                       send_to_world));
+        ws
+    }
+}
+
+pub struct LifeManager {
+    life: Vec<RefCell<Box<Living>>>,
+}
+
+impl Index<usize> for LifeManager {
+    type Output = RefCell<Box<Living>>;
+    fn index(&self, location: usize) -> &Self::Output {
+        &self.life[location]
+    }
+}
+
+impl LifeManager {
+    pub fn new() -> Self { LifeManager { life: vec![] } }
+
+    pub fn posns_of_species(&self, s: Species) -> Vec<Point3D> {
+        self.life
+            .iter()
+            .filter_map(|a| if let Ok(l) = a.try_borrow() {
+                            if l.species().species == s {
+                                Some(l.current_pos())
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        })
+            .collect()
+    }
+
+    pub fn closeby(&self,
+                   this: Box<Living>)
+        -> Vec<(Point3D, SpeciesProperties)> {
+        let mut res = vec![];
+        for l in self.life {
+            let other = l.borrow();
+            let dist = distance3_d(other.current_pos(),
+                                   this.current_pos());
+            let os = other.species();
+            let ts = this.species();
+
+            if dist <= ts.sight as f32 && os.species != ts.species {
+                res.push((other.current_pos(), *os));
+            }
+        }
+
+        res
+    }
+
+    pub fn closeby_predator(&self,
+                            this: Box<Living>)
+        -> Option<SpeciesProperties> {
+        self.closeby(this)
+            .iter()
+            .find(|a| matches!(a.1.species, Species::Carnivore(..)))
+            .map(|a| a.1)
+    }
+
+    pub fn kill(&mut self, i: usize) -> Box<Living> {
+        self.life.remove(i).into_inner()
+    }
+
+    pub fn len(&self) -> usize { self.life.len() }
+
+    pub fn life_at_point(
+        &self,
+        x: usize,
+        y: usize)
+        -> Option<(usize, &RefCell<Box<Living>>)> {
+        self.life
+            .iter()
+            .enumerate()
+            .find(|&(_i, e)| {
+            let op = e.borrow().current_pos();
+            (op.0, op.1) == (x, y)
+        })
+    }
+
+    pub fn get_drawables(&self) -> Vec<DrawableLiving> {
+        self.life
+            .iter()
+            .map(|l| {
+            let l = l.borrow();
+            DrawableLiving {
+                species: *l.species(),
+                current_pos: l.current_pos(),
+            }
+        })
+            .collect()
+    }
+}
+
+fn handle_life(receive_from_world: Receiver<AnimalHandlerEvent>,
+               send_to_world: Sender<MissionResult>)
+    -> impl FnOnce() {
+    move || {
+        let life = LifeManager::new();
+        match receive_from_world.recv() {
+            Ok(AnimalHandlerEvent::NewAnimal(animal)) => {
+                life.life.push(RefCell::new(animal));
+            }
+            Ok(AnimalHandlerEvent::Draw) => {
+                send_to_world.send(MissionResult::List(life.get_drawables()));
+            }
+            Ok(AnimalHandlerEvent::Update(time, world)) => {
+                for i in 0..life.len() {
+                    let modifier = if i % 2 == 0 { 2 } else { 3 };
+                    if time % modifier == 0 {
+                        let res = {
+                            let mut actor = life[i].borrow_mut();
+                            actor.execute_mission(&world, &life)
+                        };
+                        match res {
+                            MissionResult::Die(j) |
+                            MissionResult::Kill(j) => {
+                                let l = life.kill(if j != 0 {
+                                                      j
+                                                  } else {
+                                                      i
+                                                  });
+                                send_to_world.send(MissionResult::Kill2(l.current_pos(),
+                                                                        l.species().species));
+                            }
+                            other => {
+                                send_to_world.send(other);
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
+
+// TODO:
+// 1) Implement Kill2 and update local (worldgen::update) code
+// 2) Update execute_mission to take life as second parameter (extra)

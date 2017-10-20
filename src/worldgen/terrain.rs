@@ -16,37 +16,41 @@ use tcod::chars;
 use tcod::console::{BackgroundFlag, Console};
 
 pub const TILES: bool = true;
-pub const BASE: u32 = 256;
-const TILES_BENTGRASS: u32 = BASE;
-const TILES_BLUEGRASS: u32 = (BASE + 1);
-const TILES_CHICKWEED: u32 = (BASE + 2);
-const TILES_DANDELION: u32 = (BASE + 3);
-const TILES_PASTUREGRASS: u32 = (BASE + 4);
-const TILES_RYEGRASS: u32 = (BASE + 5);
-const TILES_CLAY: u32 = (BASE + 6);
-const TILES_CONGLOMERATE: u32 = (BASE + 7);
-const TILES_GNEISS: u32 = (BASE + 8);
-const TILES_LIMESTONE: u32 = (BASE + 9);
-const TILES_LOAMY: u32 = (BASE + 10);
-const TILES_MARBLE: u32 = (BASE + 11);
-const TILES_OBSIDIAN: u32 = (BASE + 12);
-const TILES_PEATY: u32 = (BASE + 13);
-const TILES_SANDY: u32 = (BASE + 14);
-const TILES_SILTY: u32 = (BASE + 15);
-const TILES_WATER: u32 = (BASE + 16);
-const TILES_LAVA: u32 = (BASE + 17);
-const TILES_CRABAPPLE: u32 = (BASE + 18);
-const TILES_BASALT: u32 = (BASE + 19);
-const TILES_BANYON: u32 = (BASE + 20);
-const TILES_BROOMSHRUB: u32 = (BASE + 21);
-const TILES_PINE: u32 = (BASE + 22);
-const TILES_REDBUD: u32 = (BASE + 23);
-const TILES_REDWOOD: u32 = (BASE + 24);
-const TILES_RHODODENDRON: u32 = (BASE + 25);
-const TILES_TREETRUNK: u32 = (BASE + 26);
-const TILES_PUDDLE: u32 = (BASE + 27);
-const TILES_ICE: u32 = (BASE + 28);
-const TILES_SNOW: u32 = (BASE + 29);
+pub const BASE: isize = 256;
+pub enum Tiles {
+    Bentgrass = BASE,
+    Bluegrass,
+    Chickweed,
+    Dandelion,
+    Pasturegrass,
+    Ryegrass,
+    Clay,
+    Conglomerate,
+    Gneiss,
+    Limestone,
+    Loamy,
+    Marble,
+    Obsidian,
+    Peaty,
+    Sandy,
+    Silty,
+    Water,
+    Lava,
+    Crabapple,
+    Basalt,
+    Banyon,
+    Broomshrub,
+    Pine,
+    Redbud,
+    Redwood,
+    Rhododendron,
+    Treetrunk,
+    Puddle,
+    Ice,
+    Snow,
+    Woodwall,
+    Stonewall,
+}
 
 /////// ROCK
 // Possible igneous rock kinds
@@ -72,7 +76,7 @@ impl DrawChar for IgneousRocks {
         match self {
             &IgneousRocks::Obsidian => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_OBSIDIAN)
+                    std::char::from_u32(Tiles::Obsidian as u32)
                         .unwrap()
                 } else {
                     chars::BLOCK1
@@ -89,7 +93,7 @@ impl DrawChar for IgneousRocks {
             }
             &IgneousRocks::Basalt => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_BASALT)
+                    std::char::from_u32(Tiles::Basalt as u32)
                         .unwrap()
                 } else {
                     chars::BLOCK3
@@ -133,7 +137,7 @@ impl DrawChar for MetamorphicRocks {
         match self {
             &MetamorphicRocks::Gneiss => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_GNEISS)
+                    std::char::from_u32(Tiles::Gneiss as u32)
                         .unwrap()
                 } else {
                     chars::BLOCK2
@@ -150,7 +154,7 @@ impl DrawChar for MetamorphicRocks {
             }
             &MetamorphicRocks::Marble => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_MARBLE)
+                    std::char::from_u32(Tiles::Marble as u32)
                         .unwrap()
                 } else {
                     chars::BLOCK1
@@ -194,7 +198,7 @@ impl DrawChar for SedimentaryRocks {
         match self {
             &SedimentaryRocks::Limestone => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_LIMESTONE)
+                    std::char::from_u32(Tiles::Limestone as u32)
                         .unwrap()
                 } else {
                     chars::BLOCK3
@@ -211,7 +215,7 @@ impl DrawChar for SedimentaryRocks {
             }
             &SedimentaryRocks::Conglomerate => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_CONGLOMERATE)
+                    std::char::from_u32(Tiles::Conglomerate as u32)
                         .unwrap()
                 } else {
                     chars::BLOCK2
@@ -257,7 +261,8 @@ impl DrawChar for SoilTypes {
         match self {
             &SoilTypes::Clay => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_CLAY).unwrap()
+                    std::char::from_u32(Tiles::Clay as u32)
+                        .unwrap()
                 } else {
                     '='
                 };
@@ -273,7 +278,7 @@ impl DrawChar for SoilTypes {
             }
             &SoilTypes::Sandy => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_SANDY)
+                    std::char::from_u32(Tiles::Sandy as u32)
                         .unwrap()
                 } else {
                     '='
@@ -290,7 +295,7 @@ impl DrawChar for SoilTypes {
             }
             &SoilTypes::Silty => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_SILTY)
+                    std::char::from_u32(Tiles::Silty as u32)
                         .unwrap()
                 } else {
                     '='
@@ -307,7 +312,7 @@ impl DrawChar for SoilTypes {
             }
             &SoilTypes::Peaty => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_PEATY)
+                    std::char::from_u32(Tiles::Peaty as u32)
                         .unwrap()
                 } else {
                     '='
@@ -324,7 +329,7 @@ impl DrawChar for SoilTypes {
             }
             &SoilTypes::Loamy => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_LOAMY)
+                    std::char::from_u32(Tiles::Loamy as u32)
                         .unwrap()
                 } else {
                     '='
@@ -441,7 +446,7 @@ impl DrawChar for VegType {
         match self {
             &VegType::Bluegrass => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_PASTUREGRASS)
+                    std::char::from_u32(Tiles::Pasturegrass as u32)
                         .unwrap()
                 } else {
                     '"'
@@ -458,7 +463,7 @@ impl DrawChar for VegType {
             }
             &VegType::Treetrunk => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_TREETRUNK)
+                    std::char::from_u32(Tiles::Treetrunk as u32)
                         .unwrap()
                 } else {
                     'O'
@@ -475,7 +480,7 @@ impl DrawChar for VegType {
             }
             &VegType::Bentgrass => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_BENTGRASS)
+                    std::char::from_u32(Tiles::Bentgrass as u32)
                         .unwrap()
                 } else {
                     ','
@@ -492,7 +497,7 @@ impl DrawChar for VegType {
             }
             &VegType::Ryegrass => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_RYEGRASS)
+                    std::char::from_u32(Tiles::Ryegrass as u32)
                         .unwrap()
                 } else {
                     '`'
@@ -510,7 +515,7 @@ impl DrawChar for VegType {
 
             &VegType::Dandelion => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_DANDELION)
+                    std::char::from_u32(Tiles::Dandelion as u32)
                         .unwrap()
                 } else {
                     chars::EXCLAM_DOUBLE
@@ -527,7 +532,7 @@ impl DrawChar for VegType {
             }
             &VegType::Chickweed => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_CHICKWEED)
+                    std::char::from_u32(Tiles::Chickweed as u32)
                         .unwrap()
                 } else {
                     '!'
@@ -545,7 +550,7 @@ impl DrawChar for VegType {
 
             &VegType::BroomShrub => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_BROOMSHRUB)
+                    std::char::from_u32(Tiles::Broomshrub as u32)
                         .unwrap()
                 } else {
                     '\u{f4}'
@@ -562,7 +567,7 @@ impl DrawChar for VegType {
             }
             &VegType::Rhododendron => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_RHODODENDRON)
+                    std::char::from_u32(Tiles::Rhododendron as u32)
                         .unwrap()
                 } else {
                     '\u{f4}'
@@ -580,7 +585,7 @@ impl DrawChar for VegType {
 
             &VegType::Crabapple => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_CRABAPPLE)
+                    std::char::from_u32(Tiles::Crabapple as u32)
                         .unwrap()
                 } else {
                     chars::CLUB
@@ -597,7 +602,7 @@ impl DrawChar for VegType {
             }
             &VegType::Redbud => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_REDBUD)
+                    std::char::from_u32(Tiles::Redbud as u32)
                         .unwrap()
                 } else {
                     chars::CLUB
@@ -615,7 +620,8 @@ impl DrawChar for VegType {
 
             &VegType::Pine => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_PINE).unwrap()
+                    std::char::from_u32(Tiles::Pine as u32)
+                        .unwrap()
                 } else {
                     chars::ARROW_N
                 };
@@ -631,7 +637,7 @@ impl DrawChar for VegType {
             }
             &VegType::Redwood => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_REDWOOD)
+                    std::char::from_u32(Tiles::Redwood as u32)
                         .unwrap()
                 } else {
                     '\u{17}'
@@ -648,7 +654,7 @@ impl DrawChar for VegType {
             }
             &VegType::Banyon => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_BANYON)
+                    std::char::from_u32(Tiles::Banyon as u32)
                         .unwrap()
                 } else {
                     chars::CLUB
@@ -814,7 +820,8 @@ impl DrawChar for RestrictedTile {
             }
             &RestrictedTile::Stone(_, State::Liquid) => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_LAVA).unwrap()
+                    std::char::from_u32(Tiles::Lava as u32)
+                        .unwrap()
                 } else {
                     '~'
                 };
@@ -1088,7 +1095,8 @@ impl DrawChar for Tile {
             }
             &Tile::Stone(_, State::Liquid) => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_LAVA).unwrap()
+                    std::char::from_u32(Tiles::Lava as u32)
+                        .unwrap()
                 } else {
                     '~'
                 };
@@ -1105,7 +1113,8 @@ impl DrawChar for Tile {
             &Tile::Stone(_, State::Gas) => unreachable!(),
             &Tile::Water(_, State::Solid, _) => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_ICE).unwrap()
+                    std::char::from_u32(Tiles::Ice as u32)
+                        .unwrap()
                 } else {
                     chars::BLOCK1
                 };
@@ -1121,7 +1130,7 @@ impl DrawChar for Tile {
             }
             &Tile::Water(_, State::Liquid, _) => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_WATER)
+                    std::char::from_u32(Tiles::Water as u32)
                         .unwrap()
                 } else {
                     '\u{f7}'
@@ -1138,7 +1147,7 @@ impl DrawChar for Tile {
             }
             &Tile::Water(_, State::Gas, _) => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_OBSIDIAN)
+                    std::char::from_u32(Tiles::Obsidian as u32)
                         .unwrap()
                 } else {
                     chars::BLOCK1
@@ -1156,7 +1165,7 @@ impl DrawChar for Tile {
             &Tile::Vegetation(ref v, ..) => v.draw_char(root, pos),
             &Tile::Fire => {
                 let chr = if TILES {
-                    std::char::from_u32(TILES_OBSIDIAN)
+                    std::char::from_u32(Tiles::Obsidian as u32)
                         .unwrap()
                 } else {
                     chars::BLOCK1
@@ -1198,7 +1207,7 @@ impl FramedDraw for Tile {
                         .choose(&[0, 1, 2])
                         .unwrap();
                     let cframe = frames[(time + rand) % frames.len()];
-                    std::char::from_u32(BASE + cframe as u32)
+                    std::char::from_u32(BASE as u32 + cframe as u32)
                         .unwrap()
                 } else {
                     '\u{f7}'

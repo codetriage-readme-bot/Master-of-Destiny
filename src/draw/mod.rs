@@ -6,9 +6,9 @@ use tcod::colors::Color;
 use tcod::console;
 use tcod::console::{BackgroundFlag, Console};
 
-use life::Living;
+use life::{DrawableLiving, MissionResult};
 
-use worldgen::{Frames, World, WorldState};
+use worldgen::{AnimalHandlerEvent, Frames, World, WorldState};
 use worldgen::terrain::{TILES, Tile};
 
 pub trait DrawChar {
@@ -44,7 +44,7 @@ fn draw_hud(root: &mut RootConsole,
                        true,
                        BackgroundFlag::Set,
                        Some("Tools"));
-    let mut hud_info: [String; 8] =
+    let mut hud_info: [String; 7] =
         [format!("Height: {}", world.level),
          format!("Screen Position: {}, {}",
                  world.screen.0,
@@ -52,28 +52,21 @@ fn draw_hud(root: &mut RootConsole,
          format!("Date: {}", world.time.calendar.describe()),
          format!("Clock: {}", world.time.clock.describe()),
          format!("Weather: {:?}", world.time.calendar.weather),
-         format!("Life #: {}", world_map.life.len()),
          String::new(),
          String::new()];
     let (cx, cy) = (world.cursor.0, world.cursor.1);
     if (cx >= 0 && cx < wid as i32) && (cy >= 0 && cy < hig as i32) {
         let (cx, cy) = (cx as usize, cy as usize);
-        let wmap = &world_map[cy][cx];
-        let wmapt = wmap.tiles.borrow();
+        let wmap = &world_map.get((cx, cy));
+        let wmapt = wmap.unwrap().tiles.borrow();
         let len = wmapt.len().checked_sub(1).unwrap_or(0);
-        hud_info[6] = if let Some((_id, life)) =
-            world_map.life_at_point(cx, cy)
-        {
-            format!("{:?}", life.borrow().species().species)
-        } else {
-            if len < world.level as usize {
-                wmapt.get(len as usize)
-            } else {
-                wmapt.get(world.level as usize)
-            }
-            .unwrap_or(&Tile::Empty)
-            .describe()
-        };
+        hud_info[6] = if len < world.level as usize {
+                          wmapt.get(len as usize)
+                      } else {
+                          wmapt.get(world.level as usize)
+                      }
+                      .unwrap_or(&Tile::Empty)
+                      .describe();
         if len != world.level as usize {
             hud_info[7] = format!("Distance from Level: {}",
                                   world.level as i32 - len as i32);
@@ -114,8 +107,8 @@ pub fn draw_map(root: &mut RootConsole,
                 for (mx, x) in (screen_start_x..screen_end_x)
                     .zip(0..wid)
                 {
-                    let wmap = &world_map[my][mx];
-                    let wmapt = wmap.tiles.borrow();
+                    let wmap = &world_map.get((mx, my));
+                    let wmapt = wmap.unwrap().tiles.borrow();
                     let len = wmapt.len().checked_sub(1).unwrap_or(0);
 
                     match wmapt.get(world.level as usize) {
@@ -175,27 +168,34 @@ pub fn draw_map(root: &mut RootConsole,
         None => {}
     }
     if let Some(ref map) = world.map {
-        draw_life(root, world, &map.life);
+        draw_life(root, world);
     }
 }
 
-fn draw_life(root: &mut RootConsole,
-             ws: &WorldState,
-             life: &Vec<RefCell<Box<Living>>>) {
-    let wid = root.width();
-    let hig = root.height();
+fn draw_life(root: &mut RootConsole, ws: &WorldState) {
+    use std::time::Duration;
+    ws.life_send_tc
+      .send(AnimalHandlerEvent::Draw);
+    match ws.life_receive_tc
+              .recv_timeout(Duration::from_millis(16)) {
+        Ok(MissionResult::List(drawables)) => {
+            let wid = root.width();
+            let hig = root.height();
 
-    for l in life {
-        let l = l.borrow();
-        let pnt = (l.current_pos().0, l.current_pos().1);
-        let rel_pnt = (pnt.0 as i32 - ws.screen.0,
-                       pnt.1 as i32 - ws.screen.1);
-        if rel_pnt.0 < wid && rel_pnt.1 < hig && rel_pnt.0 >= 0 &&
-            rel_pnt.1 >= 0 &&
-            ws.level >= l.current_pos().2 as i32
-        {
-            l.draw_char(root,
-                        (rel_pnt.0 as usize, rel_pnt.1 as usize));
+            for l in drawables {
+                let pnt = (l.current_pos.0, l.current_pos.1);
+                let rel_pnt = (pnt.0 as i32 - ws.screen.0,
+                               pnt.1 as i32 - ws.screen.1);
+                if rel_pnt.0 < wid && rel_pnt.1 < hig &&
+                    rel_pnt.0 >= 0 &&
+                    rel_pnt.1 >= 0 &&
+                    ws.level >= l.current_pos.2 as i32
+                {
+                    l.draw_char(root,
+                                (rel_pnt.0 as usize,
+                                 rel_pnt.1 as usize));
+                }
+            }
         }
     }
 }

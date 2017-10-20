@@ -1,23 +1,29 @@
-use draw::DrawChar;
+use std;
+use std::cell::RefCell;
 use std::option::Option;
+
+use draw::DrawChar;
 
 use tcod::{BackgroundFlag, Console, RootConsole};
 
 use utils::{Point2D, Point3D, Rect2D, Rect2D3D};
-use worldgen::World;
-use worldgen::terrain::{Item, Tile};
+use worldgen::{LifeManager, WorldMap};
+use worldgen::terrain::{Item, TILES, Tile};
 
 pub mod animal;
 pub mod bird;
 pub mod dwarf;
 pub mod monster;
 
+use self::animal::{AnimalTiles, Carnivore, Herbivore, Species,
+                   SpeciesProperties};
+
 pub type Priority = usize;
 
 pub type HealthLevel = usize;
 
 /// The mental mood of a living actor.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Mood {
     Angry,
     Fearful,
@@ -61,8 +67,10 @@ pub trait Drinkable {
 #[derive(Debug, Clone, PartialEq)]
 pub enum MissionResult {
     NoResult,
-    Die,
+    Die(usize),
+    List(Vec<DrawableLiving>),
     Kill(usize),
+    Kill2(Point3D, Species),
     ReplaceItem(Point3D, Item),
     RemoveItem(Point3D),
 }
@@ -128,11 +136,15 @@ pub trait Living {
     fn goals(&self) -> (Option<&Mission>, Option<&Mission>);
     /// Chooses highest priority mission, excecutes one step of it, and
     /// returns it if done, otherwise returns None.
-    fn execute_mission(&mut self, ws: &World) -> MissionResult;
+    fn execute_mission(&mut self,
+                       ws: &WorldMap,
+                       life: &LifeManager)
+        -> MissionResult;
     /// Adds a mission when none is provided. Used all the time for
     /// animals. If there is already a mission going, returns None.
     fn auto_add_mission(&mut self,
-                        ws: &World,
+                        ws: &WorldMap,
+                        life: &LifeManager,
                         adj: Vec<(Tile, Point3D)>)
         -> Option<Mission>;
 
@@ -140,11 +152,33 @@ pub trait Living {
     fn current_pos(&self) -> (usize, usize, usize);
     fn species(&self) -> &animal::SpeciesProperties;
 }
-impl DrawChar for Living {
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DrawableLiving {
+    pub species: SpeciesProperties,
+    pub current_pos: Point3D,
+}
+
+impl DrawChar for DrawableLiving {
     fn draw_char(&self, root: &mut RootConsole, pos: (usize, usize)) {
+        let tile: char =
+            std::char::from_u32(match self.species.species {
+                Species::Carnivore(Carnivore::Dog) => {
+                    AnimalTiles::Dog as u32
+                }
+                Species::Carnivore(Carnivore::Wolf) => {
+                    AnimalTiles::Wolf as u32
+                }
+                Species::Herbivore(Herbivore::Whale) => {
+                    AnimalTiles::Whale as u32
+                }
+                _ => self.species.chr as u32,
+            })
+            .unwrap();
+
         root.put_char(pos.0 as i32,
                       pos.1 as i32,
-                      self.species().chr,
+                      if !TILES { tile } else { self.species.chr },
                       BackgroundFlag::Default);
     }
 }

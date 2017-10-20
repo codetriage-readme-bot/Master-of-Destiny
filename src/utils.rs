@@ -7,7 +7,7 @@ use std::collections::BinaryHeap;
 use std::collections::HashMap;
 
 use life;
-use worldgen::World;
+use worldgen::{World, WorldMap};
 
 use physics::PhysicsActor;
 
@@ -90,7 +90,9 @@ pub fn can_move<'a>(map: &'a World,
     let zloc_from = animal.current_pos().2;
     let uto = (to.0 as usize, to.1 as usize);
     if let Some(new_point) = map.get(uto) {
-        let new_zloc = map.location_z_from_to(zloc_from, uto);
+        let new_zloc =
+            map.map
+               .location_z_from_to(zloc_from, uto);
         if (zloc_from as i32 - new_zloc as i32)
             .abs() < 2 &&
             !new_point.tiles.borrow()[new_zloc]
@@ -114,7 +116,10 @@ pub fn random_point(min_x: usize,
     (trng.gen_range(min_x, max_x), trng.gen_range(min_y, max_y))
 }
 
-pub fn strict_3d_adjacent(pos: Point3D, map: &World) -> Vec<Point3D> {
+pub fn strict_3d_adjacent(pos: Point3D,
+                          map: &WorldMap)
+    -> Vec<Point3D> {
+    // TODO: Refactor to use WorldMap instead of World
     strict_adjacent((pos.0, pos.1))
         .iter()
         .map(|pnt| {
@@ -155,7 +160,7 @@ impl PartialOrd for State {
 /// that when it goes from one tile to the next, it chooses the
 /// closest empty tile on the second one. I chose GBFS because it is
 /// fast and simple, and finding the absolute best path is not a goal.
-pub fn find_path<'a>(map: &World,
+pub fn find_path<'a>(map: &WorldMap,
                      start: Point3D,
                      goal: Point3D,
                      can_move: Box<Fn(Point3D) -> bool + 'a>)

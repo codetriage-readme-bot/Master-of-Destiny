@@ -378,7 +378,8 @@ impl Game {
                                     {
                                         Go((x,
                                             y,
-                                            ws.location_z((x, y))))
+                                            ws.map
+                                              .location_z((x, y))))
                                     } else {
                                         Go((x, y, 100))
                                     }
@@ -645,20 +646,16 @@ fn main() {
 
     if TILES {
         let mut x = 0;
-        let mut y = 16;
-        for chr in BASE..(BASE + 30) {
-            root.map_ascii_code_to_font(chr as i32, x, y);
+        for chr in BASE..(BASE + 47) {
+            root.map_ascii_code_to_font(chr as i32,
+                                        x % 16,
+                                        (x / 16) as i32 + 16);
             x += 1;
-            if x >= 16 {
-                y += 1;
-                x = 0;
-            }
         }
     }
 
     let mut game = Game::new(screen_size);
 
-    tcod::system::set_fps(30);
     root.set_keyboard_repeat(0, 0);
 
     while !root.window_closed() {
