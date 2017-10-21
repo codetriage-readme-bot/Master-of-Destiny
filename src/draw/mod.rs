@@ -67,11 +67,6 @@ fn draw_hud(root: &mut RootConsole,
                           }
                           .unwrap_or(&Tile::Empty)
                           .describe();
-            if len != world.level as usize {
-                hud_info[7] = format!("Distance from Level: {}",
-                                      world.level as i32 -
-                                          len as i32);
-            }
         }
     }
     for (i, line) in hud_info.iter().enumerate() {
@@ -174,38 +169,43 @@ pub fn draw_map(root: &mut RootConsole,
         }
         None => {}
     }
-    if let Some(ref map) = world.map {
-        draw_life(root, world);
-    }
+    let mut last = vec![];
+    last = draw_life(root, world, last);
 }
 
-fn draw_life(root: &mut RootConsole, ws: &WorldState) {
+fn draw_life(root: &mut RootConsole,
+             ws: &WorldState,
+             last: Vec<DrawableLiving>)
+    -> Vec<DrawableLiving> {
     use std::time::Duration;
+
     ws.life_send_tc
       .send(AnimalHandlerEvent::Draw);
-    match ws.life_receive_tc
-              .recv_timeout(Duration::from_millis(16)) {
-        Ok(MissionResult::List(drawables)) => {
-            let wid = root.width();
-            let hig = root.height();
+    let drawables =
+        match ws.life_receive_tc
+                  .recv_timeout(Duration::from_millis(16)) {
+            Ok(MissionResult::List(d)) => Some(d),
+            _ => None,
+        }
+        .unwrap_or(last);
 
-            for l in drawables {
-                let pnt = (l.current_pos.0, l.current_pos.1);
-                let rel_pnt = (pnt.0 as i32 - ws.screen.0,
-                               pnt.1 as i32 - ws.screen.1);
-                if rel_pnt.0 < wid && rel_pnt.1 < hig &&
-                    rel_pnt.0 >= 0 &&
-                    rel_pnt.1 >= 0 &&
-                    ws.level >= l.current_pos.2 as i32
-                {
-                    l.draw_char(root,
-                                (rel_pnt.0 as usize,
-                                 rel_pnt.1 as usize));
-                }
+    let wid = root.width();
+    let hig = root.height();
+    // TODO: maybe wait for specfic MissionResult?
+
+    {
+        for l in drawables.iter() {
+            let pnt = (l.current_pos.0, l.current_pos.1);
+            let rel_pnt = (pnt.0 as i32 - ws.screen.0,
+                           pnt.1 as i32 - ws.screen.1);
+            if rel_pnt.0 < wid && rel_pnt.1 < hig &&
+                rel_pnt.0 >= 0 && rel_pnt.1 >= 0 &&
+                ws.level >= l.current_pos.2 as i32
+            {
+                l.draw_char(root,
+                            (rel_pnt.0 as usize, rel_pnt.1 as usize));
             }
         }
-        _ => {
-            panic!("Animal update thread responded nonsensically in draw funcion.")
-        }
     }
+    drawables
 }

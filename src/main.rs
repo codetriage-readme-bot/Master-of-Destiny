@@ -287,15 +287,18 @@ impl Game {
                     .draw(root, self.world_state.cursor);
             }
             GameScreen::Game => {
+                // TODO: find an order where the draw queue from the
+                // animal-thread doesn't get mixed with the update
+                // queue.
                 let current_time = time::get_world_time();
-                self.world_state.update(current_time,
-                                        current_time -
-                                            self.last_time);
-                self.last_time = current_time;
                 draw_map(root,
                          &self.world_state,
                          self.show_hud,
                          self.last_time);
+                self.world_state.update(current_time,
+                                        current_time -
+                                            self.last_time);
+                self.last_time = current_time;
                 self.show_tools
                     .draw(root, self.world_state.cursor);
             }

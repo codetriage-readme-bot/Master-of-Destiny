@@ -7,16 +7,18 @@ use draw::DrawChar;
 use tcod::{BackgroundFlag, Console, RootConsole};
 
 use utils::{Point2D, Point3D, Rect2D, Rect2D3D};
-use worldgen::{LifeManager, WorldMap};
+use worldgen::WorldMap;
 use worldgen::terrain::{Item, TILES, Tile};
 
 pub mod animal;
 pub mod bird;
 pub mod dwarf;
 pub mod monster;
+pub mod threading;
 
 use self::animal::{AnimalTiles, Carnivore, Herbivore, Species,
                    SpeciesProperties};
+use self::threading::LifeManager;
 
 pub type Priority = usize;
 

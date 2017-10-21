@@ -5,13 +5,14 @@ use std;
 use std::cell::RefCell;
 
 use life::{Living, Mission, MissionResult};
+use life::threading::LifeManager;
 
 use physics::PhysicsActor;
 
 use utils::{Point3D, distance, find_path, nearest_perimeter_point,
             random_point, strict_adjacent};
 
-use worldgen::{LifeManager, WorldMap};
+use worldgen::WorldMap;
 use worldgen::terrain::{Biome, BiomeType, Food, Item, TILES, Tile,
                         Tiles, VegType};
 
