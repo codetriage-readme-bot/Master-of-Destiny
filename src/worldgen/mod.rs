@@ -54,6 +54,7 @@ pub type Frames = HashMap<String, Vec<usize>>;
 pub type BiomeMap = HashMap<String, RefCell<Vec<(usize, usize)>>>;
 
 /// A type alias for the world's map.
+#[derive(Clone)]
 pub struct WorldMap {
     pub map: Vec<Vec<Unit>>,
     pub biome_map: BiomeMap,
@@ -125,7 +126,7 @@ impl WorldMap {
 pub enum AnimalHandlerEvent {
     Update(usize, WorldMap),
     Draw,
-    NewAnimal(Box<Living>),
+    NewAnimal(Box<Living + Send>),
 }
 
 
@@ -171,11 +172,7 @@ impl World {
             heightmap: Self::generate_heightmap(size, seed),
             map: WorldMap {
                 map: vec![],
-                biome_map: ["s", "j", "f", "d", "p", "b", "w"]
-                    .iter()
-                    .cloned()
-                    .map(|x| (x.to_string(), RefCell::new(vec![])))
-                    .collect(),
+                biome_map: HashMap::new(),
             },
             stone_vein_noise: Noise::init_with_dimensions(3)
                 .lacunarity(0.43)
@@ -197,7 +194,7 @@ impl World {
 
     pub fn create_life_by_biome(pnt: Point3D,
                                 biome: Biome)
-        -> Option<Box<Living>> {
+        -> Option<Box<Living + Send>> {
         use life::animal::*;
         let mut trng = rand::thread_rng();
         let species = match biome.biome_type {
@@ -514,7 +511,11 @@ impl World {
                 => { |x| biomes_from_height_and_noise(x, ws) }
                 => { |x| vegitation_from_biomes(x, ws.seed) }
                 => { |x| add_soil(x, ws.seed) }),
-            biome_map: ws.map.biome_map,
+            biome_map: ["s", "j", "f", "d", "p", "b", "w"]
+                .iter()
+                .cloned()
+                .map(|x| (x.to_string(), RefCell::new(vec![])))
+                .collect(),
         }
     }
 
@@ -939,17 +940,16 @@ impl WorldState {
         }
     }
 
-    fn update_life(&mut self, time: usize) {
-        if let Some(ref mut world) = self.map {
-            self.life_send_tc
-                .send(AnimalHandlerEvent::Update(time, world.map));
-        }
-    }
     /// Updates world time and then deligates to the physics engine.
     pub fn update(&mut self, time: usize, dt: usize) {
         self.update_time(time, dt);
         if !self.life_sent {
-            self.update_life(time);
+            if let Some(ref world) = self.map {
+                self.life_send_tc
+                    .send(AnimalHandlerEvent::Update(time,
+                                                     world.map
+                                                          .clone()));
+            }
             self.life_sent = true;
         }
 
@@ -1090,15 +1090,14 @@ impl LifeManager {
     }
 
     pub fn closeby(&self,
-                   this: Box<Living>)
+                   this: (Point3D, SpeciesProperties))
         -> Vec<(Point3D, SpeciesProperties)> {
         let mut res = vec![];
-        for l in self.life {
+        for l in self.life.iter() {
             let other = l.borrow();
-            let dist = distance3_d(other.current_pos(),
-                                   this.current_pos());
+            let dist = distance3_d(other.current_pos(), this.0);
             let os = other.species();
-            let ts = this.species();
+            let ts = this.1;
 
             if dist <= ts.sight as f32 && os.species != ts.species {
                 res.push((other.current_pos(), *os));
@@ -1109,7 +1108,7 @@ impl LifeManager {
     }
 
     pub fn closeby_predator(&self,
-                            this: Box<Living>)
+                            this: (Point3D, SpeciesProperties))
         -> Option<SpeciesProperties> {
         self.closeby(this)
             .iter()
@@ -1155,7 +1154,7 @@ fn handle_life(receive_from_world: Receiver<AnimalHandlerEvent>,
                send_to_world: Sender<MissionResult>)
     -> impl FnOnce() {
     move || {
-        let life = LifeManager::new();
+        let mut life = LifeManager::new();
         match receive_from_world.recv() {
             Ok(AnimalHandlerEvent::NewAnimal(animal)) => {
                 life.life.push(RefCell::new(animal));
@@ -1189,6 +1188,7 @@ fn handle_life(receive_from_world: Receiver<AnimalHandlerEvent>,
                     }
                 }
             }
+            _ => (),
         }
     }
 }

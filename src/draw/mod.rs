@@ -57,19 +57,21 @@ fn draw_hud(root: &mut RootConsole,
     let (cx, cy) = (world.cursor.0, world.cursor.1);
     if (cx >= 0 && cx < wid as i32) && (cy >= 0 && cy < hig as i32) {
         let (cx, cy) = (cx as usize, cy as usize);
-        let wmap = &world_map.get((cx, cy));
-        let wmapt = wmap.unwrap().tiles.borrow();
-        let len = wmapt.len().checked_sub(1).unwrap_or(0);
-        hud_info[6] = if len < world.level as usize {
-                          wmapt.get(len as usize)
-                      } else {
-                          wmapt.get(world.level as usize)
-                      }
-                      .unwrap_or(&Tile::Empty)
-                      .describe();
-        if len != world.level as usize {
-            hud_info[7] = format!("Distance from Level: {}",
-                                  world.level as i32 - len as i32);
+        if let Some(ref wmap) = world_map.get((cx, cy)) {
+            let wmapt = wmap.tiles.borrow();
+            let len = wmapt.len().checked_sub(1).unwrap_or(0);
+            hud_info[6] = if len < world.level as usize {
+                              wmapt.get(len as usize)
+                          } else {
+                              wmapt.get(world.level as usize)
+                          }
+                          .unwrap_or(&Tile::Empty)
+                          .describe();
+            if len != world.level as usize {
+                hud_info[7] = format!("Distance from Level: {}",
+                                      world.level as i32 -
+                                          len as i32);
+            }
         }
     }
     for (i, line) in hud_info.iter().enumerate() {
@@ -107,40 +109,45 @@ pub fn draw_map(root: &mut RootConsole,
                 for (mx, x) in (screen_start_x..screen_end_x)
                     .zip(0..wid)
                 {
-                    let wmap = &world_map.get((mx, my));
-                    let wmapt = wmap.unwrap().tiles.borrow();
-                    let len = wmapt.len().checked_sub(1).unwrap_or(0);
+                    if let Some(ref wmap) = world_map.get((mx, my)) {
+                        let wmapt = wmap.tiles.borrow();
+                        let len =
+                            wmapt.len().checked_sub(1).unwrap_or(0);
 
-                    match wmapt.get(world.level as usize) {
-                        None => {
-                            wmapt.get(len)
+                        match wmapt.get(world.level as usize) {
+                            None => {
+                                wmapt.get(len)
                                  .unwrap_or(&Tile::Empty)
                                  .draw_framed_char(root,
                                                    (x, y),
                                                    time,
                                                    &world_map.frames);
-                            if TILES {
-                                let raw_c = (256 as usize)
-                                    .checked_sub((world.level as
-                                                      usize -
-                                                      len) *
-                                                     6)
-                                    .unwrap_or(0);
-                                let c = std::cmp::max(raw_c, 10) as
-                                    u8;
-                                root.set_char_foreground(x as i32,
+                                if TILES {
+                                    let raw_c = (256 as usize)
+                                        .checked_sub((world.level as
+                                                          usize -
+                                                          len) *
+                                                         6)
+                                        .unwrap_or(0);
+                                    let c = std::cmp::max(raw_c,
+                                                          10) as
+                                        u8;
+                                    root.set_char_foreground(x as i32,
                                                          y as i32,
                                                          Color::new(c,
                                                                     c,
                                                                     c));
-                            } else {
-                                root.set_char_background(x as i32,
+                                } else {
+                                    root.set_char_background(x as i32,
                                              y as i32,
                                              Color::new(100, 100, 100),
                                              BackgroundFlag::Darken);
+                                }
+                            }
+                            Some(tile) => {
+                                tile.draw_char(root, (x, y))
                             }
                         }
-                        Some(tile) => tile.draw_char(root, (x, y)),
                     }
                 }
             }
@@ -196,6 +203,9 @@ fn draw_life(root: &mut RootConsole, ws: &WorldState) {
                                  rel_pnt.1 as usize));
                 }
             }
+        }
+        _ => {
+            panic!("Animal update thread responded nonsensically in draw funcion.")
         }
     }
 }

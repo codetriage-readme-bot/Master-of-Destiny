@@ -60,7 +60,7 @@ pub enum Species {
     Herbivore(Herbivore),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub struct SpeciesProperties {
     pub health: i32,
     pub chr: char,
@@ -223,7 +223,9 @@ pub struct Animal {
 }
 
 impl Animal {
-    pub fn new(pnt: Point3D, species: Species) -> Box<super::Living> {
+    pub fn new(pnt: Point3D,
+               species: Species)
+        -> Box<super::Living + Send> {
         Box::new(Animal {
                      thirst: 200,
                      hunger: 600,
@@ -344,12 +346,12 @@ impl Animal {
                     }
                     // Find an enemy to attack, not of the same species
                     AttackEnemy(_) => {
-                        let trng = rand::thread_rng();
-                        self.add_path_to_point(map,
-                                               trng.choose(
-                                                   &life.closeby(
-                                                       box *self as Box<Living>)).unwrap().0,
-                                               m);
+                        let mut trng = rand::thread_rng();
+                        let closeby =
+                            life.closeby((self.current_pos(),
+                                          self.species().clone()));
+                        let dest = trng.choose(&closeby).unwrap().0;
+                        self.add_path_to_point(map, dest, m);
                         MissionResult::NoResult
                     }
                     // Go to a gathering area
@@ -612,8 +614,9 @@ impl Living for Animal {
                     let mut trng = self::rand::thread_rng();
                     let fish = &life.posns_of_species(Species::Herbivore(Herbivore::Fish));
                     let pred = {
-                        life.closeby_predator(box *self as
-                                                  Box<Living>)
+                        life.closeby_predator((self.current_pos(),
+                                               self.species()
+                                                   .clone()))
                             .is_some()
                     };
                     if pred {
@@ -663,3 +666,5 @@ impl Living for Animal {
         (self.current_goal.as_ref(), self.failed_goal.as_ref())
     }
 }
+
+unsafe impl Send for Animal {}
