@@ -1,10 +1,9 @@
 use super::Living;
 use life::{DrawableLiving, MissionResult};
 use life::animal::{Species, SpeciesProperties};
-use std;
 use std::cell::RefCell;
-use std::ops::{Index, Range};
-use std::sync::mpsc::{Receiver, RecvError, Sender, channel};
+use std::ops::Index;
+use std::sync::mpsc::{Receiver, Sender};
 use utils::{Point3D, distance3_d};
 use worldgen::AnimalHandlerEvent;
 

@@ -67,11 +67,9 @@ impl WorldMap {
     }
 
     pub fn get(&self, pos: Point2D) -> Option<Unit> {
-        if self.located_inside(pos) {
-            Some(self.map[pos.1][pos.0].clone())
-        } else {
-            None
-        }
+        let row = get!(self.map.iter().nth(pos.1));
+        let unit = get!(row.iter().nth(pos.0));
+        Some(unit.clone())
     }
 
     pub fn location_z(&self, pos: Point2D) -> usize {
