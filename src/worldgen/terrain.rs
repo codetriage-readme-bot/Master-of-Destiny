@@ -874,7 +874,7 @@ pub enum Tool {
 }
 
 impl DrawChar for Tool {
-    fn draw_char(&self, root: &mut RootConsole, pos: Point2D) {}
+    fn draw_char(&self, _root: &mut RootConsole, _pos: Point2D) {}
 }
 
 type Quantity = u8;
@@ -1019,7 +1019,7 @@ impl Describe for Tile {
     fn describe(&self) -> String {
         match self {
             &Tile::Empty => "Emtpy space".to_string(),
-            &Tile::Ramp(ref s) => "A ramp".to_string(),
+            &Tile::Ramp(_) => "A ramp".to_string(),
             &Tile::Moveable(ref s) => {
                 format!("Loose pile of {}", s.describe())
             }
@@ -1112,7 +1112,7 @@ impl DrawChar for Tile {
             }
             &Tile::Stone(_, State::Gas) => unreachable!(),
             &Tile::Water(_, State::Solid, _) => {
-                let chr = if TILES {
+                let _ = if TILES {
                     std::char::from_u32(Tiles::Ice as u32)
                         .unwrap()
                 } else {
@@ -1146,7 +1146,7 @@ impl DrawChar for Tile {
                                  Color::new(0, 159, 225));
             }
             &Tile::Water(_, State::Gas, _) => {
-                let chr = if TILES {
+                let _ = if TILES {
                     std::char::from_u32(Tiles::Obsidian as u32)
                         .unwrap()
                 } else {
@@ -1164,7 +1164,7 @@ impl DrawChar for Tile {
             }
             &Tile::Vegetation(ref v, ..) => v.draw_char(root, pos),
             &Tile::Fire => {
-                let chr = if TILES {
+                let _ = if TILES {
                     std::char::from_u32(Tiles::Obsidian as u32)
                         .unwrap()
                 } else {

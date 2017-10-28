@@ -1,5 +1,4 @@
 use std;
-use std::cell::RefCell;
 
 use tcod::{OffscreenConsole, RootConsole};
 use tcod::colors::Color;
@@ -169,8 +168,11 @@ pub fn draw_map(root: &mut RootConsole,
         }
         None => {}
     }
+
+    // TODO: Make this actually work.
     let mut last = vec![];
-    last = draw_life(root, world, last);
+    let nlast = draw_life(root, world, last);
+    last = nlast;
 }
 
 fn draw_life(root: &mut RootConsole,
@@ -179,10 +181,10 @@ fn draw_life(root: &mut RootConsole,
     -> Vec<DrawableLiving> {
     use std::time::Duration;
 
-    ws.life_send_tc
-      .send(AnimalHandlerEvent::Draw);
+    ws.thread_endpoint
+      .send_fail(AnimalHandlerEvent::Draw);
     let drawables =
-        match ws.life_receive_tc
+        match ws.thread_endpoint
                   .recv_timeout(Duration::from_millis(16)) {
             Ok(MissionResult::List(d)) => Some(d),
             _ => None,

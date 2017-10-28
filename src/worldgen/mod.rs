@@ -1,13 +1,11 @@
 extern crate rand;
 extern crate tcod_sys;
+extern crate bichannels;
 
+use self::bichannels::{BiChannel, Endpoint};
 use std;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
-use std::ops::{Index, Range};
-
-use std::sync::mpsc::{Receiver, RecvError, Sender, channel};
-use std::thread;
 
 use tcod::noise::{Noise, NoiseType};
 use tcod::random;
@@ -17,15 +15,15 @@ use self::rand::Rng;
 use self::rand::SeedableRng;
 use self::terrain::*;
 
-use life::{DrawableLiving, Living, MissionResult, Order, threading};
+use life::{Living, MissionResult, Order, threading};
 
 use physics::PhysicsActor;
 
 use time::{Calendar, Clock, Time};
 
-use utils::{Point2D, Point3D, distance3_d, strict_adjacent};
+use utils::{Point2D, Point3D, strict_adjacent};
 
-use life::animal::{Species, SpeciesProperties};
+use life::animal::Species;
 
 /// Returns the Some() of the restricted version of a Tile if it can be restricted, if not, returns None.
 fn restricted_from_tile(tile: Tile) -> Option<RestrictedTile> {
@@ -276,7 +274,7 @@ impl World {
     /// Generate bedrock and mountains/hills from terrain info
     fn rock_from_terrain(ws: &World,
                          (sw, sh): Point2D,
-                         world: Vec<Vec<Unit>>)
+                         _world: Vec<Vec<Unit>>)
         -> Vec<Vec<Unit>> {
         (0..sh)
             .map(|y| {
@@ -912,8 +910,7 @@ pub struct TimeHandler {
 /// instead relying on after-the-fact linking.
 pub struct WorldState {
     life_sent: bool,
-    pub life_send_tc: Sender<AnimalHandlerEvent>,
-    pub life_receive_tc: Receiver<MissionResult>,
+    pub thread_endpoint: Endpoint<AnimalHandlerEvent, MissionResult>,
     pub screen: (i32, i32),
     pub cursor: (i32, i32),
     pub level: i32,
@@ -924,7 +921,7 @@ pub struct WorldState {
 }
 
 impl WorldState {
-    fn update_time(&mut self, time: usize, dt: usize) {
+    fn update_time(&mut self, _time: usize, dt: usize) {
         self.time.clock.update_deltatime(dt);
         self.time.time_of_day = Time::from_clock_time(&self.time
                                                            .clock);
@@ -942,8 +939,8 @@ impl WorldState {
         self.update_time(time, dt);
         if !self.life_sent {
             if let Some(ref world) = self.map {
-                self.life_send_tc
-                    .send(AnimalHandlerEvent::Update(time,
+                self.thread_endpoint
+                    .send_fail(AnimalHandlerEvent::Update(time,
                                                      world.map
                                                           .clone()));
             }
@@ -951,7 +948,7 @@ impl WorldState {
         }
 
         if let Some(ref mut world) = self.map {
-            let r = self.life_receive_tc.recv();
+            let r = self.thread_endpoint.recv();
             match r {
                 Ok(MissionResult::RemoveItem(pnt)) => {
                     if let Some(unit) =
@@ -973,12 +970,7 @@ impl WorldState {
                     }
                 }
                 Ok(_) => (),
-                Err(err) => {
-                    match err {
-                        RecvError => (),
-                        err => panic!("Thread error: {:?}", err),
-                    }
-                }
+                Err(_) => (),
             }
             self.life_sent = !r.is_ok();
         }
@@ -1025,7 +1017,7 @@ impl WorldState {
                                                         unit.biome
                                                         .unwrap());
                         if let Some(animal) = animal {
-                            self.life_send_tc.send(
+                            self.thread_endpoint.send_fail(
                                 AnimalHandlerEvent::NewAnimal(animal));
                         }
                     }
@@ -1037,8 +1029,11 @@ impl WorldState {
     /// Create a new WorldState, loaded with sensable defaults.
     pub fn new() -> WorldState {
         let clock = Clock { time: (12, 30) };
-        let (send_to_thread, receive_from_world) = channel();
-        let (send_to_world, receive_from_thread) = channel();
+        let BiChannel {
+            e1: world,
+            e2: thread,
+        } = BiChannel::new();
+
         let ws = WorldState {
             commands: vec![],
             screen: (0, 0),
@@ -1052,12 +1047,10 @@ impl WorldState {
                 clock: clock,
             },
             life_sent: false,
-            life_send_tc: send_to_thread,
-            life_receive_tc: receive_from_thread,
+            thread_endpoint: thread,
             map: None,
         };
-        std::thread::spawn(threading::handle_life(receive_from_world,
-                                                  send_to_world));
+        std::thread::spawn(threading::handle_life(world));
         ws
     }
 }

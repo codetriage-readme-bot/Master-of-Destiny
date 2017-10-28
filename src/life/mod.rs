@@ -1,5 +1,4 @@
 use std;
-use std::cell::RefCell;
 use std::option::Option;
 
 use draw::DrawChar;
@@ -71,6 +70,7 @@ pub enum MissionResult {
     NoResult,
     Die(usize),
     List(Vec<DrawableLiving>),
+    Many(Vec<MissionResult>),
     Kill(usize),
     Kill2(Point3D, Species),
     ReplaceItem(Point3D, Item),

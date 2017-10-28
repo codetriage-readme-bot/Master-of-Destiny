@@ -2,19 +2,17 @@ extern crate rand;
 use self::rand::Rng;
 
 use std;
-use std::cell::RefCell;
 
 use life::{Living, Mission, MissionResult};
 use life::threading::LifeManager;
 
 use physics::PhysicsActor;
 
-use utils::{Point3D, distance, find_path, nearest_perimeter_point,
-            random_point, strict_adjacent};
+use utils::{Point3D, find_path, nearest_perimeter_point,
+            strict_adjacent};
 
 use worldgen::WorldMap;
-use worldgen::terrain::{Biome, BiomeType, Food, Item, TILES, Tile,
-                        Tiles, VegType};
+use worldgen::terrain::{Biome, BiomeType, Food, Item, Tile, Tiles};
 
 const THIRST_THRESHOLD: i32 = 3000;
 const HUNGER_THRESHOLD: i32 = 6800;
@@ -434,7 +432,7 @@ impl Animal {
     }
 
     fn stationary_action(&mut self,
-                         map: &WorldMap,
+                         _map: &WorldMap,
                          life: &LifeManager,
                          in_sight: Vec<(Tile, Point3D)>)
         -> MissionResult {
@@ -569,7 +567,7 @@ impl Living for Animal {
     }
 
     fn auto_add_mission(&mut self,
-                        map: &WorldMap,
+                        _map: &WorldMap,
                         life: &LifeManager,
                         in_sight: Vec<(Tile, Point3D)>)
         -> Option<Mission> {

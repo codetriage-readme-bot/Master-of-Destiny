@@ -75,7 +75,9 @@ pub enum Weather {
 }
 
 impl Weather {
-    pub fn from_season_time(season: Season, hours: usize) -> Weather {
+    pub fn from_season_time(season: Season,
+                            _hours: usize)
+        -> Weather {
         match season {
             Season::Autumn => {
                 rand::thread_rng()

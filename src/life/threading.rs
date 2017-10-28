@@ -1,9 +1,11 @@
+extern crate bichannels;
+use self::bichannels::Endpoint;
+
 use super::Living;
 use life::{DrawableLiving, MissionResult};
 use life::animal::{Species, SpeciesProperties};
 use std::cell::RefCell;
 use std::ops::Index;
-use std::sync::mpsc::{Receiver, Sender};
 use utils::{Point3D, distance3_d};
 use worldgen::AnimalHandlerEvent;
 
@@ -97,19 +99,20 @@ impl LifeManager {
     }
 }
 
-pub fn handle_life(receive_from_world: Receiver<AnimalHandlerEvent>,
-                   send_to_world: Sender<MissionResult>)
+pub fn handle_life(world_endp: Endpoint<MissionResult,
+                                        AnimalHandlerEvent>)
     -> impl FnOnce() {
     move || {
         let mut life = LifeManager::new();
-        match receive_from_world.recv() {
+        match world_endp.recv() {
             Ok(AnimalHandlerEvent::NewAnimal(animal)) => {
                 life.life.push(RefCell::new(animal));
             }
             Ok(AnimalHandlerEvent::Draw) => {
-                send_to_world.send(MissionResult::List(life.get_drawables()));
+                world_endp.send_fail(MissionResult::List(life.get_drawables()));
             }
             Ok(AnimalHandlerEvent::Update(time, world)) => {
+                let mut many = vec![];
                 for i in 0..life.len() {
                     let modifier = if i % 2 == 0 { 2 } else { 3 };
                     if time % modifier == 0 {
@@ -117,7 +120,7 @@ pub fn handle_life(receive_from_world: Receiver<AnimalHandlerEvent>,
                             let mut actor = life[i].borrow_mut();
                             actor.execute_mission(&world, &life)
                         };
-                        match res {
+                        many.push(match res {
                             MissionResult::Die(j) |
                             MissionResult::Kill(j) => {
                                 let l = life.kill(if j != 0 {
@@ -125,15 +128,15 @@ pub fn handle_life(receive_from_world: Receiver<AnimalHandlerEvent>,
                                                   } else {
                                                       i
                                                   });
-                                send_to_world.send(MissionResult::Kill2(l.current_pos(),
-                                                                        l.species().species));
+                                MissionResult::Kill2(l.current_pos(),
+                                                     l.species()
+                                                      .species)
                             }
-                            other => {
-                                send_to_world.send(other);
-                            }
-                        }
+                            other => other,
+                        });
                     }
                 }
+                world_endp.send_fail(MissionResult::Many(many));
             }
             _ => (),
         }
